@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Notification Settings{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Alert settings</h1>
+    <div class="sub">Configure how you'd like to be notified</div>
+  </div>
+</div>
+
+<div class="card" style="max-width:420px">
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+      <label class="form-label">
+        {{ form.email_notifications_enabled }} Email notifications
+      </label>
+      <span class="helptext">Get an email copy whenever you receive a notification (in addition to seeing it here).</span>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="action-btn primary">Save settings</button>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

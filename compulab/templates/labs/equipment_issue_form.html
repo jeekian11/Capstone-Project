@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Report Issue{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Report an equipment issue</h1>
+  </div>
+</div>
+
+<div class="card" style="max-width:480px">
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.equipment.id_for_label }}">Equipment</label>
+      {{ form.equipment }}
+      {% if form.equipment.errors %}<div class="form-errors">{{ form.equipment.errors|join:", " }}</div>{% endif %}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.description.id_for_label }}">Description</label>
+      {{ form.description }}
+      {% if form.description.errors %}<div class="form-errors">{{ form.description.errors|join:", " }}</div>{% endif %}
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="action-btn primary">Submit report</button>
+      <a href="{% url 'equipment_issues' %}" class="action-btn">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Instructor{% endblock %}
+
+{% block content %}
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#0a0e12; --surface:#12171d; --surface-raised:#171d24;
+  --border:#232b34; --border-soft:#232b3480;
+  --text:#e7ebee; --text-dim:#8b98a3; --text-faint:#4d5761;
+  --green:#3ed6c4; --green-dim:#3ed6c422;
+  --red:#ff5d5d; --red-dim:#ff5d5d22;
+  --amber:#f2a93b; --amber-dim:#f2a93b22;
+  --purple:#b98cf2; --purple-dim:#b98cf222;
+  --blue:#5b9dff; --blue-dim:#5b9dff22;
+  --font-display:'Space Grotesk',sans-serif;
+  --font-body:'Inter',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+}
+
+.in-topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; flex-wrap:wrap; gap:16px;}
+.in-brand{display:flex; align-items:center; gap:12px;}
+.in-brand-mark{width:34px; height:34px; border-radius:8px; background:linear-gradient(135deg,var(--purple),var(--blue)); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-weight:600; font-size:14px; color:#0a0e12;}
+.in-brand-text h1{font-family:var(--font-display); font-size:19px; margin:0; font-weight:600; letter-spacing:-0.01em; color:var(--text);}
+.in-brand-text span{font-size:12px; color:var(--text-faint); font-family:var(--font-mono);}
+
+.in-metrics{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:24px;}
+.in-metric{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px 20px; position:relative; overflow:hidden;}
+.in-metric::before{content:''; position:absolute; top:0; left:0; width:3px; height:100%; background:var(--bar-color,var(--text-faint));}
+.in-metric-label{font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px; font-weight:500;}
+.in-metric-val{font-family:var(--font-display); font-size:32px; font-weight:600; letter-spacing:-0.01em; color:var(--text);}
+.in-metric.amber{--bar-color:var(--amber);} .in-metric.amber .in-metric-val{color:var(--amber);}
+.in-metric.blue{--bar-color:var(--blue);} .in-metric.blue .in-metric-val{color:var(--blue);}
+.in-metric.purple{--bar-color:var(--purple);} .in-metric.purple .in-metric-val{color:var(--purple);}
+
+.in-two-col{display:grid; grid-template-columns:1.3fr 1fr; gap:20px;}
+.in-panel{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:24px;}
+.in-section-title{font-family:var(--font-display); font-size:14px; font-weight:600; color:var(--text); margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;}
+.in-action{font-size:12px; color:var(--blue); text-decoration:none; font-weight:500;}
+
+.in-schedule-row{display:flex; gap:14px; padding:12px 0; border-bottom:1px solid var(--border-soft); align-items:center;}
+.in-schedule-row:last-child{border-bottom:none; padding-bottom:0;}
+.in-schedule-time{font-family:var(--font-mono); font-size:12px; color:var(--text-dim); width:96px; flex-shrink:0;}
+.in-schedule-block{flex:1; padding:10px 14px; background:var(--surface-raised); border-radius:8px; border-left:3px solid var(--purple);}
+.in-s-title{font-size:13.5px; font-weight:500; color:var(--text);}
+.in-s-sub{font-size:12px; color:var(--text-dim); margin-top:2px;}
+
+.in-alert-item{display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-bottom:1px solid var(--border-soft);}
+.in-alert-item:last-child{border-bottom:none; padding-bottom:0;}
+.in-alert-title{font-size:13.5px; font-weight:500; color:var(--text); margin-bottom:2px;}
+.in-alert-sub{font-size:12.5px; color:var(--text-dim); line-height:1.4;}
+.in-alert-time{margin-left:auto; font-size:11px; color:var(--text-faint); font-family:var(--font-mono); white-space:nowrap;}
+.in-empty{color:var(--text-faint); font-size:13px; text-align:center; padding:24px 0;}
+
+.in-quick-actions{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:24px;}
+.in-quick-btn{display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border-radius:9px; background:var(--surface); border:1px solid var(--border); color:var(--text); font-size:13px; font-weight:500; text-decoration:none;}
+.in-quick-btn.primary{background:linear-gradient(135deg,var(--purple),var(--blue)); color:#0a0e12; border-color:transparent; font-weight:600;}
+
+@media (max-width:860px){
+  .in-metrics{grid-template-columns:repeat(1,1fr);}
+  .in-two-col{grid-template-columns:1fr;}
+}
+</style>
+
+<div class="in-topbar">
+  <div class="in-brand">
+    <div class="in-brand-mark">I</div>
+    <div class="in-brand-text">
+      <h1>{{ request.user.get_full_name|default:request.user.username }}</h1>
+      <span>Instructor Dashboard</span>
+    </div>
+  </div>
+</div>
+
+<div class="in-quick-actions">
+  <a href="{% url 'inst_schedule' %}" class="in-quick-btn">My schedule</a>
+  <a href="{% url 'attendance' %}" class="in-quick-btn">Attendance</a>
+  <a href="{% url 'inst_alerts' %}" class="in-quick-btn">Notifications{% if unread_count %} ({{ unread_count }}){% endif %}</a>
+</div>
+
+<div class="in-metrics">
+  <div class="in-metric amber">
+    <div class="in-metric-label">Today's sessions</div>
+    <div class="in-metric-val">{{ todays_sessions_count }}</div>
+  </div>
+  <div class="in-metric blue">
+    <div class="in-metric-label">Pending requests</div>
+    <div class="in-metric-val">{{ pending_requests_count }}</div>
+  </div>
+  <div class="in-metric purple">
+    <div class="in-metric-label">Unread notifications</div>
+    <div class="in-metric-val">{{ unread_count }}</div>
+  </div>
+</div>
+
+<div class="in-two-col">
+  <div class="in-panel">
+    <div class="in-section-title">
+      Upcoming sessions
+      <a href="{% url 'inst_schedule' %}" class="in-action">View all →</a>
+    </div>
+    {% for session in upcoming_sessions %}
+      <div class="in-schedule-row">
+        <div class="in-schedule-time">{{ session.date|date:"M d" }}<br>{{ session.start_time|time:"H:i" }}</div>
+        <div class="in-schedule-block">
+          <div class="in-s-title">{{ session.subject }}</div>
+          <div class="in-s-sub">{{ session.lab.name }} · {{ session.student_count }} students</div>
+        </div>
+      </div>
+    {% empty %}
+      <p class="in-empty">No upcoming sessions. Coordinate with the admin or lab in-charge to reserve one.</p>
+    {% endfor %}
+  </div>
+
+  <div class="in-panel">
+    <div class="in-section-title">
+      Notifications
+      <a href="{% url 'inst_alerts' %}" class="in-action">View all →</a>
+    </div>
+    {% for notif in notifications %}
+      <div class="in-alert-item">
+        <div style="flex:1">
+          <div class="in-alert-title">{{ notif.title }}</div>
+          <div class="in-alert-sub">{{ notif.message }}</div>
+        </div>
+        <div class="in-alert-time">{{ notif.created_at|timesince }} ago</div>
+      </div>
+    {% empty %}
+      <p class="in-empty">No new notifications.</p>
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}

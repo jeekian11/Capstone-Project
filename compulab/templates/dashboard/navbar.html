@@ -1,0 +1,163 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  .topbar {
+    padding: 16px 24px;
+    border-bottom: 1px solid #e0e0e0;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 1px 3px rgba(18, 23, 29, 0.03);
+  }
+  .topbar-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: #12171d;
+  }
+  .topbar-right { display: flex; align-items: center; gap: 16px; font-size: 13px; color: #555; }
+
+  /* divider between notif/avatar and logout */
+  .topbar-divider {
+    width: 1px;
+    height: 24px;
+    background: #e5e5e5;
+  }
+
+  .topbar-notif { position: relative; display: flex; align-items: center; }
+  .topbar-notif a {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    font-size: 16px;
+    text-decoration: none;
+    color: #4d5761;
+    background: #f7f8f9;
+    border: 1px solid #ececec;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  }
+  .topbar-notif a:hover {
+    background: rgba(62, 214, 196, 0.10);
+    border-color: rgba(62, 214, 196, 0.4);
+    transform: translateY(-1px);
+  }
+  .notif-dot {
+    position: absolute;
+    top: -3px; right: -3px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 50%;
+    background: #ff5d5d;
+    color: white;
+    font-size: 9.5px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    border: 2px solid white;
+    box-shadow: 0 0 0 1px rgba(255, 93, 93, 0.15);
+  }
+
+  .topbar-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 10px 4px 4px;
+    border-radius: 12px;
+    transition: background-color 0.15s ease;
+  }
+  .topbar-user:hover { background: #f7f8f9; }
+
+  .avatar {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #3ed6c4, #5b9dff);
+    color: #0a0e12;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .user-meta { display: flex; flex-direction: column; line-height: 1.25; }
+  .user-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #12171d;
+    white-space: nowrap;
+  }
+  .user-role {
+    font-size: 10.5px;
+    font-family: 'JetBrains Mono', monospace;
+    color: #8b98a3;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 500;
+    border: 1px solid #e0e0e0;
+    background: white;
+    cursor: pointer;
+    text-decoration: none;
+    color: #4d5761;
+    font-family: 'Inter', sans-serif;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  .btn:hover {
+    background: rgba(255, 93, 93, 0.08);
+    border-color: rgba(255, 93, 93, 0.35);
+    color: #d94545;
+  }
+</style>
+
+<div class="topbar">
+  <div class="topbar-title">{{ page_title|default:"Dashboard" }}</div>
+  <div class="topbar-right">
+
+    <div class="topbar-notif">
+      <a href="{% url 'notifications' %}" title="Notifications">
+        🔔
+        {% if unread_notifications_count %}
+          <span class="notif-dot">{{ unread_notifications_count }}</span>
+        {% endif %}
+      </a>
+    </div>
+
+    <div class="topbar-divider"></div>
+
+    <div class="topbar-user">
+      <div class="avatar">
+        {{ request.user.get_full_name|slice:":2"|upper }}
+      </div>
+      <div class="user-meta">
+        <span class="user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+        <span class="user-role">{{ request.user.role|default:"Admin" }}</span>
+      </div>
+    </div>
+
+    <form method="post" action="{% url 'logout' %}" style="display:inline;">
+      {% csrf_token %}
+      <button type="submit" class="btn">Log out</button>
+    </form>
+
+  </div>
+</div>

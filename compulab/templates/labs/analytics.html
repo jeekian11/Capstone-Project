@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Analytics{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Reporting &amp; analytics</h1>
+    <div class="sub">Last 30 days</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="section-title">Generate a report</div>
+  <div class="two-col" style="grid-template-columns: repeat(4, 1fr);">
+    <a href="{% url 'report_lab_utilization' %}" class="action-btn" style="justify-content:center; padding:16px;">Lab Utilization Report</a>
+    <a href="{% url 'report_equipment_status' %}" class="action-btn" style="justify-content:center; padding:16px;">Equipment Status Report</a>
+    <a href="{% url 'report_instructor_usage' %}" class="action-btn" style="justify-content:center; padding:16px;">Instructor Usage Report</a>
+    <a href="{% url 'report_attendance' %}" class="action-btn" style="justify-content:center; padding:16px;">Attendance Report</a>
+    <a href="{% url 'report_maintenance' %}" class="action-btn" style="justify-content:center; padding:16px;">Maintenance Report</a>
+  </div>
+</div>
+
+<div class="metrics">
+  <div class="metric neutral">
+    <div class="metric-label">Sessions this month</div>
+    <div class="metric-val">{{ sessions_this_month }}</div>
+  </div>
+  <div class="metric green">
+    <div class="metric-label">Issues resolved</div>
+    <div class="metric-val">{{ resolved_issues }}</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Labs monitored</div>
+    <div class="metric-val">{{ labs|length }}</div>
+  </div>
+</div>
+
+<div class="two-col">
+  <div class="card">
+    <div class="section-title">Issue breakdown by type</div>
+    <table class="table">
+      <thead><tr><th>Type</th></tr></thead>
+      <tbody>
+        {% for row in issue_breakdown %}
+          <tr><td>{{ row.issue_type }}</td></tr>
+        {% empty %}
+          <tr><td><p class="empty">No issues logged yet.</p></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Labs overview</div>
+    <table class="table">
+      <thead><tr><th>Lab</th><th>PCs</th></tr></thead>
+      <tbody>
+        {% for lab in labs %}
+          <tr><td>{{ lab.name }}</td><td>{{ lab.pcs.all|length }}</td></tr>
+        {% empty %}
+          <tr><td colspan="2"><p class="empty">No labs set up.</p></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

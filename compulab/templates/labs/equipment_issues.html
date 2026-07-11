@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Reported Issues{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Reported issues</h1>
+    <div class="sub">Equipment issue reports</div>
+  </div>
+  <div style="display:flex; gap:8px">
+    <a href="{% url 'inventory' %}" class="action-btn">← Back to inventory</a>
+    <a href="{% url 'equipment_issue_report' %}" class="action-btn primary">+ Report issue</a>
+  </div>
+</div>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr><th>Equipment</th><th>Reporter</th><th>Date reported</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for equipment_issue in equipment_issues %}
+        <tr>
+          <td>{{ equipment_issue.equipment.name }}</td>
+          <td>{{ equipment_issue.reporter.get_full_name|default:"—" }}</td>
+          <td>{{ equipment_issue.date_reported|date:"M d, Y" }}</td>
+          <td><span class="status-pill pill-{{ equipment_issue.status }}">{{ equipment_issue.get_status_display }}</span></td>
+          <td><a href="{% url 'equipment_issue_detail' equipment_issue.pk %}" class="action-btn small">View</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5"><p class="empty">No issues reported yet.</p></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Mark Attendance{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Mark attendance</h1>
+    <div class="sub">{{ session.subject }} · {{ session.lab.name }} · {{ session.date|date:"M d, Y" }} ({{ session.start_time|time:"H:i" }} - {{ session.end_time|time:"H:i" }})</div>
+  </div>
+  <a href="{% url 'attendance' %}?summary_date={{ session.date|date:'Y-m-d' }}" class="action-btn">Back to attendance</a>
+</div>
+
+<div class="card">
+  <div class="section-title">Present / absent, per student</div>
+  <p style="font-size:12px; color:#8b98a3; margin-top:-6px; margin-bottom:14px;">
+    Use this for classes where students didn't need to log into a lab PC (e.g. lecture-only sessions).
+    Marking a status here overrides the automatic PC-unlock estimate for that student.
+  </p>
+  <form method="post">
+    {% csrf_token %}
+    <table class="table">
+      <thead>
+        <tr><th>Student ID</th><th>Name</th><th>Present</th><th>Absent</th></tr>
+      </thead>
+      <tbody>
+        {% for c in candidates %}
+          <tr>
+            <td>{{ c.id_number }}</td>
+            <td>{{ c.name }}</td>
+            <td><input type="radio" name="status_{{ c.id_number }}" value="present" {% if c.current_status == 'present' %}checked{% endif %}></td>
+            <td><input type="radio" name="status_{{ c.id_number }}" value="absent" {% if c.current_status == 'absent' %}checked{% endif %}></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4"><p class="empty">No roster attached and no PC activity detected yet — add students manually below.</p></td></tr>
+        {% endfor %}
+        {% for m in ad_hoc %}
+          <tr>
+            <td>{{ m.id_number }}</td>
+            <td>{{ m.full_name|default:"—" }} <span style="font-size:11px;color:#8b98a3;">(added manually)</span></td>
+            <td><input type="radio" name="status_{{ m.id_number }}" value="present" disabled {% if m.status == 'present' %}checked{% endif %}></td>
+            <td><input type="radio" name="status_{{ m.id_number }}" value="absent" disabled {% if m.status == 'absent' %}checked{% endif %}></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if candidates %}
+      <div class="form-actions">
+        <button type="submit" class="action-btn primary">Save attendance</button>
+      </div>
+    {% endif %}
+  </form>
+</div>
+
+<div class="card" style="max-width:640px">
+  <div class="section-title">Add a student manually</div>
+  <p style="font-size:12px; color:#8b98a3; margin-top:-6px; margin-bottom:14px;">
+    For a student who attended but isn't on the roster or didn't use a lab PC (e.g. no roster attached to this session).
+  </p>
+  <form method="post" class="form-row" style="grid-template-columns: 1fr 1fr 1fr auto; align-items:end; gap:10px;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add_student">
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Student ID</label>
+      <input type="text" name="new_id_number" class="form-control" required>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Full name</label>
+      <input type="text" name="new_full_name" class="form-control">
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Status</label>
+      <select name="new_status" class="form-control">
+        <option value="present">Present</option>
+        <option value="absent">Absent</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <button type="submit" class="action-btn primary">Add</button>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

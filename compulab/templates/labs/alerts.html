@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Notifications & Alerts{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Notifications &amp; alerts</h1>
+    <div class="sub">System-wide alerts</div>
+  </div>
+  <div style="display:flex; gap:8px">
+    <a href="{% url 'notification_settings' %}" class="action-btn">Alert settings</a>
+    <a href="{% url 'notification_compose' %}" class="action-btn primary">+ Create notification</a>
+  </div>
+</div>
+
+<div class="card">
+  {% for alert in alerts %}
+    <div class="alert-item" style="padding:12px 0; border-bottom:1px solid #f0f0f0;">
+      <div style="flex:1">
+        <div class="alert-title" style="font-weight:500">{{ alert.title }}</div>
+        <div class="alert-sub" style="color:#888; font-size:12.5px">{{ alert.message }}</div>
+      </div>
+      <div class="alert-time" style="color:#aaa; font-size:11px">{{ alert.created_at|timesince }} ago</div>
+    </div>
+  {% empty %}
+    <p class="empty">No alerts right now.</p>
+  {% endfor %}
+</div>
+
+{% endblock %}

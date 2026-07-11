@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Issue Details{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>{{ equipment_issue.equipment.name }}</h1>
+    <div class="sub">Reported {{ equipment_issue.date_reported|date:"M d, Y H:i" }}</div>
+  </div>
+</div>
+
+<div class="card" style="max-width:560px">
+  <table class="table">
+    <tr><td>Reporter</td><td>{{ equipment_issue.reporter.get_full_name|default:"—" }}</td></tr>
+    <tr><td>Equipment</td><td>{{ equipment_issue.equipment.name }}</td></tr>
+    <tr><td>Date reported</td><td>{{ equipment_issue.date_reported|date:"M d, Y H:i" }}</td></tr>
+    <tr><td>Status</td><td><span class="status-pill pill-{{ equipment_issue.status }}">{{ equipment_issue.get_status_display }}</span></td></tr>
+  </table>
+
+  <div class="section-title" style="margin-top:18px">Description</div>
+  <p style="font-size:13px; line-height:1.6; color:#444">{{ equipment_issue.description|linebreaks }}</p>
+
+  {% if equipment_issue.status == 'resolved' %}
+    <div class="section-title" style="margin-top:18px">Resolution notes</div>
+    <p style="font-size:13px; line-height:1.6; color:#444">{{ equipment_issue.resolution_notes|linebreaks }}</p>
+    <p style="font-size:12px; color:#888">Resolved {{ equipment_issue.resolved_at|date:"M d, Y H:i" }}</p>
+  {% else %}
+    <div class="section-title" style="margin-top:18px">Resolve this issue</div>
+    <form method="post" action="{% url 'equipment_issue_resolve' equipment_issue.pk %}">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label" for="resolution_notes">Resolution notes</label>
+        <textarea name="resolution_notes" id="resolution_notes" class="form-control" rows="4" placeholder="What was done to resolve this?" required></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="action-btn primary">Mark as resolved</button>
+      </div>
+    </form>
+  {% endif %}
+
+  <div class="form-actions" style="margin-top:20px">
+    <a href="{% url 'equipment_issues' %}" class="action-btn">← Back to reported issues</a>
+  </div>
+</div>
+
+{% endblock %}

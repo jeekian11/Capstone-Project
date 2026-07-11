@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Schedule & Requests{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Schedule &amp; requests</h1>
+    <div class="sub">{{ session_count }} session{{ session_count|pluralize }} · {{ pending_count }} pending request{{ pending_count|pluralize }}</div>
+  </div>
+</div>
+
+<div class="two-col">
+  <div class="card">
+    <div class="section-title">View schedule</div>
+    <p style="font-size:13px; color:#666; line-height:1.6; margin-bottom:16px;">
+      Select a lab and date to look up the sessions scheduled for it, and export the results as PDF or Excel.
+    </p>
+    <a href="{% url 'view_schedule' %}" class="action-btn primary">View schedule</a>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Manage requests<span class="count">{{ pending_count }}</span></div>
+    <p style="font-size:13px; color:#666; line-height:1.6; margin-bottom:16px;">
+      Review pending lab requests from instructors, then approve, reject, or export each one.
+    </p>
+    <a href="{% url 'manage_requests' %}" class="action-btn primary">Manage requests</a>
+  </div>
+</div>
+
+{% endblock %}

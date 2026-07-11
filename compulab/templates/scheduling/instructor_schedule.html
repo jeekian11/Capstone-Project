@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}My Schedule{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>My schedule</h1>
+    <div class="sub">{{ my_sessions|length }} upcoming sessions</div>
+  </div>
+  <div class="sub" style="text-align:right; max-width:260px">To reserve a lab, coordinate with the admin or your lab in-charge.</div>
+</div>
+
+<div class="two-col">
+  <div class="card">
+    <div class="section-title">My sessions</div>
+    {% for session in my_sessions %}
+      <div class="schedule-row">
+        <div class="schedule-time">{{ session.date|date:"M d" }}<br>{{ session.start_time|time:"H:i" }}</div>
+        <div class="schedule-block">
+          <div class="s-title">{{ session.subject }}</div>
+          <div class="s-sub">{{ session.lab.name }} · {{ session.student_count }} students</div>
+        </div>
+      </div>
+    {% empty %}
+      <p class="empty">No sessions scheduled.</p>
+    {% endfor %}
+  </div>
+
+  <div class="card">
+    <div class="section-title">My requests</div>
+    {% for req in my_requests %}
+      <div class="schedule-row">
+        <div class="schedule-time">{{ req.date|date:"M d" }}</div>
+        <div class="schedule-block">
+          <div class="s-title">{{ req.subject }} <span class="status-pill pill-{{ req.status }}">{{ req.get_status_display }}</span></div>
+          <div class="s-sub">{{ req.lab.name }} · {{ req.start_time|time:"H:i" }}–{{ req.end_time|time:"H:i" }}</div>
+        </div>
+      </div>
+    {% empty %}
+      <p class="empty">No requests submitted yet.</p>
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,55 @@
+from django.urls import path
+from . import views
+from . import reports
+
+urlpatterns = [
+    path('pc-login/', views.ReservationPCLoginView.as_view(), name='pc_login'),
+    path('', views.AdminDashboardView.as_view(), name='admin_dashboard'),
+    path('pc-status/', views.PCStatusView.as_view(), name='pc_status'),
+    path('pc-status/api/', views.pc_status_api, name='pc_status_api'),
+    path('pc-status/refresh/', views.refresh_pc_status_view, name='pc_status_refresh'),
+    path('pc/<int:pk>/update/', views.PCUpdateView.as_view(), name='pc_update'),
+    path('inventory/', views.InventoryView.as_view(), name='inventory'),
+    path('inventory/add/', views.InventoryCreateView.as_view(), name='inventory_create'),
+    path('inventory/<int:pk>/edit/', views.InventoryUpdateView.as_view(), name='inventory_update'),
+    path('inventory/<int:pk>/delete/', views.InventoryDeleteView.as_view(), name='inventory_delete'),
+    path('analytics/', views.AnalyticsView.as_view(), name='analytics'),
+    path('alerts/', views.AlertsView.as_view(), name='alerts'),
+    path('equipment/', views.EquipmentView.as_view(), name='lab_equipment'),
+
+    path('manage/', views.LabListView.as_view(), name='lab_list'),
+    path('manage/add/', views.LabCreateView.as_view(), name='lab_create'),
+    path('manage/<int:pk>/edit/', views.LabUpdateView.as_view(), name='lab_update'),
+    path('manage/<int:pk>/delete/', views.LabDeleteView.as_view(), name='lab_delete'),
+
+    path('manage/pc/add/', views.PCCreateView.as_view(), name='pc_create'),
+    path('manage/pc/<int:pk>/edit/', views.PCEditView.as_view(), name='pc_edit'),
+    path('manage/pc/<int:pk>/delete/', views.PCDeleteView.as_view(), name='pc_delete'),
+
+    path('inventory/<int:pk>/', views.InventoryDetailView.as_view(), name='inventory_detail'),
+    path('inventory/status/', views.InventoryStatusListView.as_view(), name='inventory_status_list'),
+    path('inventory/<int:pk>/status/', views.inventory_status_update, name='inventory_status_update'),
+
+    path('maintenance/', views.MaintenanceLogListView.as_view(), name='maintenance_logs'),
+    path('maintenance/schedule/', views.MaintenanceScheduleCreateView.as_view(), name='maintenance_schedule'),
+    path('maintenance/<int:pk>/complete/', views.maintenance_complete, name='maintenance_complete'),
+
+    path('repair-history/', views.RepairHistoryView.as_view(), name='repair_history'),
+
+    path('equipment-issues/', views.EquipmentIssueListView.as_view(), name='equipment_issues'),
+    path('equipment-issues/report/', views.EquipmentIssueCreateView.as_view(), name='equipment_issue_report'),
+    path('equipment-issues/<int:pk>/', views.EquipmentIssueDetailView.as_view(), name='equipment_issue_detail'),
+    path('equipment-issues/<int:pk>/resolve/', views.equipment_issue_resolve, name='equipment_issue_resolve'),
+
+    # reporting & analytics
+    path('reports/lab-utilization/', reports.LabUtilizationReportView.as_view(), name='report_lab_utilization'),
+    path('reports/lab-utilization/export/', reports.export_lab_utilization, name='report_lab_utilization_export'),
+    path('reports/equipment-status/', reports.EquipmentStatusReportView.as_view(), name='report_equipment_status'),
+    path('reports/equipment-status/export/', reports.export_equipment_status, name='report_equipment_status_export'),
+    path('reports/instructor-usage/', reports.InstructorUsageReportView.as_view(), name='report_instructor_usage'),
+    path('reports/instructor-usage/export/', reports.export_instructor_usage, name='report_instructor_usage_export'),
+    path('reports/attendance/', reports.AttendanceReportView.as_view(), name='report_attendance'),
+    path('reports/attendance/export/', reports.export_attendance, name='report_attendance_export'),
+    path('reports/maintenance/', reports.MaintenanceReportView.as_view(), name='report_maintenance'),
+    path('reports/maintenance/export/', reports.export_maintenance, name='report_maintenance_export'),
+]

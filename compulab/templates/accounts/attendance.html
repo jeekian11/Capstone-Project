@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Attendance{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Attendance</h1>
+    <div class="sub">Your teaching sessions</div>
+  </div>
+</div>
+
+<!-- 1) Generate attendance summary -->
+<div class="card">
+  <div class="section-title">Generate attendance summary</div>
+  <form method="get" class="form-row" style="grid-template-columns: 1fr auto; align-items:end; gap:10px;">
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Date</label>
+      <input type="date" name="summary_date" class="form-control" value="{{ summary_date|date:'Y-m-d' }}">
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <button type="submit" class="action-btn primary">Generate summary</button>
+    </div>
+  </form>
+
+  <table class="table" style="margin-top:14px;">
+    <thead>
+      <tr><th>Subject</th><th>Lab</th><th>Time</th><th>Present</th><th>Absent</th><th>Expected</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for row in summary_rows %}
+        <tr>
+          <td>{{ row.session.subject }}</td>
+          <td>{{ row.session.lab.name }}</td>
+          <td>{{ row.session.start_time|time:"H:i" }} - {{ row.session.end_time|time:"H:i" }}</td>
+          <td>{{ row.present_count }}</td>
+          <td>{{ row.absent_count }}</td>
+          <td>
+            {{ row.expected_count }}
+            {% if row.manually_marked %}
+              <span style="color:#3B6D11;font-size:11px;">(manually marked)</span>
+            {% elif not row.has_roster %}
+              <span style="color:#8b98a3;font-size:11px;">(estimate - no roster)</span>
+            {% endif %}
+          </td>
+          <td><a href="{% url 'session_attendance_mark' row.session.pk %}" class="action-btn small">Mark attendance</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7"><p class="empty">No sessions of yours on this date.</p></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if summary_rows %}
+    <div style="display:flex; gap:10px; margin-top:14px;">
+      <a href="{% url 'attendance_summary_export' %}?summary_date={{ summary_date|date:'Y-m-d' }}&format=pdf" class="action-btn">Export as PDF</a>
+      <a href="{% url 'attendance_summary_export' %}?summary_date={{ summary_date|date:'Y-m-d' }}&format=excel" class="action-btn primary">Export as Excel</a>
+    </div>
+  {% endif %}
+</div>
+
+<!-- 2) View attendance logs -->
+<div class="card">
+  <div class="section-title">View attendance logs</div>
+  <form method="get" class="form-row" style="grid-template-columns: 1fr 1fr 1fr auto; align-items:end; gap:10px;">
+    <input type="hidden" name="summary_date" value="{{ summary_date|date:'Y-m-d' }}">
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Date</label>
+      <input type="date" name="log_date" class="form-control" value="{{ log_date }}">
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Student (ID or name)</label>
+      <input type="text" name="log_student" class="form-control" placeholder="e.g. 2023-0001 or Dela Cruz" value="{{ log_student }}">
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Session</label>
+      <select name="log_session" class="form-control">
+        <option value="">All sessions</option>
+        {% for s in my_sessions %}
+          <option value="{{ s.pk }}" {% if log_session == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.date|date:"M d" }} - {{ s.subject }} ({{ s.lab.name }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <button type="submit" class="action-btn primary">Filter</button>
+    </div>
+  </form>
+
+  <table class="table" style="margin-top:14px;">
+    <thead>
+      <tr><th>Date</th><th>Session</th><th>Student ID</th><th>Student name</th><th>Status</th><th>PC</th><th>Time in</th></tr>
+    </thead>
+    <tbody>
+      {% for row in log_rows %}
+        <tr>
+          <td>{{ row.date|date:"M d, Y" }}</td>
+          <td>{{ row.session.subject }}</td>
+          <td>{{ row.id_number }}</td>
+          <td>{{ row.name }}</td>
+          <td><span class="status-pill pill-{% if row.status == 'present' %}resolved{% else %}open{% endif %}">{{ row.status|capfirst }}</span></td>
+          <td>{{ row.pc }}</td>
+          <td>{{ row.time|time:"H:i"|default:"-" }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7"><p class="empty">No attendance records match these filters.</p></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p style="font-size:12px; color:#8b98a3; margin-top:10px;">
+    Attendance is derived from lab PC unlock activity during each session's scheduled time. Attach a class roster to a session for exact absentee names instead of an estimated count.
+  </p>
+</div>
+
+{% endblock %}

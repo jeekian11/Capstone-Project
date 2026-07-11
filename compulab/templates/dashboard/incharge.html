@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block title %}Lab In-charge{% endblock %}
+
+{% block content %}
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#0a0e12; --surface:#12171d; --surface-raised:#171d24;
+  --border:#232b34; --border-soft:#232b3480;
+  --text:#e7ebee; --text-dim:#8b98a3; --text-faint:#4d5761;
+  --green:#3ed6c4; --green-dim:#3ed6c422;
+  --red:#ff5d5d; --red-dim:#ff5d5d22;
+  --amber:#f2a93b; --amber-dim:#f2a93b22;
+  --blue:#5b9dff; --blue-dim:#5b9dff22;
+  --font-display:'Space Grotesk',sans-serif;
+  --font-body:'Inter',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+}
+
+.ic-topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; flex-wrap:wrap; gap:16px;}
+.ic-brand{display:flex; align-items:center; gap:12px;}
+.ic-brand-mark{width:34px; height:34px; border-radius:8px; background:linear-gradient(135deg,var(--green),var(--blue)); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-weight:600; font-size:14px; color:#0a0e12;}
+.ic-brand-text h1{font-family:var(--font-display); font-size:19px; margin:0; font-weight:600; letter-spacing:-0.01em; color:var(--text);}
+.ic-brand-text span{font-size:12px; color:var(--text-faint); font-family:var(--font-mono);}
+
+.ic-metrics{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px;}
+.ic-metric{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px 20px; position:relative; overflow:hidden;}
+.ic-metric::before{content:''; position:absolute; top:0; left:0; width:3px; height:100%; background:var(--bar-color,var(--text-faint));}
+.ic-metric-label{font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px; font-weight:500;}
+.ic-metric-val{font-family:var(--font-display); font-size:32px; font-weight:600; letter-spacing:-0.01em; color:var(--text);}
+.ic-metric.green{--bar-color:var(--green);} .ic-metric.green .ic-metric-val{color:var(--green);}
+.ic-metric.red{--bar-color:var(--red);} .ic-metric.red .ic-metric-val{color:var(--red);}
+.ic-metric.amber{--bar-color:var(--amber);} .ic-metric.amber .ic-metric-val{color:var(--amber);}
+.ic-metric.blue{--bar-color:var(--blue);}
+
+.ic-panel{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:24px;}
+.ic-section-title{font-family:var(--font-display); font-size:14px; font-weight:600; color:var(--text); margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;}
+.ic-legend{display:flex; gap:16px; margin-bottom:16px;}
+.ic-legend-item{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-dim); font-family:var(--font-mono);}
+.ic-legend-dot{width:8px; height:8px; border-radius:50%; display:inline-block;}
+.dot-green{background:var(--green);} .dot-dim{background:var(--text-faint);} .dot-red{background:var(--red);}
+
+.ic-pc-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(56px,1fr)); gap:8px;}
+.ic-pc-node{position:relative; aspect-ratio:1; border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-family:var(--font-mono); font-size:10px; font-weight:500; border:1px solid var(--border); background:var(--surface-raised); color:var(--text-dim);}
+.ic-pc-node.online{background:var(--green-dim); border-color:#3ed6c440; color:var(--green);}
+.ic-pc-node.offline{opacity:.55;}
+.ic-pc-node.issue{background:var(--red-dim); border-color:#ff5d5d40; color:var(--red);}
+.ic-pc-node.in_use{background:var(--amber-dim); border-color:#f2a93b40; color:var(--amber);}
+
+.ic-two-col{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+
+.ic-alert-item{display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-bottom:1px solid var(--border-soft);}
+.ic-alert-item:last-child{border-bottom:none; padding-bottom:0;}
+.ic-alert-title{font-size:13.5px; font-weight:500; color:var(--text); margin-bottom:2px;}
+.ic-alert-sub{font-size:12.5px; color:var(--text-dim); line-height:1.4;}
+.ic-priority{display:inline-block; padding:2px 8px; border-radius:10px; font-size:10.5px; font-weight:500; margin-left:8px;}
+.ic-priority.high{background:var(--red-dim); color:var(--red);}
+.ic-priority.medium{background:var(--amber-dim); color:var(--amber);}
+.ic-priority.low{background:var(--green-dim); color:var(--green);}
+.ic-action{font-size:12px; color:var(--blue); text-decoration:none; font-weight:500;}
+
+.ic-schedule-row{display:flex; gap:14px; padding:12px 0; border-bottom:1px solid var(--border-soft); align-items:center;}
+.ic-schedule-row:last-child{border-bottom:none; padding-bottom:0;}
+.ic-schedule-time{font-family:var(--font-mono); font-size:12px; color:var(--text-dim); width:80px; flex-shrink:0;}
+.ic-schedule-block{flex:1; padding:10px 14px; background:var(--surface-raised); border-radius:8px; border-left:3px solid var(--blue);}
+.ic-s-title{font-size:13.5px; font-weight:500; color:var(--text);}
+.ic-s-sub{font-size:12px; color:var(--text-dim); margin-top:2px;}
+.ic-empty{color:var(--text-faint); font-size:13px; text-align:center; padding:24px 0;}
+
+@media (max-width:860px){
+  .ic-metrics{grid-template-columns:repeat(2,1fr);}
+  .ic-two-col{grid-template-columns:1fr;}
+}
+</style>
+
+<div class="ic-topbar">
+  <div class="ic-brand">
+    <div class="ic-brand-mark">L</div>
+    <div class="ic-brand-text">
+      <h1>{{ lab.name|default:"No lab assigned" }}</h1>
+      <span>{{ lab.location|default:"Lab In-charge Dashboard" }}</span>
+    </div>
+  </div>
+</div>
+
+{% if not lab %}
+  <div class="ic-panel">
+    <p class="ic-empty">You don't have a lab assigned yet. Contact an admin to get set up.</p>
+  </div>
+{% else %}
+
+  <div class="ic-metrics">
+    <div class="ic-metric green">
+      <div class="ic-metric-label">PCs online</div>
+      <div class="ic-metric-val">{{ online_count }}</div>
+    </div>
+    <div class="ic-metric">
+      <div class="ic-metric-label">PCs offline</div>
+      <div class="ic-metric-val">{{ offline_count }}</div>
+    </div>
+    <div class="ic-metric red">
+      <div class="ic-metric-label">Open issues</div>
+      <div class="ic-metric-val">{{ open_issues_count }}</div>
+    </div>
+    <div class="ic-metric amber">
+      <div class="ic-metric-label">Today's sessions</div>
+      <div class="ic-metric-val">{{ todays_sessions_count }}</div>
+    </div>
+  </div>
+
+  <div class="ic-panel">
+    <div class="ic-section-title">
+      PC power status
+      <a href="{% url 'lab_equipment' %}" class="ic-action">Monitor equipment →</a>
+    </div>
+    <div class="ic-legend">
+      <div class="ic-legend-item"><span class="ic-legend-dot dot-green"></span>Online</div>
+      <div class="ic-legend-item"><span class="ic-legend-dot dot-dim"></span>Offline</div>
+      <div class="ic-legend-item"><span class="ic-legend-dot dot-red"></span>Needs attention</div>
+    </div>
+    <div class="ic-pc-grid">
+      {% for pc in pcs %}
+        <div class="ic-pc-node {{ pc.status }}" title="{{ pc.pc_id }} · {{ pc.get_status_display }}">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2.5" y="4" width="19" height="12" rx="1.5" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M9 20h6M12 16v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <span>{{ pc.pc_id }}</span>
+        </div>
+      {% empty %}
+        <p class="ic-empty">No PCs registered for this lab yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="ic-two-col">
+    <div class="ic-panel">
+      <div class="ic-section-title">
+        Open issues
+        <a href="{% url 'issues' %}" class="ic-action">View all →</a>
+      </div>
+      {% for issue in open_issues %}
+        <div class="ic-alert-item">
+          <div style="flex:1">
+            <div class="ic-alert-title">
+              {{ issue.title }}
+              <span class="ic-priority {{ issue.priority }}">{{ issue.get_priority_display }}</span>
+            </div>
+            <div class="ic-alert-sub">{{ issue.pc.pc_id|default:"General" }} · reported {{ issue.created_at|timesince }} ago</div>
+          </div>
+          <a href="{% url 'issue_detail' issue.pk %}" class="ic-action">Take action</a>
+        </div>
+      {% empty %}
+        <p class="ic-empty">No open issues. Everything's running smoothly.</p>
+      {% endfor %}
+    </div>
+
+    <div class="ic-panel">
+      <div class="ic-section-title">Today's lab schedule</div>
+      {% for session in todays_sessions %}
+        <div class="ic-schedule-row">
+          <div class="ic-schedule-time">{{ session.start_time|time:"H:i" }}–{{ session.end_time|time:"H:i" }}</div>
+          <div class="ic-schedule-block">
+            <div class="ic-s-title">{{ session.subject }}</div>
+            <div class="ic-s-sub">{{ session.requester_name }} · {{ session.student_count }} students</div>
+          </div>
+        </div>
+      {% empty %}
+        <p class="ic-empty">No sessions scheduled today.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if needs_attention_count %}
+    <div class="ic-panel">
+      <div class="ic-section-title">
+        Inventory needs attention
+        <a href="{% url 'inventory' %}" class="ic-action">View inventory →</a>
+      </div>
+      <p style="font-size:13px; color:var(--text-dim)">{{ needs_attention_count }} item{{ needs_attention_count|pluralize }} flagged as needing a check or faulty.</p>
+    </div>
+  {% endif %}
+
+{% endif %}
+
+{% endblock %}

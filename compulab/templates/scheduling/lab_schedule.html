@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Lab Schedule{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Lab schedule</h1>
+    <div class="sub">{{ lab.name|default:"No lab assigned" }}</div>
+  </div>
+  <a href="{% url 'analytics' %}" class="action-btn">View reports →</a>
+</div>
+
+<div class="card">
+  {% if lab %}
+    <table class="table">
+      <thead>
+        <tr><th>Date</th><th>Time</th><th>Subject</th><th>Instructor</th><th>Students</th></tr>
+      </thead>
+      <tbody>
+        {% for session in sessions %}
+          <tr>
+            <td>{{ session.date|date:"M d, Y" }}</td>
+            <td>{{ session.start_time|time:"H:i" }}–{{ session.end_time|time:"H:i" }}</td>
+            <td>{{ session.subject }}</td>
+            <td>{{ session.requester_name }}</td>
+            <td>{{ session.student_count }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5"><p class="empty">No sessions scheduled for this lab.</p></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">You don't have a lab assigned yet. Contact an admin.</p>
+  {% endif %}
+</div>
+
+{% endblock %}

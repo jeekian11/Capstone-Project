@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}View Schedule{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>View schedule</h1>
+    <div class="sub">All approved sessions — filter by lab and/or date if needed</div>
+  </div>
+  <a href="{% url 'schedule' %}" class="action-btn">← Back to schedule &amp; requests</a>
+</div>
+
+<div class="card">
+  <form method="get" class="form-row" style="grid-template-columns: 1fr 1fr auto auto; align-items:end; gap:14px;">
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label" for="lab">Lab</label>
+      <select name="lab" id="lab" class="form-control">
+        <option value="">All labs</option>
+        {% for lab in labs %}
+          <option value="{{ lab.pk }}" {% if selected_lab == lab.pk|stringformat:"s" %}selected{% endif %}>{{ lab.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label" for="date">Date</label>
+      <input type="date" name="date" id="date" class="form-control" value="{{ selected_date }}">
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <button type="submit" class="action-btn primary">Filter</button>
+    </div>
+    {% if filtered %}
+      <div class="form-group" style="margin-bottom:0">
+        <a href="{% url 'view_schedule' %}" class="action-btn">Clear filter</a>
+      </div>
+    {% endif %}
+  </form>
+</div>
+
+<div class="card">
+  {% if schedule_found %}
+    <div class="page-header" style="margin-bottom:14px">
+      <div class="section-title" style="margin-bottom:0">
+        {% if filtered %}Filtered schedule{% else %}All approved sessions{% endif %}
+      </div>
+      <div style="display:flex; gap:8px">
+        <a href="{% url 'view_schedule_export_pdf' %}?lab={{ selected_lab }}&date={{ selected_date }}" class="action-btn">Export PDF</a>
+        <a href="{% url 'view_schedule_export_excel' %}?lab={{ selected_lab }}&date={{ selected_date }}" class="action-btn">Export Excel</a>
+      </div>
+    </div>
+    <table class="table">
+      <thead>
+        <tr><th>Date</th><th>Time</th><th>Lab</th><th>Class / subject</th><th>Requester</th><th>Code</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for session in sessions %}
+          <tr>
+            <td>{{ session.date|date:"M d, Y" }}</td>
+            <td>{{ session.start_time|time:"H:i" }}–{{ session.end_time|time:"H:i" }}</td>
+            <td>{{ session.lab.name }}</td>
+            <td>{{ session.subject }}</td>
+            <td>{{ session.requester_name }} <span class="status-pill">{{ session.get_requester_type_display }}</span></td>
+            <td><code>{{ session.reservation_code }}</code></td>
+            <td style="white-space:nowrap">
+              <a href="{% url 'session_edit' session.pk %}" class="action-btn small">Edit</a>
+              <form method="post" action="{% url 'session_delete' session.pk %}" style="display:inline"
+                    onsubmit="return confirm('Remove this session from the schedule?');">
+                {% csrf_token %}
+                <button type="submit" class="action-btn small danger">Delete</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">
+      {% if filtered %}No schedule found for this filter. Try a different lab or date.{% else %}No approved sessions yet.{% endif %}
+    </p>
+  {% endif %}
+</div>
+
+{% endblock %}

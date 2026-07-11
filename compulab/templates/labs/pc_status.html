@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}PC Power Status{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>PC power status</h1>
+    <div class="sub">
+      {{ pcs|length }} units across {{ all_labs|length }} lab{{ all_labs|length|pluralize }}
+      &middot; auto-checks every {{ auto_check_interval_seconds }}s
+    </div>
+  </div>
+  <form method="post" action="{% url 'pc_status_refresh' %}">
+    {% csrf_token %}
+    <button type="submit" class="action-btn primary">Check now</button>
+  </form>
+</div>
+
+<div class="metrics">
+  <div class="metric green">
+    <div class="metric-label">Online</div>
+    <div class="metric-val">{{ online_count }}</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Offline</div>
+    <div class="metric-val">{{ offline_count }}</div>
+  </div>
+  <div class="metric amber">
+    <div class="metric-label">In use</div>
+    <div class="metric-val">{{ in_use_count }}</div>
+  </div>
+  <div class="metric red">
+    <div class="metric-label">Has issue</div>
+    <div class="metric-val">{{ issue_count }}</div>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" class="form-row" style="grid-template-columns: 1fr 1fr 1.4fr auto auto; align-items:end; gap:14px;">
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label" for="lab">Lab</label>
+      <select name="lab" id="lab" class="form-control">
+        <option value="">All labs</option>
+        {% for lab in all_labs %}
+          <option value="{{ lab.pk }}" {% if selected_lab == lab.pk|stringformat:"s" %}selected{% endif %}>{{ lab.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label" for="day">Day</label>
+      <input type="date" name="day" id="day" class="form-control" value="{{ selected_day }}">
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label" for="q">Search</label>
+      <input type="text" name="q" id="q" class="form-control" placeholder="PC ID or user name" value="{{ search_query }}">
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <button type="submit" class="action-btn primary">Filter</button>
+    </div>
+    {% if filtered %}
+      <div class="form-group" style="margin-bottom:0">
+        <a href="{% url 'pc_status' %}" class="action-btn">Clear</a>
+      </div>
+    {% endif %}
+  </form>
+  <p style="font-size:12px; color:#8b98a3; margin:10px 0 0;">
+    {% if day_mode %}
+      Day shows every PC that was actually checked in to (unlocked) on that date, from the login history.
+    {% else %}
+      Leave Day blank to see each PC's live status. Set it to look up which PCs were used on a specific date.
+    {% endif %}
+  </p>
+</div>
+
+{% if day_mode %}
+  {% for entry in labs_usage %}
+    <div class="card">
+      <div class="section-title">{{ entry.lab.name }}<span class="count">{{ entry.logs|length }} check-in{{ entry.logs|length|pluralize }}</span></div>
+      <table class="table">
+        <thead>
+          <tr><th>PC ID</th><th>Used by</th><th>ID number</th><th>Time</th></tr>
+        </thead>
+        <tbody>
+          {% for log in entry.logs %}
+            <tr>
+              <td>{{ log.pc.pc_id }}</td>
+              <td>{{ log.actor.get_full_name|default:log.actor.username|default:"—" }}</td>
+              <td>{{ log.target_username }}</td>
+              <td>{{ log.created_at|date:"M d, Y H:i" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% empty %}
+    <div class="card"><p class="empty">No PCs were used on {{ selected_day }}{% if selected_lab %} for this lab{% endif %}.</p></div>
+  {% endfor %}
+{% else %}
+  {% for lab in labs %}
+    {% if lab.filtered_pcs %}
+      <div class="card">
+        <div class="section-title">{{ lab.name }}<span class="count">{{ lab.filtered_pcs|length }} PC{{ lab.filtered_pcs|length|pluralize }}</span></div>
+        <table class="table">
+          <thead>
+            <tr><th>PC ID</th><th>IP address</th><th>Status</th><th>Used by</th><th>Last active</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for pc in lab.filtered_pcs %}
+              <tr>
+                <td>{{ pc.pc_id }}</td>
+                <td>{{ pc.ip_address|default:"—" }}</td>
+                <td><span class="status-pill pill-{{ pc.status }}">{{ pc.get_status_display }}</span></td>
+                <td>{% if pc.current_user %}{{ pc.current_user.get_full_name|default:pc.current_user.username }}{% else %}—{% endif %}</td>
+                <td>{{ pc.last_active|timesince|default:"—" }}{% if pc.last_active %} ago{% endif %}</td>
+                <td><a href="{% url 'pc_update' pc.pk %}" class="action-btn small">Update</a></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% elif not filtered %}
+      <div class="card">
+        <div class="section-title">{{ lab.name }}<span class="count">0 PCs</span></div>
+        <p class="empty">No PCs registered.</p>
+      </div>
+    {% endif %}
+  {% empty %}
+    <div class="card"><p class="empty">No labs set up yet.</p></div>
+  {% endfor %}
+
+  {% if filtered and total_filtered == 0 %}
+    <div class="card"><p class="empty">No PCs match this filter.</p></div>
+  {% endif %}
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,128 @@
+{% extends "auth_base.html" %}
+
+{% block title %}Unlock this computer{% endblock %}
+
+{% block content %}
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#080b0f; --card:#12171d; --card-border:#232b34;
+    --text:#e7ebee; --text-dim:#8b98a3; --text-faint:#4d5761;
+    --teal:#3ed6c4; --blue:#5b9dff; --red:#ff5d5d; --amber:#f2a93b;
+    --font-display:'Space Grotesk',sans-serif;
+    --font-body:'Inter',sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
+  }
+
+  .pl-wrap{
+    min-height:100vh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(62,214,196,0.10), transparent 45%),
+      radial-gradient(circle at 80% 80%, rgba(91,157,255,0.10), transparent 45%),
+      var(--bg);
+    font-family:var(--font-body);
+    padding:24px;
+  }
+
+  .pl-lock-icon{
+    width:52px; height:52px; border-radius:14px;
+    background:linear-gradient(135deg,var(--teal),var(--blue));
+    display:flex; align-items:center; justify-content:center;
+    margin-bottom:22px;
+  }
+
+  .pl-pc-tag{
+    font-family:var(--font-mono); font-size:12px; letter-spacing:0.04em;
+    color:var(--text-faint); margin-bottom:8px; text-align:center;
+  }
+  .pl-pc-tag b{ color:var(--teal); }
+
+  .pl-card{ width:100%; max-width:360px; text-align:center; }
+  .pl-card h2{ font-family:var(--font-display); font-size:22px; font-weight:600; color:var(--text); margin:0 0 6px; }
+  .pl-card p.lead{ font-size:13px; color:var(--text-dim); margin:0 0 26px; line-height:1.5; }
+
+  .pl-error{
+    background:rgba(255,93,93,0.10); border:1px solid rgba(255,93,93,0.3); color:#ff8080;
+    font-size:12.5px; padding:10px 14px; border-radius:8px; margin-bottom:18px; text-align:left;
+  }
+  .pl-warn{
+    background:rgba(242,169,59,0.10); border:1px solid rgba(242,169,59,0.3); color:var(--amber);
+    font-size:12.5px; padding:10px 14px; border-radius:8px; margin-bottom:18px; text-align:left;
+  }
+  .pl-success{
+    background:rgba(62,214,196,0.10); border:1px solid rgba(62,214,196,0.3); color:var(--teal);
+    font-size:12.5px; padding:10px 14px; border-radius:8px; margin-bottom:18px; text-align:left;
+  }
+
+  .pl-card label{ display:block; font-size:12px; font-weight:500; color:var(--text-dim); margin:16px 0 6px; text-align:left; }
+  .pl-card label:first-of-type{ margin-top:0; }
+  .pl-card input{
+    width:100%; padding:11px 14px; background:var(--card); border:1px solid var(--card-border);
+    border-radius:8px; color:var(--text); font-size:13.5px; font-family:var(--font-body);
+  }
+  .pl-card input::placeholder{ color:var(--text-faint); }
+  .pl-card input:focus{ outline:none; border-color:var(--teal); background:#161c23; }
+
+  .pl-card button[type="submit"]{
+    width:100%; margin-top:26px; padding:12px 14px; border:none; border-radius:8px;
+    background:linear-gradient(135deg,var(--teal),var(--blue)); color:#080b0f;
+    font-family:var(--font-body); font-size:14px; font-weight:600; cursor:pointer;
+  }
+  .pl-card button[type="submit"]:hover{ opacity:0.9; }
+
+  .pl-foot{ margin-top:22px; font-size:11px; color:var(--text-faint); font-family:var(--font-mono); }
+</style>
+
+<div class="pl-wrap">
+
+  <div class="pl-lock-icon">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <rect x="5" y="10.5" width="14" height="9" rx="1.8" stroke="#080b0f" stroke-width="1.8"/>
+      <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="#080b0f" stroke-width="1.8"/>
+    </svg>
+  </div>
+
+  <div class="pl-pc-tag">
+    {% if pc %}
+      <b>{{ pc.pc_id }}</b> — {{ pc.lab.name }}
+    {% else %}
+      This computer is not yet registered with CompuLab
+    {% endif %}
+  </div>
+
+  <div class="pl-card">
+    <h2>This computer is locked</h2>
+    <p class="lead">Enter your Student/Instructor ID and the reservation code given to you by the Admin or Lab In-Charge.</p>
+
+    {% if messages %}
+      {% for message in messages %}
+        <div class="pl-{% if message.tags == 'success' %}success{% elif message.tags == 'warning' %}warn{% else %}error{% endif %}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+
+    {% if form.non_field_errors %}
+      <div class="pl-error">{{ form.non_field_errors.0 }}</div>
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+
+      <label for="id_id_number">Student ID / Instructor ID</label>
+      <input type="text" name="id_number" id="id_id_number" placeholder="Enter your ID number" required autofocus>
+
+      <label for="id_reservation_code">Reservation code</label>
+      <input type="text" name="reservation_code" id="id_reservation_code" placeholder="Enter your reservation code" required style="text-transform:uppercase; letter-spacing:0.08em;">
+
+      <button type="submit">Unlock</button>
+    </form>
+
+    <div class="pl-foot">No reservation code? Ask the Admin or your Lab In-Charge to log your request.</div>
+  </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Edit Reservation Request{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Edit reservation request</h1>
+    <div class="sub">Fix any mistakes before approving or rejecting</div>
+  </div>
+  <a href="{% url 'request_detail' req.pk %}" class="action-btn">← Back to request</a>
+</div>
+
+<div class="card" style="max-width:640px">
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.requester_type.id_for_label }}">Requester type</label>
+        {{ form.requester_type }}
+        {% if form.requester_type.errors %}<div class="form-errors">{{ form.requester_type.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.requester_id_number.id_for_label }}">Student / instructor ID</label>
+        {{ form.requester_id_number }}
+        {% if form.requester_id_number.errors %}<div class="form-errors">{{ form.requester_id_number.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.requester_name.id_for_label }}">Requester name</label>
+      {{ form.requester_name }}
+      {% if form.requester_name.errors %}<div class="form-errors">{{ form.requester_name.errors|join:", " }}</div>{% endif %}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.lab.id_for_label }}">Lab</label>
+      {{ form.lab }}
+      {% if form.lab.errors %}<div class="form-errors">{{ form.lab.errors|join:", " }}</div>{% endif %}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.subject.id_for_label }}">Subject</label>
+      {{ form.subject }}
+      {% if form.subject.errors %}<div class="form-errors">{{ form.subject.errors|join:", " }}</div>{% endif %}
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.date.id_for_label }}">Date</label>
+        {{ form.date }}
+        {% if form.date.errors %}<div class="form-errors">{{ form.date.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.student_count.id_for_label }}">Number of students</label>
+        {{ form.student_count }}
+        {% if form.student_count.errors %}<div class="form-errors">{{ form.student_count.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.start_time.id_for_label }}">Start time</label>
+        {{ form.start_time }}
+        {% if form.start_time.errors %}<div class="form-errors">{{ form.start_time.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.end_time.id_for_label }}">End time</label>
+        {{ form.end_time }}
+        {% if form.end_time.errors %}<div class="form-errors">{{ form.end_time.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.notes.id_for_label }}">Notes (optional)</label>
+      {{ form.notes }}
+      {% if form.notes.errors %}<div class="form-errors">{{ form.notes.errors|join:", " }}</div>{% endif %}
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="action-btn primary">Save changes</button>
+      <a href="{% url 'request_detail' req.pk %}" class="action-btn">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

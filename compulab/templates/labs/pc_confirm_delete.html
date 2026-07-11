@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Remove PC{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Remove PC</h1>
+    <div class="sub">This action cannot be undone</div>
+  </div>
+</div>
+
+<div class="card" style="max-width:480px">
+  <p style="font-size:13px; margin-bottom:20px; line-height:1.6;">
+    Are you sure you want to remove <strong>{{ pc.pc_id }}</strong> from <strong>{{ pc.lab.name }}</strong>?
+    Any issue reports linked to it will keep their history, but the PC record itself will be gone.
+  </p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-actions">
+      <button type="submit" class="action-btn danger">Yes, remove PC</button>
+      <a href="{% url 'lab_list' %}" class="action-btn">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>User &amp; role management</h1>
+    <div class="sub">{{ users|length }} accounts</div>
+  </div>
+  <a href="{% url 'user_create' %}" class="action-btn primary">+ Add user</a>
+  <a href="{% url 'log_history' %}" class="action-btn" style="margin-left:8px">View log history</a>
+</div>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Username</th>
+        <th>ID Number</th>
+        <th>Email</th>
+        <th>Role</th>
+        <th>Assigned lab</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+        <tr>
+          <td>{{ u.get_full_name|default:u.username }}</td>
+          <td>{{ u.username }}</td>
+          <td>{{ u.id_number|default:"—" }}</td>
+          <td>{{ u.email|default:"—" }}</td>
+          <td><span class="status-pill pill-{{ u.role }}">{{ u.get_role_display }}</span></td>
+          <td>{{ u.assigned_lab.name|default:"—" }}</td>
+          <td>
+            {% if u.is_active %}
+              <span class="status-pill pill-online">Active</span>
+            {% else %}
+              <span class="status-pill pill-offline">Disabled</span>
+            {% endif %}
+          </td>
+          <td style="white-space:nowrap; display:flex; gap:6px;">
+            <a href="{% url 'user_update' u.pk %}" class="action-btn small">Edit</a>
+            {% if u.is_active %}
+              <form method="post" action="{% url 'user_deactivate' u.pk %}" style="display:inline">
+                {% csrf_token %}
+                <button type="submit" class="action-btn small">Deactivate</button>
+              </form>
+            {% else %}
+              <form method="post" action="{% url 'user_activate' u.pk %}" style="display:inline">
+                {% csrf_token %}
+                <button type="submit" class="action-btn small primary">Activate</button>
+              </form>
+            {% endif %}
+            <a href="{% url 'user_reset_password' u.pk %}" class="action-btn small">Reset password</a>
+            <a href="{% url 'user_delete' u.pk %}" class="action-btn small danger">Delete</a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7"><p class="empty">No users yet.</p></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}
