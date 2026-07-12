@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#0a0e12;
+  --surface:#12171d;
+  --surface-raised:#171d24;
+  --border:#232b34;
+  --border-soft:#232b3480;
+  --text:#e7ebee;
+  --text-dim:#8b98a3;
+  --text-faint:#4d5761;
+  --green:#3ed6c4;
+  --green-dim:#3ed6c422;
+  --red:#ff5d5d;
+  --red-dim:#ff5d5d22;
+  --amber:#f2a93b;
+  --amber-dim:#f2a93b22;
+  --blue:#5b9dff;
+  --blue-dim:#5b9dff22;
+  --font-display:'Space Grotesk',sans-serif;
+  --font-body:'Inter',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+}
+
+/* content wrapper needs to size correctly inside base.html's .content scroll area */
+.dash-wrap{ min-height:0; }
+
+.topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; flex-wrap:wrap; gap:16px;}
+.brand{display:flex; align-items:center; gap:12px;}
+.brand-mark{width:34px; height:34px; border-radius:8px; background:linear-gradient(135deg,var(--green),var(--blue)); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-weight:600; font-size:14px; color:#0a0e12;}
+.brand-text h1{font-family:var(--font-display); font-size:19px; margin:0; font-weight:600; letter-spacing:-0.01em; color:var(--text);}
+.brand-text span{font-size:12px; color:var(--text-faint); font-family:var(--font-mono);}
+.topbar-right{display:flex; align-items:center; gap:18px;}
+.live-pill{display:flex; align-items:center; gap:7px; font-family:var(--font-mono); font-size:12px; color:var(--text-dim); background:var(--surface); border:1px solid var(--border); padding:6px 12px 6px 10px; border-radius:20px;}
+.live-dot{width:7px; height:7px; border-radius:50%; background:var(--green); animation:pulse 2s infinite;}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(62,214,196,.5);} 70%{box-shadow:0 0 0 7px rgba(62,214,196,0);} 100%{box-shadow:0 0 0 0 rgba(62,214,196,0);}}
+.lab-select{font-family:var(--font-body); font-size:13px; color:var(--text); background:var(--surface); border:1px solid var(--border); padding:8px 14px; border-radius:8px; cursor:pointer;}
+
+.metrics{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:32px;}
+.metric{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px 20px; position:relative; overflow:hidden;}
+.metric::before{content:''; position:absolute; top:0; left:0; width:3px; height:100%; background:var(--bar-color,var(--text-faint));}
+.metric-label{font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px; font-weight:500;}
+.metric-val{font-family:var(--font-display); font-size:32px; font-weight:600; letter-spacing:-0.01em; color:var(--text); display:flex; align-items:baseline; gap:8px;}
+.metric-val .trend{font-family:var(--font-mono); font-size:12px; font-weight:500; color:var(--text-faint);}
+.metric.green{--bar-color:var(--green);} .metric.green .metric-val{color:var(--green);}
+.metric.red{--bar-color:var(--red);} .metric.red .metric-val{color:var(--red);}
+.metric.amber{--bar-color:var(--amber);} .metric.amber .metric-val{color:var(--amber);}
+.metric.neutral{--bar-color:var(--blue);}
+
+.section-title{font-family:var(--font-display); font-size:14px; font-weight:600; color:var(--text); margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;}
+.section-title .count{font-family:var(--font-mono); font-size:11px; color:var(--text-faint); font-weight:400; background:var(--surface-raised); padding:2px 8px; border-radius:10px; border:1px solid var(--border);}
+.section-title a{font-size:12px; color:var(--blue); text-decoration:none; font-weight:500; font-family:var(--font-body);}
+.section-title a:hover{text-decoration:underline;}
+
+.pc-panel{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:24px;}
+.pc-legend{display:flex; gap:16px; margin-bottom:16px;}
+.legend-item{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-dim); font-family:var(--font-mono);}
+.legend-dot{width:8px; height:8px; border-radius:50%; display:inline-block;}
+.dot-green{background:var(--green);} .dot-dim{background:var(--text-faint);} .dot-red{background:var(--red);}
+
+.pc-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(56px,1fr)); gap:8px;}
+.pc-node{position:relative; aspect-ratio:1; border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-family:var(--font-mono); font-size:10px; font-weight:500; border:1px solid var(--border); background:var(--surface-raised); color:var(--text-dim); transition:transform .12s ease, border-color .12s ease;}
+.pc-node:hover{transform:translateY(-2px); border-color:var(--text-faint); z-index:2;}
+.pc-icon{width:20px; height:20px; flex-shrink:0;}
+.pc-label{line-height:1;}
+.pc-node.online{background:var(--green-dim); border-color:#3ed6c440; color:var(--green);}
+.pc-node.online::after{content:''; position:absolute; top:4px; right:4px; width:5px; height:5px; border-radius:50%; background:var(--green); animation:nodepulse 2.4s infinite;}
+.pc-node.offline{background:transparent; color:var(--text-faint); opacity:.55;}
+.pc-node.issue{background:var(--red-dim); border-color:#ff5d5d40; color:var(--red);}
+@keyframes nodepulse{0%{box-shadow:0 0 0 0 rgba(62,214,196,.5);} 70%{box-shadow:0 0 0 5px rgba(62,214,196,0);} 100%{box-shadow:0 0 0 0 rgba(62,214,196,0);}}
+
+.two-col{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+.card{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px;}
+
+.alert-item{display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-bottom:1px solid var(--border-soft);}
+.alert-item:last-child{border-bottom:none; padding-bottom:0;}
+.alert-item:first-child{padding-top:0;}
+.alert-icon{width:26px; height:26px; border-radius:7px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; font-family:var(--font-mono);}
+.alert-icon.critical{background:var(--red-dim); color:var(--red);}
+.alert-icon.warning{background:var(--amber-dim); color:var(--amber);}
+.alert-icon.info{background:var(--blue-dim); color:var(--blue);}
+.alert-title{font-size:13.5px; font-weight:500; color:var(--text); margin-bottom:2px;}
+.alert-sub{font-size:12.5px; color:var(--text-dim); line-height:1.4;}
+.alert-time{margin-left:auto; font-size:11px; color:var(--text-faint); font-family:var(--font-mono); white-space:nowrap; padding-top:2px;}
+.empty{color:var(--text-faint); font-size:13px; text-align:center; padding:24px 0; grid-column:1/-1;}
+
+.schedule-row{display:flex; gap:14px; padding:12px 0; border-bottom:1px solid var(--border-soft); align-items:center;}
+.schedule-row:last-child{border-bottom:none; padding-bottom:0;}
+.schedule-row:first-child{padding-top:0;}
+.schedule-time{font-family:var(--font-mono); font-size:12px; color:var(--text-dim); width:92px; flex-shrink:0;}
+.schedule-block{flex:1; padding:10px 14px; background:var(--surface-raised); border-radius:8px; border-left:3px solid var(--blue);}
+.schedule-block.now{border-left-color:var(--green);}
+.schedule-block.free{border-left-color:var(--border); background:transparent;}
+.s-title{font-size:13.5px; font-weight:500; color:var(--text);}
+.s-sub{font-size:12px; color:var(--text-dim); margin-top:2px;}
+.now-badge{font-family:var(--font-mono); font-size:9.5px; color:var(--green); background:var(--green-dim); padding:2px 6px; border-radius:4px; margin-left:8px; vertical-align:middle;}
+
+@media (max-width:860px){
+  .metrics{grid-template-columns:repeat(2,1fr);}
+  .two-col{grid-template-columns:1fr;}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .live-dot, .pc-node.online::after{animation:none;}
+}
+</style>
+
+<div class="dash-wrap">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">L</div>
+      <div class="brand-text">
+        <h1>Lab Console</h1>
+        <span>Computer Lab Monitoring</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      {% if labs %}
+        <select class="lab-select" onchange="location.href=this.value">
+          {% for lab in labs %}
+            <option value="?lab={{ lab.id }}" {% if lab.id == current_lab.id %}selected{% endif %}>
+              {{ lab.name }} — {{ lab.pc_count }} PCs
+            </option>
+          {% endfor %}
+        </select>
+      {% endif %}
+      <div class="live-pill"><span class="live-dot"></span>Live · updated <span id="lastUpdated">just now</span></div>
+    </div>
+  </div>
+
+  <!-- metric cards -->
+  <div class="metrics">
+    <div class="metric green">
+      <div class="metric-label">PCs online</div>
+      <div class="metric-val">{{ online_count }} <span class="trend">/ {{ online_count|add:offline_count }}</span></div>
+    </div>
+    <div class="metric neutral">
+      <div class="metric-label">PCs offline</div>
+      <div class="metric-val">{{ offline_count }}</div>
+    </div>
+    <div class="metric red">
+      <div class="metric-label">Issues open</div>
+      <div class="metric-val">{{ open_issues_count }}</div>
+    </div>
+    <div class="metric amber">
+      <div class="metric-label">Today's sessions</div>
+      <div class="metric-val">{{ todays_sessions_count }}</div>
+    </div>
+  </div>
+
+  <!-- PC grid -->
+  <div class="pc-panel">
+    <div class="section-title">
+      PC power status — {{ current_lab.name|default:"Lab A" }}
+      <span class="count">{{ pcs|length }} units</span>
+    </div>
+    <div class="pc-legend">
+      <div class="legend-item"><span class="legend-dot dot-green"></span>Online</div>
+      <div class="legend-item"><span class="legend-dot dot-dim"></span>Offline</div>
+      <div class="legend-item"><span class="legend-dot dot-red"></span>Needs attention</div>
+    </div>
+    <div class="pc-grid">
+      {% for pc in pcs %}
+        <div class="pc-node {{ pc.status }}" title="{{ pc.pc_id }} · {{ pc.get_status_display }}">
+          <svg class="pc-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2.5" y="4" width="19" height="12" rx="1.5" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M9 20h6M12 16v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <span class="pc-label">{{ pc.pc_id }}</span>
+        </div>
+      {% empty %}
+        <p class="empty">No PCs registered for this lab yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="two-col">
+
+    <!-- recent alerts -->
+    <div class="card">
+      <div class="section-title">
+        Recent alerts
+        {% if recent_alerts %}<a href="{% url 'alerts' %}">View all</a>{% endif %}
+      </div>
+      {% for alert in recent_alerts %}
+        <div class="alert-item">
+          <div class="alert-icon {{ alert.level }}">!</div>
+          <div style="flex:1">
+            <div class="alert-title">{{ alert.title }}</div>
+            <div class="alert-sub">{{ alert.description }}</div>
+          </div>
+          <div class="alert-time">{{ alert.created_at|timesince }} ago</div>
+        </div>
+      {% empty %}
+        <p class="empty">No recent alerts. Everything's running smoothly.</p>
+      {% endfor %}
+    </div>
+
+    <!-- today's schedule -->
+    <div class="card">
+      <div class="section-title">Today's schedule</div>
+      {% for session in todays_sessions %}
+        <div class="schedule-row">
+          <div class="schedule-time">
+            {{ session.start_time|time:"H:i" }}–{{ session.end_time|time:"H:i" }}
+          </div>
+          <div class="schedule-block {% if session.is_current %}now{% endif %}">
+            <div class="s-title">
+              {{ session.subject }}
+              {% if session.is_current %}<span class="now-badge">NOW</span>{% endif %}
+            </div>
+            <div class="s-sub">{{ session.requester_name }} · {{ session.lab.name }}</div>
+          </div>
+        </div>
+      {% empty %}
+        <div class="schedule-row">
+          <div class="schedule-block free">
+            <div class="s-title">No sessions today</div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+  </div>
+
+</div>
+
+{% endblock %}

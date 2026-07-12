@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Delete Roster{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Delete roster</h1>
+    <div class="sub">This action cannot be undone</div>
+  </div>
+</div>
+
+<div class="card" style="max-width:480px">
+  <p style="font-size:13px; margin-bottom:20px; line-height:1.6;">
+    Are you sure you want to delete <strong>{{ roster.name }}</strong>?
+    {% with n=roster.students.count %}
+      {% if n %}This will also remove its {{ n }} student{{ n|pluralize }}.{% endif %}
+    {% endwith %}
+    Sessions linked to this roster will keep their attendance history but lose the name lookup.
+  </p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-actions">
+      <button type="submit" class="action-btn danger">Yes, delete roster</button>
+      <a href="{% url 'roster_list' %}" class="action-btn">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

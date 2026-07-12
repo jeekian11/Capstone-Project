@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}Edit User{% else %}Add User{% endif %}{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>{% if object %}Edit user{% else %}Add new user{% endif %}</h1>
+    <div class="sub">{% if object %}{{ object.get_full_name|default:object.username }}{% else %}Create an account for an instructor, lab in-charge, admin, or student{% endif %}</div>
+  </div>
+</div>
+
+<div class="card" style="max-width:640px">
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.first_name.id_for_label }}">First name</label>
+        {{ form.first_name }}
+        {% if form.first_name.errors %}<div class="form-errors">{{ form.first_name.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.last_name.id_for_label }}">Last name</label>
+        {{ form.last_name }}
+        {% if form.last_name.errors %}<div class="form-errors">{{ form.last_name.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+
+    {% if form.username %}
+    <div class="form-group">
+      <label class="form-label" for="{{ form.username.id_for_label }}">Username</label>
+      {{ form.username }}
+      <span class="helptext">Used to log into CompuLab (the dashboard). Not the same as ID Number below.</span>
+      {% if form.username.errors %}<div class="form-errors">{{ form.username.errors|join:", " }}</div>{% endif %}
+    </div>
+    {% endif %}
+
+    {% if form.id_number %}
+    <div class="form-group">
+      <label class="form-label" for="{{ form.id_number.id_for_label }}">ID Number</label>
+      {{ form.id_number }}
+      <span class="helptext">Student/Instructor ID — this is what they present at the lab PC and what reservation requests are matched against. Required for the account to be linked to a reservation.</span>
+      {% if form.id_number.errors %}<div class="form-errors">{{ form.id_number.errors|join:", " }}</div>{% endif %}
+    </div>
+    {% endif %}
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.email.id_for_label }}">Email</label>
+      {{ form.email }}
+      {% if form.email.errors %}<div class="form-errors">{{ form.email.errors|join:", " }}</div>{% endif %}
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.role.id_for_label }}">Role</label>
+        {{ form.role }}
+        {% if form.role.errors %}<div class="form-errors">{{ form.role.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.assigned_lab.id_for_label }}">Assigned lab</label>
+        {{ form.assigned_lab }}
+        {% if form.assigned_lab.errors %}<div class="form-errors">{{ form.assigned_lab.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+
+    {% if form.is_active %}
+    <div class="form-group">
+      <label class="form-label">
+        {{ form.is_active }} Account active
+      </label>
+    </div>
+    {% endif %}
+
+    {% if form.password1 %}
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.password1.id_for_label }}">Password</label>
+        {{ form.password1 }}
+        <span class="helptext">{{ form.password1.help_text }}</span>
+        {% if form.password1.errors %}<div class="form-errors">{{ form.password1.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.password2.id_for_label }}">Confirm password</label>
+        {{ form.password2 }}
+        {% if form.password2.errors %}<div class="form-errors">{{ form.password2.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="form-actions">
+      <button type="submit" class="action-btn primary">{% if object %}Save changes{% else %}Create user{% endif %}</button>
+      <a href="{% url 'users' %}" class="action-btn">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Instructor Usage Report{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Instructor usage report</h1>
+    <div class="sub">{{ date_from }} to {{ date_to }}</div>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <a href="{% url 'report_instructor_usage_export' %}?{{ request.GET.urlencode }}&format=pdf" class="action-btn">Export as PDF</a>
+    <a href="{% url 'report_instructor_usage_export' %}?{{ request.GET.urlencode }}&format=excel" class="action-btn primary">Export as Excel</a>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" class="form-row" style="grid-template-columns: 1fr 1fr 1fr auto; align-items:end; gap:10px;">
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Instructor</label>
+      <select name="instructor" class="form-control">
+        <option value="">All instructors</option>
+        {% for i in instructors %}
+          <option value="{{ i.pk }}" {% if selected_instructor == i.pk|stringformat:"s" %}selected{% endif %}>{{ i.get_full_name|default:i.username }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">From</label>
+      <input type="date" name="date_from" class="form-control" value="{{ date_from|date:'Y-m-d' }}">
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">To</label>
+      <input type="date" name="date_to" class="form-control" value="{{ date_to|date:'Y-m-d' }}">
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <button type="submit" class="action-btn primary">Generate report</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr><th>Instructor</th><th>Laboratories Used</th><th>Total Hours</th><th>Number of Sessions</th></tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        <tr>
+          <td>{{ row.instructor.get_full_name|default:row.instructor.username }}</td>
+          <td>{{ row.labs_used|join:", " }}</td>
+          <td>{{ row.total_hours }} hrs</td>
+          <td>{{ row.num_sessions }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4"><p class="empty">No sessions in this date range.</p></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p style="font-size:12px; color:#8b98a3; margin-top:10px;">
+    Only counts sessions tied to a registered instructor account. Walk-in requests without a matching account aren't included.
+  </p>
+</div>
+
+{% endblock %}

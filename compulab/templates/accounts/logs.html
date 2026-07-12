@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Log History{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>System log history</h1>
+    <div class="sub">{{ paginator.count }} record{{ paginator.count|pluralize }}</div>
+  </div>
+  <a href="{% url 'log_export_pdf' %}?{{ request.GET.urlencode }}" class="action-btn primary">Export as PDF</a>
+</div>
+
+<div class="card">
+  <form method="get" class="form-row" style="grid-template-columns: 1fr 1fr 1fr 1fr auto; align-items:end; gap:10px;">
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Action</label>
+      <select name="action" class="form-control">
+        <option value="">All actions</option>
+        {% for value, label in action_choices %}
+          <option value="{{ value }}" {% if selected_action == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Performed by</label>
+      <select name="actor" class="form-control">
+        <option value="">All users</option>
+        {% for a in actors %}
+          <option value="{{ a.pk }}" {% if selected_actor == a.pk|stringformat:"s" %}selected{% endif %}>{{ a.get_full_name|default:a.username }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">From</label>
+      <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">To</label>
+      <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <button type="submit" class="action-btn primary">Apply filters</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr><th>Date/Time</th><th>Performed by</th><th>Action</th><th>Target</th><th>Details</th></tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+        <tr>
+          <td>{{ log.created_at|date:"M d, Y H:i" }}</td>
+          <td>{{ log.actor.get_full_name|default:log.actor.username|default:"—" }}</td>
+          <td><span class="status-pill pill-{{ log.action }}">{{ log.get_action_display }}</span></td>
+          <td>{{ log.target_username }}</td>
+          <td style="color:#666">{{ log.details }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5"><p class="empty">No log records match these filters.</p></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if is_paginated %}
+    <div class="toolbar" style="margin-top:14px">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="action-btn small">← Previous</a>
+      {% endif %}
+      <span style="font-size:12px; color:#888">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="action-btn small">Next →</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Equipment Status Report{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Equipment status report</h1>
+    <div class="sub">{{ date_from }} to {{ date_to }}</div>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <a href="{% url 'report_equipment_status_export' %}?{{ request.GET.urlencode }}&format=pdf" class="action-btn">Export as PDF</a>
+    <a href="{% url 'report_equipment_status_export' %}?{{ request.GET.urlencode }}&format=excel" class="action-btn primary">Export as Excel</a>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" class="form-row" style="grid-template-columns: 1fr 1fr 1fr auto; align-items:end; gap:10px;">
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Laboratory</label>
+      <select name="lab" class="form-control">
+        <option value="">All labs</option>
+        {% for lab in all_labs %}
+          <option value="{{ lab.pk }}" {% if selected_lab == lab.pk|stringformat:"s" %}selected{% endif %}>{{ lab.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">From</label>
+      <input type="date" name="date_from" class="form-control" value="{{ date_from|date:'Y-m-d' }}">
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">To</label>
+      <input type="date" name="date_to" class="form-control" value="{{ date_to|date:'Y-m-d' }}">
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <button type="submit" class="action-btn primary">Generate report</button>
+    </div>
+  </form>
+  <p style="font-size:12px; color:#8b98a3; margin-top:10px;">
+    Filtered by each item's "last checked" date falling within the range above.
+  </p>
+</div>
+
+<div class="ic-metrics" style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px;">
+  <div class="card" style="margin-bottom:0;"><div style="font-size:12px; color:#8b98a3;">Total items</div><div style="font-size:24px; font-weight:600;">{{ summary.total }}</div></div>
+  <div class="card" style="margin-bottom:0;"><div style="font-size:12px; color:#8b98a3;">Operational</div><div style="font-size:24px; font-weight:600;">{{ summary.operational }}</div></div>
+  <div class="card" style="margin-bottom:0;"><div style="font-size:12px; color:#8b98a3;">Under repair</div><div style="font-size:24px; font-weight:600;">{{ summary.under_repair }}</div></div>
+  <div class="card" style="margin-bottom:0;"><div style="font-size:12px; color:#8b98a3;">Retired</div><div style="font-size:24px; font-weight:600;">{{ summary.retired }}</div></div>
+</div>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr><th>Equipment</th><th>Category</th><th>Lab</th><th>Condition</th><th>Status</th><th>Qty</th><th>Last Checked</th><th>Open Issues</th></tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        <tr>
+          <td><a href="{% url 'inventory_detail' row.item.pk %}">{{ row.item.name }}</a></td>
+          <td>{{ row.item.category }}</td>
+          <td>{{ row.item.lab.name }}</td>
+          <td><span class="status-pill pill-{{ row.item.condition }}">{{ row.item.get_condition_display }}</span></td>
+          <td><span class="status-pill pill-{{ row.item.status }}">{{ row.item.get_status_display }}</span></td>
+          <td>{{ row.item.quantity }}</td>
+          <td>{{ row.item.last_checked|date:"M d, Y"|default:"—" }}</td>
+          <td>{{ row.open_issues }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="8"><p class="empty">No equipment last checked in this date range.</p></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

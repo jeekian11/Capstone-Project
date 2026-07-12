@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}{{ item.name }}{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>{{ item.name }}</h1>
+    <div class="sub">{{ item.category }} · {{ item.lab.name }}</div>
+  </div>
+  {% if request.user.role == 'admin' %}
+    <a href="{% url 'inventory_update' item.pk %}" class="action-btn primary">Edit item</a>
+  {% endif %}
+</div>
+
+<div class="two-col">
+  <div class="card">
+    <div class="section-title">Equipment information and current status</div>
+    <table class="table">
+      <tr><td>Quantity</td><td>{{ item.quantity }}</td></tr>
+      <tr><td>Condition</td><td><span class="status-pill pill-{{ item.condition }}">{{ item.get_condition_display }}</span></td></tr>
+      <tr><td>Status</td><td><span class="status-pill pill-{{ item.status }}">{{ item.get_status_display }}</span></td></tr>
+      <tr><td>Last checked</td><td>{{ item.last_checked|date:"M d, Y"|default:"—" }}</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Update status</div>
+    <form method="post" action="{% url 'inventory_status_update' item.pk %}" style="display:flex; gap:8px; align-items:center;">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="detail">
+      <select name="status" class="form-control" style="max-width:220px;">
+        <option value="operational" {% if item.status == 'operational' %}selected{% endif %}>Operational</option>
+        <option value="under_repair" {% if item.status == 'under_repair' %}selected{% endif %}>Under Repair</option>
+        <option value="retired" {% if item.status == 'retired' %}selected{% endif %}>Retired</option>
+      </select>
+      <button type="submit" class="action-btn primary">Update status</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="section-title">
+      Open issues
+      <a href="{% url 'equipment_issue_report' %}?equipment={{ item.pk }}" class="action-btn small">Report issue</a>
+    </div>
+    {% for issue in open_issues %}
+      <div class="alert-item" style="padding:10px 0; border-bottom:1px solid #f0f0f0;">
+        <div style="flex:1">
+          <div style="font-weight:500; font-size:13px">{{ issue.description|truncatechars:80 }}</div>
+          <div style="color:#888; font-size:12px">reported {{ issue.date_reported|timesince }} ago</div>
+        </div>
+        <a href="{% url 'equipment_issue_detail' issue.pk %}" class="action-btn small">View</a>
+      </div>
+    {% empty %}
+      <p class="empty">No open issues for this item.</p>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="section-title">
+    Recent maintenance
+    {% if request.user.role == 'admin' %}<a href="{% url 'maintenance_schedule' %}" class="action-btn small">Schedule maintenance</a>{% endif %}
+  </div>
+  <table class="table">
+    <thead><tr><th>Date</th><th>Technician</th><th>Status</th><th>Notes</th></tr></thead>
+    <tbody>
+      {% for log in maintenance_logs %}
+        <tr>
+          <td>{{ log.maintenance_date|date:"M d, Y" }}</td>
+          <td>{{ log.assigned_technician.get_full_name|default:"—" }}</td>
+          <td>
+            {% if log.completed %}
+              <span class="status-pill pill-resolved">Completed</span>
+            {% else %}
+              <span class="status-pill pill-pending">Pending</span>
+            {% endif %}
+          </td>
+          <td style="color:#666">{{ log.completion_notes|default:log.notes|default:"—" }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4"><p class="empty">No maintenance history yet.</p></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <a href="{% url 'inventory' %}" class="action-btn">← Back to inventory</a>
+</div>
+
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Equipment Status{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Equipment status</h1>
+    <div class="sub">{{ items|length }} items</div>
+  </div>
+  <a href="{% url 'inventory' %}" class="action-btn">← Back to inventory</a>
+</div>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr><th>Item</th><th>Location (lab)</th><th>Current status</th>{% if request.user.role == 'admin' or request.user.role == 'incharge' %}<th>Set new status</th>{% endif %}</tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+        <tr>
+          <td><a href="{% url 'inventory_detail' item.pk %}">{{ item.name }}</a></td>
+          <td>{{ item.lab.name }}</td>
+          <td><span class="status-pill pill-{{ item.status }}">{{ item.get_status_display }}</span></td>
+          {% if request.user.role == 'admin' or request.user.role == 'incharge' %}
+            <td style="white-space:nowrap">
+              <form method="post" action="{% url 'inventory_status_update' item.pk %}" style="display:flex; gap:6px;">
+                {% csrf_token %}
+                <select name="status" class="form-control" style="width:auto; padding:6px 10px; font-size:12.5px;">
+                  <option value="operational" {% if item.status == 'operational' %}selected{% endif %}>Operational</option>
+                  <option value="under_repair" {% if item.status == 'under_repair' %}selected{% endif %}>Under Repair</option>
+                  <option value="retired" {% if item.status == 'retired' %}selected{% endif %}>Retired</option>
+                </select>
+                <button type="submit" class="action-btn small primary">Update</button>
+              </form>
+            </td>
+          {% endif %}
+        </tr>
+      {% empty %}
+        <tr><td colspan="4"><p class="empty">No equipment recorded.</p></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

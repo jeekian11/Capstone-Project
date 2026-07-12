@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Class Rosters{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Class rosters</h1>
+    <div class="sub">{{ rosters|length }} roster{{ rosters|length|pluralize }}</div>
+  </div>
+  <a href="{% url 'roster_create' %}" class="action-btn primary">+ New roster</a>
+</div>
+
+<div class="card">
+  <table class="table">
+    <thead><tr><th>Name</th><th>Subject</th><th>Lab</th><th>Instructor</th><th>Students</th><th></th></tr></thead>
+    <tbody>
+      {% for roster in rosters %}
+        <tr>
+          <td><a href="{% url 'roster_detail' roster.pk %}">{{ roster.name }}</a></td>
+          <td>{{ roster.subject|default:"—" }}</td>
+          <td>{{ roster.lab.name|default:"—" }}</td>
+          <td>{{ roster.instructor.get_full_name|default:"—" }}</td>
+          <td>{{ roster.students.count }}</td>
+          <td><a href="{% url 'roster_detail' roster.pk %}" class="action-btn small">Manage</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6"><p class="empty">No class rosters yet. Create one to enable real attendance names.</p></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

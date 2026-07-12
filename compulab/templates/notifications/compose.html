@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Create Notification{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Create notification</h1>
+    <div class="sub">Choose a type, pick recipients, and send</div>
+  </div>
+</div>
+
+<div class="card" style="max-width:560px">
+  <form method="post" novalidate id="compose-form">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.notification_type.id_for_label }}">Notification type</label>
+      {{ form.notification_type }}
+      {% if form.notification_type.errors %}<div class="form-errors">{{ form.notification_type.errors|join:", " }}</div>{% endif %}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.target_audience.id_for_label }}">Recipient(s)</label>
+      {{ form.target_audience }}
+      {% if form.target_audience.errors %}<div class="form-errors">{{ form.target_audience.errors|join:", " }}</div>{% endif %}
+    </div>
+
+    <div class="form-group" id="group-specific">
+      <label class="form-label" for="{{ form.specific_recipients.id_for_label }}">Specific user(s)</label>
+      {{ form.specific_recipients }}
+      {% if form.specific_recipients.errors %}<div class="form-errors">{{ form.specific_recipients.errors|join:", " }}</div>{% endif %}
+    </div>
+
+    <hr style="border:none; border-top:1px solid #eee; margin:18px 0;">
+
+    <div data-type-group="booking_confirmation">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.booking_details.id_for_label }}">Booking details</label>
+        {{ form.booking_details }}
+        {% if form.booking_details.errors %}<div class="form-errors">{{ form.booking_details.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div data-type-group="schedule_reminder">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="{{ form.reminder_date.id_for_label }}">Date</label>
+          {{ form.reminder_date }}
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="{{ form.reminder_time.id_for_label }}">Time</label>
+          {{ form.reminder_time }}
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.reminder_lab.id_for_label }}">Laboratory</label>
+        {{ form.reminder_lab }}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.reminder_event.id_for_label }}">Event</label>
+        {{ form.reminder_event }}
+      </div>
+      {% if form.reminder_date.errors or form.reminder_time.errors or form.reminder_lab.errors or form.reminder_event.errors %}
+        <div class="form-errors">All schedule reminder fields are required.</div>
+      {% endif %}
+    </div>
+
+    <div data-type-group="maintenance_alert">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.maintenance_equipment.id_for_label }}">Equipment</label>
+        {{ form.maintenance_equipment }}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.maintenance_issue.id_for_label }}">Issue</label>
+        {{ form.maintenance_issue }}
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="{{ form.maintenance_date.id_for_label }}">Date</label>
+          {{ form.maintenance_date }}
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="{{ form.maintenance_time.id_for_label }}">Time</label>
+          {{ form.maintenance_time }}
+        </div>
+      </div>
+      {% if form.maintenance_equipment.errors or form.maintenance_issue.errors or form.maintenance_date.errors or form.maintenance_time.errors %}
+        <div class="form-errors">All maintenance alert fields are required.</div>
+      {% endif %}
+    </div>
+
+    <div data-type-group="system_announcement">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.announcement_text.id_for_label }}">Announcement text</label>
+        {{ form.announcement_text }}
+        {% if form.announcement_text.errors %}<div class="form-errors">{{ form.announcement_text.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="action-btn primary">Send</button>
+      <a href="{% url 'notifications' %}" class="action-btn">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+(function(){
+  var typeSelect = document.getElementById('{{ form.notification_type.id_for_label }}');
+  var audienceSelect = document.getElementById('{{ form.target_audience.id_for_label }}');
+  var specificGroup = document.getElementById('group-specific');
+  var typeGroups = document.querySelectorAll('[data-type-group]');
+
+  function syncTypeGroups(){
+    var val = typeSelect.value;
+    typeGroups.forEach(function(g){
+      g.style.display = (g.getAttribute('data-type-group') === val) ? '' : 'none';
+    });
+  }
+  function syncAudience(){
+    specificGroup.style.display = (audienceSelect.value === 'specific') ? '' : 'none';
+  }
+
+  typeSelect.addEventListener('change', syncTypeGroups);
+  audienceSelect.addEventListener('change', syncAudience);
+  syncTypeGroups();
+  syncAudience();
+})();
+</script>
+
+{% endblock %}

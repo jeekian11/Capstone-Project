@@ -1,0 +1,283 @@
+{% extends "auth_base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#080b0f; --panel:#0b0f14; --card:#12171d; --card-border:#232b34;
+    --line:#1a2129;
+    --text:#e7ebee; --text-dim:#8b98a3; --text-faint:#4d5761;
+    --teal:#3ed6c4; --teal-dim:rgba(62,214,196,0.14);
+    --blue:#5b9dff; --blue-dim:rgba(91,157,255,0.14);
+    --amber:#f2a93b;
+    --red:#ff5d5d;
+    --font-display:'Space Grotesk',sans-serif;
+    --font-body:'Inter',sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
+  }
+
+  .lg-wrap{
+    min-height:100vh;
+    display:flex;
+    background:var(--bg);
+    font-family:var(--font-body);
+  }
+
+  /* ---------- left: console / signature panel ---------- */
+  .lg-console{
+    flex:1.25;
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding:56px 64px;
+    overflow:hidden;
+    background:
+      radial-gradient(circle at 15% 15%, rgba(62,214,196,0.10), transparent 45%),
+      radial-gradient(circle at 85% 85%, rgba(91,157,255,0.10), transparent 45%),
+      var(--panel);
+    border-right:1px solid var(--line);
+  }
+  .lg-grid-bg{
+    position:absolute; inset:0;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 42px 42px;
+    mask-image: radial-gradient(circle at 30% 40%, black 10%, transparent 70%);
+    opacity:0.6;
+  }
+
+  .lg-brand{ position:relative; display:flex; align-items:center; gap:11px; margin-bottom:44px; }
+  .lg-brand-mark{
+    width:36px; height:36px; border-radius:9px;
+    background:linear-gradient(135deg,var(--teal),var(--blue));
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-mono); font-weight:700; font-size:15px; color:#080b0f;
+  }
+  .lg-brand-text{ font-family:var(--font-mono); font-weight:600; font-size:15px; letter-spacing:0.05em; color:var(--text); }
+  .lg-brand-text b{ color:var(--teal); }
+
+  .lg-headline{
+    position:relative;
+    font-family:var(--font-display); font-weight:600; font-size:34px; line-height:1.2;
+    color:var(--text); letter-spacing:-0.01em; margin-bottom:14px; max-width:460px;
+  }
+  .lg-headline em{ font-style:normal; color:var(--teal); }
+  .lg-sub{ position:relative; font-size:14px; color:var(--text-dim); max-width:420px; line-height:1.6; margin-bottom:36px; }
+
+  /* terminal boot readout — the signature element */
+  .lg-terminal{
+    position:relative;
+    background:#0a0e12;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:18px 20px;
+    font-family:var(--font-mono);
+    font-size:12.5px;
+    line-height:1.9;
+    color:#7fe8da;
+    max-width:440px;
+    min-height:150px;
+  }
+  .lg-terminal .dim{ color:var(--text-faint); }
+  .lg-terminal .ok{ color:var(--teal); }
+  .lg-cursor{ display:inline-block; width:7px; height:14px; background:var(--teal); vertical-align:-2px; animation:lg-blink 1s step-end infinite; }
+  @keyframes lg-blink{ 50%{ opacity:0; } }
+
+  /* pc status grid — recalls the dashboard's PC nodes */
+  .lg-pc-grid{ position:relative; display:flex; gap:8px; margin-top:28px; flex-wrap:wrap; max-width:440px; }
+  .lg-pc-node{
+    width:22px; height:22px; border-radius:5px;
+    background:var(--teal-dim); border:1px solid rgba(62,214,196,0.3);
+    animation:lg-pulse 2.6s ease-in-out infinite;
+  }
+  .lg-pc-node.blue{ background:var(--blue-dim); border-color:rgba(91,157,255,0.3); animation-name:lg-pulse-blue; }
+  .lg-pc-node.dim{ background:#171d24; border-color:var(--line); animation:none; opacity:0.5; }
+  @keyframes lg-pulse{ 0%,100%{ opacity:0.55; } 50%{ opacity:1; } }
+  @keyframes lg-pulse-blue{ 0%,100%{ opacity:0.5; } 50%{ opacity:0.95; } }
+  .lg-pc-caption{ position:relative; font-family:var(--font-mono); font-size:11px; color:var(--text-faint); margin-top:10px; letter-spacing:0.03em; }
+
+  /* ---------- right: login card ---------- */
+  .lg-formside{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:32px;
+  }
+  .lg-card{ width:100%; max-width:380px; }
+
+  .lg-card h2{ font-family:var(--font-display); font-size:23px; font-weight:600; color:var(--text); letter-spacing:-0.01em; margin:0 0 6px; }
+  .lg-card p.lead{ font-size:13px; color:var(--text-dim); margin:0 0 28px; line-height:1.5; }
+
+  .lg-error{
+    background:rgba(255,93,93,0.10); border:1px solid rgba(255,93,93,0.3); color:#ff8080;
+    font-size:12.5px; padding:10px 14px; border-radius:8px; margin-bottom:18px;
+  }
+
+  .lg-card label{ display:block; font-size:12px; font-weight:500; color:var(--text-dim); margin:16px 0 6px; }
+  .lg-card label:first-of-type{ margin-top:0; }
+
+  .lg-input-wrap{ position:relative; }
+  .lg-input-wrap svg{ position:absolute; left:13px; top:50%; transform:translateY(-50%); opacity:0.55; pointer-events:none; }
+  .lg-card input{
+    width:100%; padding:11px 14px 11px 38px;
+    background:var(--card); border:1px solid var(--card-border); border-radius:8px;
+    color:var(--text); font-size:13.5px; font-family:var(--font-body);
+    transition:border-color 0.15s ease, background-color 0.15s ease;
+  }
+  .lg-card input::placeholder{ color:var(--text-faint); }
+  .lg-card input:focus{ outline:none; border-color:var(--teal); background:#161c23; }
+
+  .lg-card button[type="submit"]{
+    width:100%; margin-top:26px; padding:12px 14px; border:none; border-radius:8px;
+    background:linear-gradient(135deg,var(--teal),var(--blue)); color:#080b0f;
+    font-family:var(--font-body); font-size:14px; font-weight:600; cursor:pointer;
+    transition:opacity 0.15s ease, transform 0.15s ease;
+  }
+  .lg-card button[type="submit"]:hover{ opacity:0.9; transform:translateY(-1px); }
+  .lg-card button[type="submit"]:active{ transform:translateY(0); }
+
+  .lg-foot{ margin-top:22px; font-size:11.5px; color:var(--text-faint); font-family:var(--font-mono); text-align:center; }
+
+  @media (max-width:900px){
+    .lg-console{ display:none; }
+    .lg-formside{ padding:20px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .lg-cursor, .lg-pc-node{ animation:none; }
+  }
+</style>
+
+<div class="lg-wrap">
+
+  <div class="lg-console">
+    <div class="lg-grid-bg"></div>
+
+    <div class="lg-brand">
+      <span class="lg-brand-mark">L</span>
+      <span class="lg-brand-text">LAB<b>.SYS</b></span>
+    </div>
+
+    <h1 class="lg-headline">Every PC, every lab,<br><em>one console.</em></h1>
+    <p class="lg-sub">CompuLab keeps track of machines, sessions, and issues across your computer laboratories — in real time.</p>
+
+    <div class="lg-terminal" id="lg-terminal" aria-hidden="true"></div>
+
+    <div class="lg-pc-grid">
+      <div class="lg-pc-node"></div><div class="lg-pc-node blue"></div><div class="lg-pc-node"></div>
+      <div class="lg-pc-node dim"></div><div class="lg-pc-node"></div><div class="lg-pc-node blue"></div>
+      <div class="lg-pc-node"></div><div class="lg-pc-node"></div><div class="lg-pc-node dim"></div>
+      <div class="lg-pc-node blue"></div><div class="lg-pc-node"></div><div class="lg-pc-node"></div>
+    </div>
+    <div class="lg-pc-caption">// live lab status once you're signed in</div>
+  </div>
+
+  <div class="lg-formside">
+    <div class="lg-card">
+      <h2>Sign in to CompuLab</h2>
+      <p class="lead">Enter your account details to reach your dashboard.</p>
+
+      <form method="post">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="lg-error">{{ form.non_field_errors.0 }}</div>
+        {% elif form.errors %}
+          <div class="lg-error">Invalid username or password.</div>
+        {% endif %}
+
+        <label for="id_username">Username</label>
+        <div class="lg-input-wrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="8" r="3.5" stroke="#8b98a3" stroke-width="1.6"/>
+            <path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" stroke="#8b98a3" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <input type="text" name="username" id="id_username" placeholder="Enter username" required autofocus>
+        </div>
+
+        <label for="id_password">Password</label>
+        <div class="lg-input-wrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="5" y="10.5" width="14" height="9" rx="1.8" stroke="#8b98a3" stroke-width="1.6"/>
+            <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="#8b98a3" stroke-width="1.6"/>
+          </svg>
+          <input type="password" name="password" id="id_password" placeholder="Enter password" required>
+        </div>
+
+        <button type="submit">Sign in</button>
+      </form>
+
+      <div class="lg-foot">Computer Laboratory Management System</div>
+      <div class="lg-foot" style="margin-top:6px;">Student? Sign in at the lab computer, not here.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var el = document.getElementById('lg-terminal');
+  if(!el) return;
+  var pcCount = {{ pc_count|default:0 }};
+  var lines = [
+    ['compulab-os v2.4 booting', 'dim'],
+    ['checking lab network............ ', 'dim', 'OK', 'ok'],
+    ['loading pc inventory............ ', 'dim', pcCount + ' unit' + (pcCount === 1 ? '' : 's'), 'ok'],
+    ['syncing schedules................ ', 'dim', 'OK', 'ok'],
+    ['authentication service........... ', 'dim', 'ready', 'ok'],
+  ];
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function renderStatic(){
+    var html = '';
+    lines.forEach(function(l){
+      html += '<div>&gt; ' + l[0] + (l[2] ? '<span class="ok">' + l[2] + '</span>' : '') + '</div>';
+    });
+    html += '<div>&gt; <span class="lg-cursor"></span></div>';
+    el.innerHTML = html;
+  }
+
+  if(reduceMotion){ renderStatic(); return; }
+
+  var rowIndex = 0, charIndex = 0;
+  var container = document.createElement('div');
+  el.appendChild(container);
+
+  function typeNext(){
+    if(rowIndex >= lines.length){
+      var cur = document.createElement('div');
+      cur.innerHTML = '&gt; <span class="lg-cursor"></span>';
+      container.appendChild(cur);
+      return;
+    }
+    var l = lines[rowIndex];
+    var row = container.children[rowIndex];
+    if(!row){
+      row = document.createElement('div');
+      row.innerHTML = '&gt; <span class="txt"></span>';
+      container.appendChild(row);
+    }
+    var txt = row.querySelector('.txt');
+    if(charIndex <= l[0].length){
+      txt.textContent = l[0].slice(0, charIndex);
+      charIndex++;
+      setTimeout(typeNext, 14);
+    } else {
+      if(l[2]){ txt.innerHTML = l[0] + '<span class="ok">' + l[2] + '</span>'; }
+      rowIndex++; charIndex = 0;
+      setTimeout(typeNext, 120);
+    }
+  }
+  typeNext();
+})();
+</script>
+
+{% endblock %}

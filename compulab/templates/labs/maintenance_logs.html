@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Maintenance Logs{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Maintenance logs</h1>
+    <div class="sub">{{ pending_count }} pending</div>
+  </div>
+  <div style="display:flex; gap:8px">
+    <a href="{% url 'inventory' %}" class="action-btn">← Back to inventory</a>
+    <a href="{% url 'repair_history' %}" class="action-btn">Repair history</a>
+    {% if request.user.role == 'admin' %}
+      <a href="{% url 'maintenance_schedule' %}" class="action-btn primary">+ Schedule maintenance</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr><th>Equipment</th><th>Date</th><th>Technician</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+        <tr>
+          <td>{{ log.equipment.name }}</td>
+          <td>{{ log.maintenance_date|date:"M d, Y" }}</td>
+          <td>{{ log.assigned_technician.get_full_name|default:"—" }}</td>
+          <td>
+            {% if log.completed %}
+              <span class="status-pill pill-resolved">Completed</span>
+            {% else %}
+              <span class="status-pill pill-pending">Pending</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if not log.completed %}
+              <a href="{% url 'maintenance_complete' log.pk %}" class="action-btn small primary">Record completion</a>
+            {% else %}
+              <span style="color:#888; font-size:12px">{{ log.completed_at|date:"M d, Y" }}</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5"><p class="empty">No maintenance scheduled yet.</p></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

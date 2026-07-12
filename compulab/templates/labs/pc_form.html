@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Update PC{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Update {{ object.pc_id }}</h1>
+    <div class="sub">{{ object.lab.name }}</div>
+  </div>
+</div>
+
+<div class="card" style="max-width:480px">
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <div class="form-group">
+      <label class="form-label" for="{{ form.status.id_for_label }}">Status</label>
+      {{ form.status }}
+      {% if form.status.errors %}<div class="form-errors">{{ form.status.errors|join:", " }}</div>{% endif %}
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="action-btn primary">Save</button>
+      <a href="{% url 'pc_status' %}" class="action-btn">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

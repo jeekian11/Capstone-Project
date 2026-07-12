@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Attendance Report{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Attendance report</h1>
+    <div class="sub">{{ day }}</div>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <a href="{% url 'report_attendance_export' %}?{{ request.GET.urlencode }}&format=pdf" class="action-btn">Export as PDF</a>
+    <a href="{% url 'report_attendance_export' %}?{{ request.GET.urlencode }}&format=excel" class="action-btn primary">Export as Excel</a>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" class="form-row" style="grid-template-columns: 1fr 1fr auto; align-items:end; gap:10px;">
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Laboratory</label>
+      <select name="lab" class="form-control">
+        <option value="">All labs</option>
+        {% for lab in all_labs %}
+          <option value="{{ lab.pk }}" {% if selected_lab == lab.pk|stringformat:"s" %}selected{% endif %}>{{ lab.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Date</label>
+      <input type="date" name="day" class="form-control" value="{{ day|date:'Y-m-d' }}">
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <button type="submit" class="action-btn primary">Generate report</button>
+    </div>
+  </form>
+</div>
+
+{% for row in rows %}
+  <div class="card">
+    <div class="section-title">
+      {{ row.session.lab.name }} — {{ row.session.subject }}
+      <span class="count">{{ row.session.start_time|time:"H:i" }}–{{ row.session.end_time|time:"H:i" }}</span>
+    </div>
+    {% if row.has_roster %}
+      <p style="font-size:12px; color:#3B6D11; margin-bottom:10px;">Roster attached: <a href="{% url 'roster_detail' row.session.roster_id %}">{{ row.session.roster.name }}</a> — present/absent below are real names.</p>
+    {% else %}
+      <p style="font-size:12px; color:#BA7517; margin-bottom:10px;">No roster attached to this session — absent count is an estimate only. <a href="{% url 'roster_list' %}">Attach a roster</a> for real names.</p>
+    {% endif %}
+    <div class="metrics" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 12px;">
+      <div class="metric green">
+        <div class="metric-label">Present</div>
+        <div class="metric-val">{{ row.present_count }}</div>
+      </div>
+      <div class="metric red">
+        <div class="metric-label">Absent{% if not row.has_roster %} (estimated){% endif %}</div>
+        <div class="metric-val">{{ row.absent_count }}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Expected</div>
+        <div class="metric-val">{{ row.expected_count }}</div>
+      </div>
+    </div>
+    <table class="table">
+      <thead><tr><th>Name</th><th>ID number</th><th>PC used</th><th>Time logged in</th></tr></thead>
+      <tbody>
+        {% for p in row.present %}
+          <tr>
+            <td>{{ p.name }}</td>
+            <td>{{ p.id_number }}</td>
+            <td>{{ p.pc }}</td>
+            <td>{{ p.time|date:"H:i" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4"><p class="empty">No PC check-ins recorded for this session.</p></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if row.has_roster %}
+      <div class="section-title" style="margin-top:16px;">Absent<span class="count">{{ row.absent|length }}</span></div>
+      <table class="table">
+        <thead><tr><th>Name</th><th>ID number</th></tr></thead>
+        <tbody>
+          {% for a in row.absent %}
+            <tr><td>{{ a.full_name }}</td><td>{{ a.id_number }}</td></tr>
+          {% empty %}
+            <tr><td colspan="2"><p class="empty">Everyone on the roster checked in.</p></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+  </div>
+{% empty %}
+  <div class="card"><p class="empty">No sessions scheduled on this date.</p></div>
+{% endfor %}
+
+<p style="font-size:12px; color:#8b98a3;">
+  "Present" is based on students who unlocked a lab PC with an ID number during the session window. When a class roster is attached to the session, names come straight from the roster and "Absent" lists everyone on the roster who didn't check in. Without a roster, the name shown is the reservation's requester name and "Absent" is only an estimate (expected count minus present count).
+</p>
+
+{% endblock %}

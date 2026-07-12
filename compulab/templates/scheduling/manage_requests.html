@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Manage Requests{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Manage requests</h1>
+    <div class="sub">{{ pending_requests|length }} pending request{{ pending_requests|length|pluralize }}</div>
+  </div>
+  <div style="display:flex; gap:8px">
+    <a href="{% url 'request_new' %}" class="action-btn primary">+ Log reservation</a>
+    <a href="{% url 'schedule' %}" class="action-btn">Back</a>
+  </div>
+</div>
+
+<p style="font-size:13px; color:#666; margin-bottom:14px;">
+  Instructors request a lab in person or verbally — log it here on their behalf, then approve or reject it below.
+</p>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr><th>Requester</th><th>ID number</th><th>Lab</th><th>Subject</th><th>Date</th><th>Time</th><th>Students</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for req in pending_requests %}
+        <tr>
+          <td>{{ req.requester_name }} <span class="status-pill">{{ req.get_requester_type_display }}</span></td>
+          <td>{{ req.requester_id_number }}</td>
+          <td>{{ req.lab.name }}</td>
+          <td>{{ req.subject }}</td>
+          <td>{{ req.date|date:"M d, Y" }}</td>
+          <td>{{ req.start_time|time:"H:i" }}–{{ req.end_time|time:"H:i" }}</td>
+          <td>{{ req.student_count }}</td>
+          <td>
+            <a href="{% url 'request_detail' req.pk %}" class="action-btn small primary">Select</a>
+            <a href="{% url 'request_edit' req.pk %}" class="action-btn small">Edit</a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="8"><p class="empty">No pending requests.</p></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Notifications</h1>
+    <div class="sub">{{ notifications|length }} total</div>
+  </div>
+  <div style="display:flex; gap:8px">
+    <a href="{% url 'notification_settings' %}" class="action-btn">Settings</a>
+    <form method="post" action="{% url 'mark_all_read' %}">
+      {% csrf_token %}
+      <button type="submit" class="action-btn">Mark all as read</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  {% for notif in notifications %}
+    <div class="alert-item" style="padding:12px 0; border-bottom:1px solid #f0f0f0; {% if not notif.read %}font-weight:500;{% endif %}">
+      <div style="flex:1">
+        <div class="alert-title" style="font-weight:500">{{ notif.title }}</div>
+        <div class="alert-sub" style="color:#888; font-size:12.5px">{{ notif.message }}</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px">
+        <span class="alert-time" style="color:#aaa; font-size:11px">{{ notif.created_at|timesince }} ago</span>
+        {% if not notif.read %}
+          <form method="post" action="{% url 'mark_read' notif.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="action-btn small">Mark read</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  {% empty %}
+    <p class="empty">No notifications yet.</p>
+  {% endfor %}
+</div>
+
+{% endblock %}

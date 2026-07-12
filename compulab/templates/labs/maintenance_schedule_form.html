@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Schedule Maintenance{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Schedule maintenance</h1>
+    <div class="sub">Assign equipment for an upcoming maintenance check</div>
+  </div>
+</div>
+
+<div class="card" style="max-width:480px">
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.equipment.id_for_label }}">Equipment</label>
+      {{ form.equipment }}
+      {% if form.equipment.errors %}<div class="form-errors">{{ form.equipment.errors|join:", " }}</div>{% endif %}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.maintenance_date.id_for_label }}">Maintenance date</label>
+      {{ form.maintenance_date }}
+      {% if form.maintenance_date.errors %}<div class="form-errors">{{ form.maintenance_date.errors|join:", " }}</div>{% endif %}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.assigned_technician.id_for_label }}">Assigned technician</label>
+      {{ form.assigned_technician }}
+      {% if form.assigned_technician.errors %}<div class="form-errors">{{ form.assigned_technician.errors|join:", " }}</div>{% endif %}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.notes.id_for_label }}">Notes (optional)</label>
+      {{ form.notes }}
+      {% if form.notes.errors %}<div class="form-errors">{{ form.notes.errors|join:", " }}</div>{% endif %}
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="action-btn primary">Save schedule</button>
+      <a href="{% url 'maintenance_logs' %}" class="action-btn">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

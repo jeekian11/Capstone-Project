@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Inventory{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Inventory</h1>
+    <div class="sub">{{ total_items }} items tracked</div>
+  </div>
+  <div style="display:flex; gap:8px">
+    <a href="{% url 'inventory_status_list' %}" class="action-btn">Equipment status</a>
+    <a href="{% url 'maintenance_logs' %}" class="action-btn">Maintenance logs</a>
+    <a href="{% url 'equipment_issues' %}" class="action-btn">Reported issues</a>
+    {% if request.user.role == 'admin' %}
+      <a href="{% url 'inventory_create' %}" class="action-btn primary">+ Add item</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="toolbar-stats" style="margin-bottom:14px">
+  <div><b>{{ total_items }}</b> total items</div>
+  <div><b>{{ needs_replacement }}</b> faulty</div>
+  <div><b>{{ under_repair }}</b> needs check</div>
+</div>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Category</th>
+        <th>Lab</th>
+        <th>Quantity</th>
+        <th>Condition</th>
+        <th>Last checked</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+        <tr>
+          <td>{{ item.name }}</td>
+          <td>{{ item.category }}</td>
+          <td>{{ item.lab.name }}</td>
+          <td>{{ item.quantity }}</td>
+          <td><span class="status-pill pill-{{ item.condition }}">{{ item.get_condition_display }}</span></td>
+          <td>{{ item.last_checked|date:"M d, Y"|default:"—" }}</td>
+          <td style="white-space:nowrap">
+            <a href="{% url 'inventory_detail' item.pk %}" class="action-btn small">View</a>
+            {% if request.user.role == 'admin' %}
+              <a href="{% url 'inventory_update' item.pk %}" class="action-btn small">Edit</a>
+              <a href="{% url 'inventory_delete' item.pk %}" class="action-btn small danger">Delete</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7"><p class="empty">No inventory items recorded.</p></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

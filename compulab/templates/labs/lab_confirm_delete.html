@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Delete Lab{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Delete lab</h1>
+    <div class="sub">This action cannot be undone</div>
+  </div>
+</div>
+
+<div class="card" style="max-width:480px">
+  <p style="font-size:13px; margin-bottom:20px; line-height:1.6;">
+    Are you sure you want to delete <strong>{{ lab.name }}</strong>?
+    {% with pc_count=lab.pcs.count %}
+      {% if pc_count %}
+        This will also permanently remove {{ pc_count }} PC{{ pc_count|pluralize }} registered to this lab.
+      {% endif %}
+    {% endwith %}
+  </p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-actions">
+      <button type="submit" class="action-btn danger">Yes, delete lab</button>
+      <a href="{% url 'lab_list' %}" class="action-btn">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Monitor Equipment{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Monitor equipment</h1>
+    <div class="sub">{{ total_pcs }} PCs · {{ online_pcs }} online</div>
+  </div>
+</div>
+
+{% for lab in labs %}
+  <div class="card">
+    <div class="section-title">{{ lab.name }}</div>
+    <table class="table">
+      <thead><tr><th>PC ID</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for pc in lab.pcs.all %}
+          <tr>
+            <td>{{ pc.pc_id }}</td>
+            <td><span class="status-pill pill-{{ pc.status }}">{{ pc.get_status_display }}</span></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="2"><p class="empty">No PCs in this lab.</p></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% empty %}
+  <div class="card"><p class="empty">No labs set up yet.</p></div>
+{% endfor %}
+
+<div class="card">
+  <div class="section-title">Inventory items</div>
+  <table class="table">
+    <thead><tr><th>Item</th><th>Lab</th><th>Condition</th></tr></thead>
+    <tbody>
+      {% for item in items %}
+        <tr>
+          <td>{{ item.name }}</td>
+          <td>{{ item.lab.name }}</td>
+          <td><span class="status-pill pill-{{ item.condition }}">{{ item.get_condition_display }}</span></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="3"><p class="empty">No items recorded.</p></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

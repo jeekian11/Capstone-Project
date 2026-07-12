@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}{{ issue.title }}{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>{{ issue.title }}</h1>
+    <div class="sub">{{ issue.lab.name }} {% if issue.pc %}· {{ issue.pc.pc_id }}{% endif %}</div>
+  </div>
+  <a href="{% url 'issue_update' issue.pk %}" class="action-btn">Update issue</a>
+</div>
+
+<div class="two-col">
+  <div class="card">
+    <div class="section-title">Details</div>
+    <table class="table">
+      <tr><td>Reporter</td><td>{{ issue.reported_by.get_full_name|default:"—" }}</td></tr>
+      <tr><td>Equipment</td><td>{{ issue.pc.pc_id|default:"General / no specific PC" }}</td></tr>
+      <tr><td>Type</td><td>{{ issue.get_issue_type_display }}</td></tr>
+      <tr><td>Priority</td><td><span class="status-pill pill-{{ issue.priority }}">{{ issue.get_priority_display }}</span></td></tr>
+      <tr><td>Status</td><td><span class="status-pill pill-{{ issue.status }}">{{ issue.get_status_display }}</span></td></tr>
+      <tr><td>Assigned technician</td><td>{{ issue.assigned_technician.get_full_name|default:"Not yet assigned" }}</td></tr>
+      <tr><td>Reported</td><td>{{ issue.created_at|date:"M d, Y H:i" }}</td></tr>
+      {% if issue.resolved_at %}
+        <tr><td>Resolved</td><td>{{ issue.resolved_at|date:"M d, Y H:i" }}</td></tr>
+      {% endif %}
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Description</div>
+    <p style="font-size:13px; line-height:1.6; color:#444">{{ issue.description|default:"No description provided."|linebreaks }}</p>
+    {% if issue.notes %}
+      <div class="section-title" style="margin-top:16px">Notes</div>
+      <p style="font-size:13px; line-height:1.6; color:#444">{{ issue.notes|linebreaks }}</p>
+    {% endif %}
+    {% if issue.status == 'resolved' %}
+      <div class="section-title" style="margin-top:16px">Resolution notes</div>
+      <p style="font-size:13px; line-height:1.6; color:#444">{{ issue.resolution_notes|default:"—"|linebreaks }}</p>
+    {% endif %}
+  </div>
+</div>
+
+{% if issue.status != 'resolved' %}
+<div class="two-col">
+  <div class="card">
+    <div class="section-title">Assign to technician</div>
+    <form method="post" action="{% url 'issue_assign' issue.pk %}">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label" for="assigned_technician">Technician</label>
+        <select name="assigned_technician" id="assigned_technician" class="form-control" required>
+          <option value="">Select technician</option>
+          {% for tech in technicians %}
+            <option value="{{ tech.pk }}" {% if issue.assigned_technician_id == tech.pk %}selected{% endif %}>{{ tech.get_full_name|default:tech.username }} ({{ tech.get_role_display }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="action-btn primary">Update assignment</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Mark as resolved</div>
+    <form method="post" action="{% url 'issue_resolve' issue.pk %}">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label" for="resolution_notes">Resolution notes</label>
+        <textarea name="resolution_notes" id="resolution_notes" class="form-control" rows="4" placeholder="What was done to resolve this?" required></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="action-btn primary">Mark as resolved</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <a href="{% url 'issues' %}" class="action-btn">← Back to issues</a>
+</div>
+
+{% endblock %}
