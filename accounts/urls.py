@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path('redirect/', views.role_redirect, name='role_redirect'),
+    path('profile/', views.ProfileView.as_view(), name='profile'),
     path('dashboard/incharge/', views.InchargeDashboardView.as_view(), name='incharge_dashboard'),
     path('dashboard/instructor/', views.InstructorDashboardView.as_view(), name='instructor_dashboard'),
     path('users/', views.UsersListView.as_view(), name='users'),
@@ -17,4 +18,5 @@ urlpatterns = [
     path('attendance/', views.AttendanceView.as_view(), name='attendance'),
     path('attendance/summary/export/', views.attendance_summary_export, name='attendance_summary_export'),
     path('attendance/session/<int:pk>/mark/', views.session_attendance_mark, name='session_attendance_mark'),
+    path('api/search-requesters/', views.search_requesters, name='search_requesters'),
 ]

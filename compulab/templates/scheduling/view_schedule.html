@@ -64,7 +64,7 @@
             <td style="white-space:nowrap">
               <a href="{% url 'session_edit' session.pk %}" class="action-btn small">Edit</a>
               <form method="post" action="{% url 'session_delete' session.pk %}" style="display:inline"
-                    onsubmit="return confirm('Remove this session from the schedule?');">
+                    onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Remove this session?', text: 'This will remove {{ session.subject|escapejs }} ({{ session.reservation_code|escapejs }}) from the schedule.', confirmButtonText: 'Yes, remove'}); return false;">
                 {% csrf_token %}
                 <button type="submit" class="action-btn small danger">Delete</button>
               </form>

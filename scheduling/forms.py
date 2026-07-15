@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from scheduling.models import ClassRoster, RosterStudent, Session, SessionRequest
 
 User = get_user_model()
@@ -14,7 +15,44 @@ _DATE_TIME_WIDGETS = {
 }
 
 
-class SessionForm(forms.ModelForm):
+class RequiresRegisteredAccountMixin:
+    """Enforces the policy that only accounts registered by an Admin/Lab
+    In-Charge (under Users) may hold a reservation. The requester's ID
+    number + requester type must match an existing, active account —
+    otherwise the form is rejected before it ever saves a request/session.
+    """
+
+    def clean(self):
+        cleaned_data = super().clean()
+        id_number = (cleaned_data.get('requester_id_number') or '').strip()
+        requester_type = cleaned_data.get('requester_type')
+        if id_number and requester_type:
+            # "Group of students" isn't a separate account role — the person
+            # who files the request still logs in with their own student
+            # account, so match against role='student' for that case.
+            account_role = 'student' if requester_type == 'group' else requester_type
+            account = User.objects.filter(
+                Q(id_number__iexact=id_number) | Q(username__iexact=id_number),
+                role=account_role,
+            ).first()
+            if account is None:
+                self.add_error(
+                    'requester_id_number',
+                    'No registered account matches this ID number and requester type. '
+                    'Only accounts registered by an Admin (under Users) may request a reservation — '
+                    'ask an Admin to register this account first.'
+                )
+            elif not account.is_active:
+                self.add_error(
+                    'requester_id_number',
+                    f'The account for "{id_number}" has been deactivated. Ask an Admin to reactivate it before requesting a reservation.'
+                )
+            else:
+                cleaned_data['_matched_account'] = account
+        return cleaned_data
+
+
+class SessionForm(RequiresRegisteredAccountMixin, forms.ModelForm):
     """Used by SessionUpdateView to edit an already-scheduled session."""
     class Meta:
         model = Session
@@ -23,13 +61,18 @@ class SessionForm(forms.ModelForm):
         widgets = _DATE_TIME_WIDGETS
 
 
-class SessionRequestForm(forms.ModelForm):
+class SessionRequestForm(RequiresRegisteredAccountMixin, forms.ModelForm):
     """Used by RequestCreateView/RequestUpdateView to log or edit a pending request."""
     class Meta:
         model = SessionRequest
-        fields = ['requester_type', 'requester_name', 'requester_id_number',
+        fields = ['requester_type', 'requester_name', 'requester_id_number', 'roster',
                   'lab', 'subject', 'date', 'start_time', 'end_time', 'student_count', 'notes']
         widgets = _DATE_TIME_WIDGETS
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['roster'].required = False
+        self.fields['roster'].queryset = ClassRoster.objects.order_by('name')
 
 
 class ClassRosterForm(forms.ModelForm):

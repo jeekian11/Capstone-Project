@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CompuLab — {% block title %}Dashboard{% endblock %}</title>
+  <title>SCLAMS — {% block title %}Dashboard{% endblock %}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
@@ -154,11 +154,8 @@
 
     <div class="content">
       {% if messages %}
-        <div class="messages">
-          {% for message in messages %}
-            <div class="message {{ message.tags }}">{{ message }}</div>
-          {% endfor %}
-        </div>
+        <div id="django-messages-data" style="display:none;"
+             data-messages='[{% for message in messages %}{"tags": "{{ message.tags|escapejs }}", "text": "{{ message|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]'></div>
       {% endif %}
       {% block content %}{% endblock %}
 
@@ -166,5 +163,59 @@
     </div>
   </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+(function() {
+  var dataEl = document.getElementById('django-messages-data');
+  if (!dataEl || typeof Swal === 'undefined') return;
+  var msgs;
+  try {
+    msgs = JSON.parse(dataEl.dataset.messages);
+  } catch (e) {
+    return;
+  }
+  var ICONS = {success: 'success', error: 'error', warning: 'warning', info: 'info', debug: 'info'};
+  msgs.forEach(function(m, i) {
+    setTimeout(function() {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: ICONS[m.tags] || 'info',
+        title: m.text,
+        showConfirmButton: false,
+        timer: 4500,
+        timerProgressBar: true,
+        background: '#12171d',
+        color: '#e7ebee',
+      });
+    }, i * 300);
+  });
+})();
+
+// Shared helper: SweetAlert2 confirm dialog that submits a given form only
+// if the user confirms. Used across the app for destructive/important
+// actions (delete, deactivate, remove, approve/reject, etc.).
+function compulabConfirmSubmit(form, options) {
+  options = options || {};
+  if (typeof Swal === 'undefined') {
+    if (confirm(options.text || 'Are you sure?')) form.submit();
+    return;
+  }
+  Swal.fire({
+    title: options.title || 'Are you sure?',
+    text: options.text || '',
+    icon: options.icon || 'warning',
+    showCancelButton: true,
+    confirmButtonText: options.confirmButtonText || 'Yes, continue',
+    cancelButtonText: 'Cancel',
+    confirmButtonColor: options.confirmButtonColor || '#ff5d5d',
+    background: '#12171d',
+    color: '#e7ebee',
+  }).then(function(result) {
+    if (result.isConfirmed) form.submit();
+  });
+}
+</script>
 </body>
 </html>

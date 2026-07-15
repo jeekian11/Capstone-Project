@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CompuLab — Manual PC Control</title>
+<style>
+  body { font-family: -apple-system, Segoe UI, Arial, sans-serif; background: #0b1220; color: #fff;
+         margin: 0; padding: 24px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  p.hint { color: #9fb3c8; font-size: 13px; margin-top: 0; }
+  label { display: block; margin-top: 14px; font-size: 13px; color: #9fb3c8; }
+  input { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px; border: 1px solid #2a3b52;
+          background: #101a2b; color: #fff; font-size: 15px; margin-top: 4px; }
+  .buttons { display: flex; gap: 10px; margin-top: 20px; }
+  button { flex: 1; padding: 16px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600;
+           cursor: pointer; }
+  #unlockBtn { background: #22c55e; color: #06240f; }
+  #lockBtn { background: #ef4444; color: #2a0505; }
+  #pingBtn { background: #334155; color: #fff; }
+  #status { margin-top: 18px; padding: 12px; border-radius: 8px; font-size: 14px; min-height: 20px;
+            background: #101a2b; border: 1px solid #2a3b52; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+  <h1>CompuLab — Manual PC Control</h1>
+  <p class="hint">Ilagay ang IP address ng lab PC/laptop na tumatakbo ang agent, at ang secret na naka-set sa agent_config.json nito.</p>
+
+  <label for="ip">PC IP Address</label>
+  <input id="ip" placeholder="hal. 192.168.1.50" value="localhost">
+
+  <label for="port">Port</label>
+  <input id="port" value="5555">
+
+  <label for="secret">Shared Secret</label>
+  <input id="secret" type="password" placeholder="dapat pareho sa agent_config.json">
+
+  <div class="buttons">
+    <button id="pingBtn">Ping</button>
+    <button id="unlockBtn">Unlock</button>
+    <button id="lockBtn">Lock</button>
+  </div>
+
+  <div id="status">Wala pang aksyon.</div>
+
+<script>
+function baseUrl() {
+  const ip = document.getElementById('ip').value.trim();
+  const port = document.getElementById('port').value.trim();
+  return `http://${ip}:${port}`;
+}
+
+function setStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+async function callAgent(path, needsSecret) {
+  const url = baseUrl() + path;
+  setStatus('Nagpapadala sa ' + url + ' ...');
+  try {
+    const opts = { method: needsSecret ? 'POST' : 'GET' };
+    if (needsSecret) {
+      opts.headers = { 'Content-Type': 'application/json' };
+      opts.body = JSON.stringify({ secret: document.getElementById('secret').value });
+    }
+    const res = await fetch(url, opts);
+    const data = await res.json();
+    setStatus(`Status ${res.status}\n` + JSON.stringify(data, null, 2));
+  } catch (err) {
+    setStatus('Error: ' + err.message + '\n\n(Tip: siguraduhing parehong WiFi/network kayo ng PC, at tama ang IP/port.)');
+  }
+}
+
+document.getElementById('pingBtn').addEventListener('click', () => callAgent('/ping', false));
+document.getElementById('unlockBtn').addEventListener('click', () => callAgent('/unlock', true));
+document.getElementById('lockBtn').addEventListener('click', () => callAgent('/lock', true));
+</script>
+</body>
+</html>

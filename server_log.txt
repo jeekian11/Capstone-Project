@@ -1,0 +1,106 @@
+Watching for file changes with StatReloader
+System check identified some issues:
+
+WARNINGS:
+issues.Issue: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the IssuesConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+labs.EquipmentIssue: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the LabsConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+labs.InventoryItem: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the LabsConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+labs.Lab: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the LabsConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+labs.MaintenanceLog: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the LabsConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+labs.PC: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the LabsConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+notifications.Notification: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the NotificationsConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+scheduling.ClassRoster: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the SchedulingConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+scheduling.ManualAttendanceRecord: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the SchedulingConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+scheduling.RosterStudent: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the SchedulingConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+scheduling.Session: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the SchedulingConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+scheduling.SessionRequest: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the SchedulingConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+
+System check identified 12 issues (0 silenced).
+[14/Jul/2026 07:40:08] "GET / HTTP/1.1" 302 0
+[14/Jul/2026 07:40:08] "GET /labs/ HTTP/1.1" 200 34154
+Not Found: /favicon.ico
+[14/Jul/2026 07:40:08] "GET /favicon.ico HTTP/1.1" 404 3007
+[14/Jul/2026 07:40:10] "GET /schedule/ HTTP/1.1" 200 24579
+[14/Jul/2026 07:40:13] "GET /schedule/view/ HTTP/1.1" 200 27115
+[14/Jul/2026 07:40:15] "GET /schedule/session/2/edit/ HTTP/1.1" 200 27195
+[14/Jul/2026 07:40:28] "POST /schedule/session/2/edit/ HTTP/1.1" 302 0
+[14/Jul/2026 07:40:28] "GET /schedule/view/?lab=1&date=2026-07-14 HTTP/1.1" 200 26565
+Internal Server Error: /labs/api/pc-agent-login/
+Traceback (most recent call last):
+  File "C:\Users\iandi\Desktop\SCLMS\compulab\venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\iandi\Desktop\SCLMS\compulab\venv\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\iandi\Desktop\SCLMS\compulab\venv\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\iandi\Desktop\SCLMS\compulab\labs\views.py", line 193, in pc_agent_login_api
+    result = verify_reservation_and_check_in(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\iandi\Desktop\SCLMS\compulab\labs\views.py", line 98, in verify_reservation_and_check_in
+    pc.save(update_fields=['status', 'last_active', 'current_user', 'current_session'])
+  File "C:\Users\iandi\Desktop\SCLMS\compulab\venv\Lib\site-packages\django\db\models\base.py", line 801, in save
+    raise ValueError(
+ValueError: The following fields do not exist in this model, are m2m fields, or are non-concrete fields: current_session
+[14/Jul/2026 07:41:04] "POST /labs/api/pc-agent-login/ HTTP/1.1" 500 79780
+C:\Users\iandi\Desktop\SCLMS\compulab\labs\models.py changed, reloading.
+Performing system checks...
+
+July 14, 2026 - 07:39:28
+Django version 5.0.14, using settings 'compulab.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CTRL-BREAK.
+
+Watching for file changes with StatReloader
+System check identified some issues:
+
+WARNINGS:
+issues.Issue: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the IssuesConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+labs.EquipmentIssue: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the LabsConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+labs.InventoryItem: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the LabsConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+labs.Lab: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the LabsConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+labs.MaintenanceLog: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the LabsConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+labs.PC: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the LabsConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+notifications.Notification: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the NotificationsConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+scheduling.ClassRoster: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the SchedulingConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+scheduling.ManualAttendanceRecord: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the SchedulingConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+scheduling.RosterStudent: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the SchedulingConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+scheduling.Session: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the SchedulingConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+scheduling.SessionRequest: (models.W042) Auto-created primary key used when not defining a primary key type, by default 'django.db.models.AutoField'.
+	HINT: Configure the DEFAULT_AUTO_FIELD setting or the SchedulingConfig.default_auto_field attribute to point to a subclass of AutoField, e.g. 'django.db.models.BigAutoField'.
+
+System check identified 12 issues (0 silenced).
+[14/Jul/2026 07:56:46] "GET /schedule/view/?lab=1&date=2026-07-14 HTTP/1.1" 200 26425
+[14/Jul/2026 07:56:48] "GET /schedule/ HTTP/1.1" 200 24579
+[14/Jul/2026 07:56:51] "GET /schedule/view/ HTTP/1.1" 200 27115
+[14/Jul/2026 07:56:53] "GET /schedule/session/2/edit/ HTTP/1.1" 200 27195
+[14/Jul/2026 07:57:10] "POST /schedule/session/2/edit/ HTTP/1.1" 302 0
+[14/Jul/2026 07:57:10] "GET /schedule/view/?lab=1&date=2026-07-14 HTTP/1.1" 200 26565
+[14/Jul/2026 07:57:41] "POST /labs/api/pc-agent-login/ HTTP/1.1" 200 209
+Not Found: /labs/api/pc-agent-end-session/
+[14/Jul/2026 08:02:00] "POST /labs/api/pc-agent-end-session/ HTTP/1.1" 404 11303

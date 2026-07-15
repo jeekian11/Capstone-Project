@@ -14,6 +14,14 @@ class User(AbstractUser):
         max_length=50, blank=True, default='',
         help_text='Student/Instructor ID — used to match this account to reservation requests and lab PC check-ins. Separate from the login username.'
     )
+    course_year_section = models.CharField(
+        max_length=100, blank=True, default='',
+        help_text='Students only — e.g. "BSIS 4A". Shown when this student is picked as a requester.'
+    )
+    department = models.CharField(
+        max_length=100, blank=True, default='',
+        help_text='Instructors only — e.g. "College of Computer Studies". Shown when this instructor is picked as a requester.'
+    )
     assigned_lab = models.ForeignKey(
         'labs.Lab',
         null=True,
@@ -22,6 +30,7 @@ class User(AbstractUser):
         related_name='assigned_users'
     )
     email_notifications_enabled = models.BooleanField(default=True)
+    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
 
     def __str__(self):
         return f'{self.get_full_name()} ({self.role})'

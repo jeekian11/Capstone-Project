@@ -24,9 +24,27 @@
         {{ form.requester_type }}
         {% if form.requester_type.errors %}<div class="form-errors">{{ form.requester_type.errors|join:", " }}</div>{% endif %}
       </div>
+    </div>
+
+    <div class="form-group" style="position:relative;">
+      <label class="form-label" id="requester-search-label" for="requester-search">Search Student / Search Instructor</label>
+      <input type="text" id="requester-search" class="form-control" autocomplete="off"
+             placeholder="Type a name or ID number to find a registered account..."
+             value="{{ session.requester_name }}">
+      <div id="requester-search-results" class="search-results"
+           style="display:none; position:absolute; z-index:10; background:#fff; border:1px solid #ddd; border-radius:6px; width:100%; max-height:220px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.08);"></div>
+      <span class="helptext">Pick a registered account to auto-fill the fields below — Full Name, ID, and Course &amp; Year/Section (student) or Department (instructor).</span>
+      <div id="requester-extra-info" class="helptext"
+           style="{% if session.instructor.course_year_section or session.instructor.department %}display:block;{% else %}display:none;{% endif %} font-weight:600; margin-top:4px;">
+        {% if session.instructor.course_year_section %}Course & Year/Section: {{ session.instructor.course_year_section }}{% elif session.instructor.department %}Department: {{ session.instructor.department }}{% endif %}
+      </div>
+    </div>
+
+    <div class="form-row">
       <div class="form-group">
         <label class="form-label" for="{{ form.requester_id_number.id_for_label }}">Student / instructor ID</label>
         {{ form.requester_id_number }}
+        <span class="helptext">Must match an account already registered by an Admin under Users — unregistered IDs can't hold a reservation.</span>
         {% if form.requester_id_number.errors %}<div class="form-errors">{{ form.requester_id_number.errors|join:", " }}</div>{% endif %}
       </div>
     </div>
@@ -52,7 +70,15 @@
     <div class="form-group">
       <label class="form-label" for="{{ form.roster.id_for_label }}">Class roster (optional)</label>
       {{ form.roster }}
-      <span class="helptext">Attach a roster so the Attendance Report can show real present/absent student names instead of an estimate. <a href="{% url 'roster_list' %}">Manage rosters</a>.</span>
+      <span class="helptext">
+        Only relevant for <strong>Instructor</strong> requests — link a roster to let everyone in that
+        class check in with this same reservation code (using their own ID number) and to show real
+        names in attendance reports.
+        For <strong>Group of students</strong>, leave this blank: any ID number will work with the
+        shared code, no roster/names needed.
+        For <strong>Student</strong> (individual), leave this blank too: only that one ID will work.
+        <a href="{% url 'roster_list' %}">Manage rosters</a>.
+      </span>
       {% if form.roster.errors %}<div class="form-errors">{{ form.roster.errors|join:", " }}</div>{% endif %}
     </div>
 
@@ -65,6 +91,7 @@
       <div class="form-group">
         <label class="form-label" for="{{ form.student_count.id_for_label }}">Number of students</label>
         {{ form.student_count }}
+        <span class="helptext">For <strong>Group of students</strong>, this also caps how many distinct IDs can check in with the shared code.</span>
         {% if form.student_count.errors %}<div class="form-errors">{{ form.student_count.errors|join:", " }}</div>{% endif %}
       </div>
     </div>
@@ -88,5 +115,100 @@
     </div>
   </form>
 </div>
+
+<script>
+(function() {
+  var typeSelect = document.getElementById('{{ form.requester_type.id_for_label }}');
+  var searchLabel = document.getElementById('requester-search-label');
+  var searchInput = document.getElementById('requester-search');
+  var resultsBox = document.getElementById('requester-search-results');
+  var extraInfo = document.getElementById('requester-extra-info');
+  var idField = document.getElementById('{{ form.requester_id_number.id_for_label }}');
+  var nameField = document.getElementById('{{ form.requester_name.id_for_label }}');
+  var debounceTimer = null;
+
+  var LABELS = {instructor: 'Search Instructor', student: 'Search Student', group: 'Search Student (group representative)'};
+
+  function currentRole() {
+    return typeSelect ? typeSelect.value : 'student';
+  }
+
+  function updateLabel() {
+    if (searchLabel) searchLabel.textContent = LABELS[currentRole()] || 'Search Student / Search Instructor';
+  }
+
+  function doSearch(q) {
+    var url = '{% url "search_requesters" %}?role=' + encodeURIComponent(currentRole()) + '&q=' + encodeURIComponent(q);
+    fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+      renderResults(data.results || []);
+    });
+  }
+
+  function renderResults(results) {
+    resultsBox.innerHTML = '';
+    if (!results.length) {
+      resultsBox.style.display = 'none';
+      return;
+    }
+    results.forEach(function(r) {
+      var item = document.createElement('div');
+      var extra = r.course_year_section || r.department || '';
+      item.textContent = r.full_name + ' — ' + r.id_number + (extra ? ' (' + extra + ')' : '');
+      item.style.cursor = 'pointer';
+      item.style.padding = '8px 10px';
+      item.addEventListener('mouseenter', function() { item.style.background = '#f2f2f2'; });
+      item.addEventListener('mouseleave', function() { item.style.background = ''; });
+      item.addEventListener('click', function() { selectResult(r); });
+      resultsBox.appendChild(item);
+    });
+    resultsBox.style.display = 'block';
+  }
+
+  function selectResult(r) {
+    idField.value = r.id_number;
+    nameField.value = r.full_name;
+    searchInput.value = r.full_name;
+    resultsBox.style.display = 'none';
+    resultsBox.innerHTML = '';
+    if (r.course_year_section) {
+      extraInfo.textContent = 'Course & Year/Section: ' + r.course_year_section;
+      extraInfo.style.display = 'block';
+    } else if (r.department) {
+      extraInfo.textContent = 'Department: ' + r.department;
+      extraInfo.style.display = 'block';
+    } else {
+      extraInfo.style.display = 'none';
+    }
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      clearTimeout(debounceTimer);
+      var q = searchInput.value.trim();
+      extraInfo.style.display = 'none';
+      debounceTimer = setTimeout(function() { doSearch(q); }, 250);
+    });
+    searchInput.addEventListener('focus', function() {
+      if (searchInput.value.trim()) doSearch(searchInput.value.trim());
+    });
+    document.addEventListener('click', function(e) {
+      if (resultsBox && !resultsBox.contains(e.target) && e.target !== searchInput) {
+        resultsBox.style.display = 'none';
+      }
+    });
+  }
+
+  if (typeSelect) {
+    typeSelect.addEventListener('change', function() {
+      updateLabel();
+      searchInput.value = '';
+      resultsBox.style.display = 'none';
+      extraInfo.style.display = 'none';
+    });
+  }
+
+  updateLabel();
+})();
+</script>
 
 {% endblock %}

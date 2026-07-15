@@ -39,6 +39,13 @@ class PC(models.Model):
         related_name='pcs_in_use',
         help_text="The student currently signed in on this PC, set when they unlock it with their Student ID and password. Cleared once the PC goes offline or is reassigned.",
     )
+    current_session = models.ForeignKey(
+        'scheduling.Session',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='+',
+        help_text="The reservation that most recently unlocked this PC. Used to auto re-lock the PC once that reservation's end_time passes, and cleared whenever the PC is locked again (by time running out or a manual lock).",
+    )
 
     def __str__(self):
         return self.pc_id

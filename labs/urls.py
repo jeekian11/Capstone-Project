@@ -4,6 +4,7 @@ from . import reports
 
 urlpatterns = [
     path('pc-login/', views.ReservationPCLoginView.as_view(), name='pc_login'),
+    path('api/pc-agent-login/', views.pc_agent_login_api, name='pc_agent_login_api'),
     path('', views.AdminDashboardView.as_view(), name='admin_dashboard'),
     path('pc-status/', views.PCStatusView.as_view(), name='pc_status'),
     path('pc-status/api/', views.pc_status_api, name='pc_status_api'),

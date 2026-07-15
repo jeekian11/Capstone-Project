@@ -10,7 +10,12 @@
   </div>
   <div style="display:flex; gap:10px;">
     <a href="{% url 'roster_edit' roster.pk %}" class="action-btn">Edit details</a>
-    <a href="{% url 'roster_delete' roster.pk %}" class="action-btn danger">Delete</a>
+    <form method="post" action="{% url 'roster_delete' roster.pk %}"
+          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this roster?', text: 'This action cannot be undone. {{ roster.name|escapejs }}{% with n=roster.students.count %}{% if n %} and its {{ n }} student{{ n|pluralize }}{% endif %}{% endwith %} will be removed.', confirmButtonText: 'Yes, delete roster'}); return false;"
+          style="display:inline">
+      {% csrf_token %}
+      <button type="submit" class="action-btn danger">Delete</button>
+    </form>
   </div>
 </div>
 
@@ -25,7 +30,9 @@
             <td>{{ s.id_number }}</td>
             <td>{{ s.full_name }}</td>
             <td>
-              <form method="post" action="{% url 'roster_remove_student' roster.pk s.pk %}" onsubmit="return confirm('Remove {{ s.full_name }} from this roster?');" style="display:inline">
+              <form method="post" action="{% url 'roster_remove_student' roster.pk s.pk %}"
+                    onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Remove student?', text: 'Remove {{ s.full_name|escapejs }} from this roster?', confirmButtonText: 'Yes, remove'}); return false;"
+                    style="display:inline">
                 {% csrf_token %}
                 <button type="submit" class="action-btn small danger">Remove</button>
               </form>

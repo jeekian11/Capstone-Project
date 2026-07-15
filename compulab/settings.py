@@ -121,6 +121,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 
 # No real SMTP server configured yet, so notification emails print to the
 # console instead of trying (and failing) to connect somewhere real.
@@ -129,19 +134,30 @@ STATIC_URL = 'static/'
 # have real email credentials for production.
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'noreply@compulab.local'
-STATICFILES_DIRS = [BASE_DIR / 'static']
 AUTH_USER_MODEL = 'accounts.User'
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
-# Command run locally on a lab PC (labs.views.ReservationPCLoginView) to release
-# its lock/kiosk screen once a student's Student ID and password have been
-# verified. Every lab's kiosk setup is different, so this is left unset by
-# default — students can still be verified and their login logged, but no
-# machine will actually unlock until this is pointed at a real command.
+# --- Remote PC unlock (agent-based, internet-cafe style) ---
 #
-# Example: PC_UNLOCK_COMMAND = 'rundll32.exe user32.dll,LockWorkStation'  # Windows placeholder — replace with your kiosk's real unlock hook
+# Each lab PC runs a small local "agent" (see lab_pc_agent/agent.py) that
+# listens on PC_AGENT_PORT and knows how to unlock *that* machine's own
+# lock/kiosk screen. The server never logs into a lab PC directly — it just
+# sends a signed HTTP request to the PC's own IP address (pc.ip_address) and
+# the agent running there does the actual unlocking. This avoids needing
+# admin shares, stored admin passwords, or PsExec/SSH access to every PC.
+#
+# PC_AGENT_SHARED_SECRET must match the secret configured in each agent's
+# agent_config.json — treat it like a password. Change this before deploying.
+PC_AGENT_PORT = 5555
+PC_AGENT_SHARED_SECRET = 'change-me-to-a-long-random-string'
+PC_AGENT_TIMEOUT_SECONDS = 4
+
+# Legacy fallback: if PC_AGENT is not reachable (or you're not using the
+# agent yet), unlock_pc() will fall back to running this command *on the
+# server itself* — only useful if the server IS one of the lab PCs, or for
+# local testing. Leave as None once the agent is deployed to every PC.
 PC_UNLOCK_COMMAND = None
 
 # How often (in seconds) the server automatically pings every PC that has an

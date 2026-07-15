@@ -6,6 +6,16 @@ from django.core.exceptions import ValidationError
 User = get_user_model()
 
 
+class ProfileUpdateForm(forms.ModelForm):
+    """Lets a logged-in user update their own display info and avatar.
+    Deliberately excludes username/role/permissions — those stay
+    admin-controlled via AdminUserCreateForm/UserUpdateView."""
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email', 'avatar']
+
+
 class AdminUserCreateForm(forms.ModelForm):
     """Used by admins to create accounts for lab in-charges, instructors, etc.
     Includes a password so the new user can actually log in right away."""
@@ -21,7 +31,8 @@ class AdminUserCreateForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'username', 'id_number', 'email', 'role', 'assigned_lab']
+        fields = ['first_name', 'last_name', 'username', 'id_number', 'email', 'role',
+                  'course_year_section', 'department', 'assigned_lab']
 
     def clean_username(self):
         username = self.cleaned_data['username']

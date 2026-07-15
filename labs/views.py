@@ -1,3 +1,4 @@
+import json
 from django.views.generic import TemplateView, ListView, UpdateView, CreateView, DeleteView, FormView
 from django.http import JsonResponse
 from django.shortcuts import redirect, get_object_or_404, render
@@ -6,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse_lazy
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from accounts.mixins import RoleRequiredMixin
 from labs.models import PC, Lab, InventoryItem, MaintenanceLog, EquipmentIssue
 from labs.network import refresh_pc_statuses
@@ -36,12 +38,145 @@ class AdminDashboardView(RoleRequiredMixin, TemplateView):
         return ctx
 
 
+# Shared by ReservationPCLoginView (browser form, used when a student logs
+# in from a separate reception/kiosk computer) and PCAgentLoginAPIView (JSON
+# endpoint, used when the student types their ID/reservation code directly
+# into the lock screen on the PC itself). Keeping this logic in one place
+# means both entry points enforce identical rules — same reservation checks,
+# same PC-unlock call, same activity log — they just differ in how the
+# result gets back to the person (rendered form errors vs. a JSON reply).
+def verify_reservation_and_check_in(remote_addr, id_number, code):
+    """
+    Returns a dict:
+      {'ok': True,  'pc': PC, 'session': Session, 'unlock_success': bool, 'unlock_detail': str}
+      {'ok': False, 'error': str}
+    Does NOT raise on "expected" failures (no PC, no matching reservation,
+    etc.) — those come back as {'ok': False, 'error': ...} so callers can
+    show them however fits their interface.
+    """
+    from accounts.models import ActivityLog
+    from labs.network import unlock_pc
+    from scheduling.models import Session, SessionCheckIn
+
+    id_number = (id_number or '').strip()
+    code = (code or '').strip()
+
+    pc = PC.objects.filter(ip_address=remote_addr).select_related('lab').first()
+    if pc is None:
+        return {'ok': False, 'error': "This computer isn't registered in the system yet. Ask your Laboratory In-Charge to add it before it can be unlocked."}
+
+    # A reservation code is shared by different sets of people depending on
+    # how the booking was made:
+    #  - Individual request (requester_type='student', no roster attached):
+    #    only the requester's own ID works.
+    #  - Instructor request with their class roster attached: any student on
+    #    that roster can check in with the shared code — a whole-class booking.
+    #  - Group-of-students request (requester_type='group'): the group isn't
+    #    enumerated by name anywhere — ANY ID number works with the shared
+    #    code, since one person filed it on behalf of the whole group.
+    #  - Any request with a roster attached (regardless of type): roster
+    #    members can also check in with the shared code, in addition to
+    #    whatever the rule above allows.
+    session = Session.objects.filter(
+        reservation_code__iexact=code,
+        lab=pc.lab,
+    ).select_related('lab', 'instructor', 'roster').first()
+
+    if session is None:
+        return {'ok': False, 'error': 'No matching reservation for this lab. Check your ID and reservation code, or ask your Lab In-Charge.'}
+
+    if not id_number:
+        return {'ok': False, 'error': 'Please enter your Student/Instructor ID.'}
+
+    is_group_booking = session.requester_type == 'group'
+    is_primary_requester = id_number.lower() == (session.requester_id_number or '').strip().lower()
+    roster_student = None
+    if not is_primary_requester and session.roster_id:
+        roster_student = session.roster.students.filter(id_number__iexact=id_number).first()
+
+    if not is_group_booking and not is_primary_requester and roster_student is None:
+        return {'ok': False, 'error': 'No matching reservation for this lab. Check your ID and reservation code, or ask your Lab In-Charge.'}
+
+    already_checked_in = False
+    if is_group_booking:
+        already_checked_in = session.check_ins.filter(id_number__iexact=id_number).exists()
+        cap = session.student_count or 0
+        if not already_checked_in and cap > 0 and session.check_ins.count() >= cap:
+            return {'ok': False, 'error': (
+                f"This group's check-in limit ({cap} student{'s' if cap != 1 else ''}) has already been "
+                "reached for this reservation. If that count is wrong, ask your Admin or Lab In-Charge to "
+                "update the request."
+            )}
+
+    if session.instructor is None:
+        return {'ok': False, 'error': (
+            'Your reservation was found, but this ID isn\u2019t linked to a registered account yet. '
+            'Ask your Admin or Lab In-Charge to register your account before you can log in here.'
+        )}
+
+    if not session.instructor.is_active:
+        return {'ok': False, 'error': 'Your account has been deactivated. Ask your Admin or Lab In-Charge for assistance.'}
+
+    now = timezone.localtime()
+    if session.date != now.date():
+        return {'ok': False, 'error': f"This reservation is for {session.date.strftime('%B %d, %Y')}, not today."}
+    if not (session.start_time <= now.time() <= session.end_time):
+        return {'ok': False, 'error': f"This reservation is only valid from {session.start_time.strftime('%H:%M')} to {session.end_time.strftime('%H:%M')}."}
+
+    success, detail = unlock_pc(pc)
+
+    if is_group_booking and not already_checked_in:
+        SessionCheckIn.objects.get_or_create(session=session, id_number=id_number)
+
+    pc.status = 'in_use'
+    pc.last_active = timezone.now()
+    pc.current_user = session.instructor
+    pc.current_session = session
+    pc.save(update_fields=['status', 'last_active', 'current_user', 'current_session'])
+
+    # Credit the actual person who checked in where we can identify them
+    # (roster member); for a group booking checked in by someone who isn't
+    # the primary requester or on a roster, just label them as a group member.
+    if roster_student:
+        checked_in_name = roster_student.full_name
+    elif is_primary_requester:
+        checked_in_name = session.requester_name
+    else:
+        checked_in_name = f'{session.requester_name} — group member'
+
+    ActivityLog.objects.create(
+        actor=session.instructor,
+        action='pc_unlock',
+        target_username=id_number,
+        pc=pc,
+        details=(
+            f"{checked_in_name} ({id_number}) checked in with reservation {session.reservation_code} — unlocked {pc.pc_id} ({pc.lab.name})."
+            if success else
+            f"{checked_in_name} ({id_number}) was verified for {pc.pc_id} ({pc.lab.name}) via reservation {session.reservation_code}, but the unlock command didn't run: {detail}"
+        )
+    )
+
+    return {
+        'ok': True,
+        'pc': pc,
+        'session': session,
+        'unlock_success': success,
+        'unlock_detail': detail,
+    }
+
+
 # the lock screen shown on a lab computer itself — the person enters the
 # Student/Instructor ID and reservation code that the Admin/Lab In-Charge
 # gave them when their walk-in request was approved. This is deliberately
 # NOT behind RoleRequiredMixin/LoginRequiredMixin: it's the page someone
 # sees before they're identified at all, and it never grants access to the
 # web management system, only to the physical PC it's running on.
+#
+# NOTE: this browser-based page is kept for labs that use a separate
+# reception/kiosk computer for check-in. If students log in directly on the
+# lock screen of the (currently locked) lab PC itself, see
+# PCAgentLoginAPIView below instead — the lock screen can't show a normal
+# browser page since it deliberately blocks all other access to the PC.
 class ReservationPCLoginView(FormView):
     template_name = 'labs/pc_login.html'
     form_class = ReservationPCLoginForm
@@ -56,76 +191,184 @@ class ReservationPCLoginView(FormView):
         return ctx
 
     def form_valid(self, form):
-        from accounts.models import ActivityLog
-        from labs.network import unlock_pc
-        from scheduling.models import Session
-
-        id_number = form.cleaned_data['id_number'].strip()
-        code = form.cleaned_data['reservation_code'].strip()
-        pc = self._resolve_pc()
-
-        if pc is None:
-            form.add_error(None, "This computer isn't registered in the system yet. Ask your Laboratory In-Charge to add it before it can be unlocked.")
-            return self.form_invalid(form)
-
-        session = Session.objects.filter(
-            reservation_code__iexact=code,
-            requester_id_number__iexact=id_number,
-            lab=pc.lab,
-        ).select_related('lab', 'instructor').first()
-
-        if session is None:
-            form.add_error(None, 'No matching reservation for this lab. Check your ID and reservation code, or ask your Lab In-Charge.')
-            return self.form_invalid(form)
-
-        if session.instructor is None:
-            form.add_error(
-                None,
-                'Your reservation was found, but this ID isn\u2019t linked to a registered account yet. '
-                'Ask your Admin or Lab In-Charge to register your account before you can log in here.'
-            )
-            return self.form_invalid(form)
-
-        if not session.instructor.is_active:
-            form.add_error(None, 'Your account has been deactivated. Ask your Admin or Lab In-Charge for assistance.')
-            return self.form_invalid(form)
-
-        now = timezone.localtime()
-        if session.date != now.date():
-            form.add_error(None, f"This reservation is for {session.date.strftime('%B %d, %Y')}, not today.")
-            return self.form_invalid(form)
-        if not (session.start_time <= now.time() <= session.end_time):
-            form.add_error(
-                None,
-                f"This reservation is only valid from {session.start_time.strftime('%H:%M')} to {session.end_time.strftime('%H:%M')}."
-            )
-            return self.form_invalid(form)
-
-        success, detail = unlock_pc(pc)
-
-        pc.status = 'in_use'
-        pc.last_active = timezone.now()
-        pc.current_user = session.instructor
-        pc.save(update_fields=['status', 'last_active', 'current_user'])
-
-        ActivityLog.objects.create(
-            actor=session.instructor,
-            action='pc_unlock',
-            target_username=id_number,
-            pc=pc,
-            details=(
-                f"{session.requester_name} ({id_number}) checked in with reservation {session.reservation_code} — unlocked {pc.pc_id} ({pc.lab.name})."
-                if success else
-                f"{session.requester_name} ({id_number}) was verified for {pc.pc_id} ({pc.lab.name}) via reservation {session.reservation_code}, but the unlock command didn't run: {detail}"
-            )
+        result = verify_reservation_and_check_in(
+            self.request.META.get('REMOTE_ADDR'),
+            form.cleaned_data['id_number'],
+            form.cleaned_data['reservation_code'],
         )
 
-        if success:
+        if not result['ok']:
+            form.add_error(None, result['error'])
+            return self.form_invalid(form)
+
+        pc = result['pc']
+        session = result['session']
+        if result['unlock_success']:
             messages.success(self.request, f'Welcome, {session.requester_name}. Unlocking {pc.pc_id}...')
         else:
             messages.warning(self.request, f'You were verified, but {pc.pc_id} could not be unlocked automatically. Ask your Laboratory In-Charge for help.')
 
         return redirect('pc_login')
+
+
+# JSON endpoint used by the lab_pc_agent running ON the lab PC itself, for
+# labs where students type their ID/reservation code directly into the lock
+# screen (instead of a separate reception/kiosk computer running the
+# browser-based ReservationPCLoginView above). The request is expected to
+# originate from the same machine's agent process, so REMOTE_ADDR here is
+# that PC's own IP — the identical IP-based PC lookup used everywhere else,
+# just reached over JSON instead of an HTML form. CSRF-exempt because this
+# is a machine-to-machine call from a local agent process, not a browser
+# session; PC_AGENT_SHARED_SECRET (checked the same way the agent checks
+# incoming unlock/lock requests) is what stands in for a login here.
+@csrf_exempt
+def pc_agent_login_api(request):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+
+    from django.conf import settings
+
+    try:
+        payload = json.loads(request.body or b'{}')
+    except (ValueError, TypeError):
+        return JsonResponse({'ok': False, 'error': 'invalid JSON body'}, status=400)
+
+    expected_secret = getattr(settings, 'PC_AGENT_SHARED_SECRET', '')
+    if not expected_secret or payload.get('secret') != expected_secret:
+        return JsonResponse({'ok': False, 'error': 'invalid secret'}, status=403)
+
+    result = verify_reservation_and_check_in(
+        request.META.get('REMOTE_ADDR'),
+        payload.get('id_number', ''),
+        payload.get('reservation_code', ''),
+    )
+
+    if not result['ok']:
+        return JsonResponse({'ok': False, 'error': result['error']}, status=200)
+
+    return JsonResponse({
+        'ok': True,
+        'pc_id': result['pc'].pc_id,
+        'student_name': result['session'].requester_name,
+        'unlock_success': result['unlock_success'],
+        'unlock_detail': result['unlock_detail'],
+        # HH:MM:SS the reservation ends — the agent uses this to schedule an
+        # automatic re-lock locally, without needing to keep polling the
+        # server. Combined with today's date since Session.date is always
+        # "today" by the time verify_reservation_and_check_in accepts it.
+        'session_end_time': result['session'].end_time.strftime('%H:%M:%S'),
+        # The server's own current wall-clock time (Asia/Manila), sent so the
+        # agent can measure its OWN clock's drift/offset against the server
+        # instead of trusting the lab PC's local Windows clock outright.
+        # Without this, a lab PC with a wrong/drifted system clock schedules
+        # the warning + auto-relock against the wrong moment in real time.
+        'server_time': timezone.localtime().strftime('%H:%M:%S'),
+    })
+
+
+
+# Called by the agent whenever it re-locks a PC — either because the
+# reservation's end_time was reached (automatic) or because the student
+# clicked "Lock Now" on the little always-on-visible mini panel (manual,
+# for when they're done early). Either way this just clears the PC's
+# "currently in use" tracking server-side so status pages/admin reflect
+# reality; the actual re-locking of the screen happens locally in the
+# agent regardless of whether this call succeeds.
+@csrf_exempt
+def pc_agent_end_session_api(request):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+
+    from django.conf import settings
+    from accounts.models import ActivityLog
+
+    try:
+        payload = json.loads(request.body or b'{}')
+    except (ValueError, TypeError):
+        return JsonResponse({'ok': False, 'error': 'invalid JSON body'}, status=400)
+
+    expected_secret = getattr(settings, 'PC_AGENT_SHARED_SECRET', '')
+    if not expected_secret or payload.get('secret') != expected_secret:
+        return JsonResponse({'ok': False, 'error': 'invalid secret'}, status=403)
+
+    remote_addr = request.META.get('REMOTE_ADDR')
+    pc = PC.objects.filter(ip_address=remote_addr).select_related('lab').first()
+    if pc is None:
+        return JsonResponse({'ok': False, 'error': 'PC not registered'}, status=200)
+
+    reason = payload.get('reason', 'manual')  # 'manual' or 'expired'
+    session = pc.current_session
+    user = pc.current_user
+
+    if session is not None or user is not None:
+        ActivityLog.objects.create(
+            actor=user,
+            action='pc_lock',
+            target_username=session.requester_id_number if session else '',
+            pc=pc,
+            details=(
+                f"{pc.pc_id} ({pc.lab.name}) re-locked — reservation time ended."
+                if reason == 'expired' else
+                f"{pc.pc_id} ({pc.lab.name}) locked by the student (session ended early)."
+            )
+        )
+
+    pc.status = 'online'
+    pc.current_user = None
+    pc.current_session = None
+    pc.save(update_fields=['status', 'current_user', 'current_session'])
+
+    return JsonResponse({'ok': True})
+
+
+# Called by the agent when a student clicks "Log Out" on the PC itself, or
+# when the agent's own scheduled auto-relock timer fires because the
+# reservation's end_time passed. Either way, this just marks the PC as no
+# longer in use server-side — the actual re-locking of the screen is a
+# purely local decision the agent already made before calling this; this
+# endpoint exists so the admin dashboard / PC status view reflects reality.
+@csrf_exempt
+def pc_agent_logout_api(request):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+
+    from django.conf import settings
+    from accounts.models import ActivityLog
+
+    try:
+        payload = json.loads(request.body or b'{}')
+    except (ValueError, TypeError):
+        return JsonResponse({'ok': False, 'error': 'invalid JSON body'}, status=400)
+
+    expected_secret = getattr(settings, 'PC_AGENT_SHARED_SECRET', '')
+    if not expected_secret or payload.get('secret') != expected_secret:
+        return JsonResponse({'ok': False, 'error': 'invalid secret'}, status=403)
+
+    pc = PC.objects.filter(ip_address=request.META.get('REMOTE_ADDR')).select_related('lab').first()
+    if pc is None:
+        return JsonResponse({'ok': False, 'error': 'PC not registered'}, status=200)
+
+    previous_user = pc.current_user
+    reason = payload.get('reason', 'manual')  # 'manual' or 'expired'
+
+    pc.status = 'locked'
+    pc.current_user = None
+    pc.last_active = timezone.now()
+    pc.save(update_fields=['status', 'current_user', 'last_active'])
+
+    ActivityLog.objects.create(
+        actor=previous_user,
+        action='pc_lock',
+        target_username=previous_user.username if previous_user else '',
+        pc=pc,
+        details=(
+            f"{pc.pc_id} ({pc.lab.name}) re-locked — reservation time ended."
+            if reason == 'expired' else
+            f"{pc.pc_id} ({pc.lab.name}) locked by student (logged out)."
+        )
+    )
+
+    return JsonResponse({'ok': True})
 
 
 # shows all PCs with their current status

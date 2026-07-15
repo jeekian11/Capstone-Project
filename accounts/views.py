@@ -1,4 +1,7 @@
 from django.shortcuts import redirect, get_object_or_404, render
+from django.http import JsonResponse
+from django.db.models import Q, Value
+from django.db.models.functions import Concat
 from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DeleteView, FormView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
@@ -9,7 +12,7 @@ from django.core.exceptions import PermissionDenied
 from django.urls import reverse_lazy
 from accounts.mixins import RoleRequiredMixin
 from accounts.models import ActivityLog
-from accounts.forms import AdminUserCreateForm, AdminSetPasswordForm
+from accounts.forms import AdminUserCreateForm, AdminSetPasswordForm, ProfileUpdateForm
 
 
 # custom login view — same as Django's built-in one, but also hands the
@@ -35,6 +38,23 @@ class CompulabLoginView(LoginView):
         return ctx
 
 User = get_user_model()
+
+
+class ProfileView(LoginRequiredMixin, UpdateView):
+    """Lets any logged-in user (admin, in-charge, or instructor) update
+    their own name, email, and profile picture from the navbar avatar."""
+    model = User
+    form_class = ProfileUpdateForm
+    template_name = 'accounts/profile.html'
+    success_url = reverse_lazy('profile')
+
+    def get_object(self, queryset=None):
+        return self.request.user
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Profile updated.')
+        return super().form_valid(form)
+
 
 # sends each role to their own dashboard after login
 def role_redirect(request):
@@ -157,7 +177,8 @@ class UserUpdateView(RoleRequiredMixin, UpdateView):
     allowed_roles = ['admin']
     template_name = 'accounts/user_form.html'
     model = User
-    fields = ['first_name', 'last_name', 'email', 'id_number', 'role', 'assigned_lab', 'is_active']
+    fields = ['first_name', 'last_name', 'username', 'email', 'id_number',
+              'course_year_section', 'department', 'role', 'assigned_lab', 'is_active']
     success_url = reverse_lazy('users')
 
 
@@ -591,3 +612,65 @@ def export_logs_pdf(request):
     response = HttpResponse(buffer, content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="log_history.pdf"'
     return response
+
+
+@login_required
+def search_requesters(request):
+    """Powers the requester search/auto-fill picker on 'Log a reservation'.
+    Only returns active, registered accounts — matches the policy that only
+    admin-registered accounts may hold a reservation. Restricted to the same
+    roles allowed to log a reservation (admin/incharge).
+    """
+    if request.user.role not in ('admin', 'incharge'):
+        raise PermissionDenied
+
+    role = request.GET.get('role', '')
+    query = (request.GET.get('q') or '').strip()
+
+    # 'group' requester_type maps to student accounts (see scheduling forms) —
+    # the group is filed under a student's own account, there's no distinct role.
+    account_role = 'student' if role == 'group' else role
+    if account_role not in ('student', 'instructor'):
+        return JsonResponse({'results': []})
+
+    qs = User.objects.filter(role=account_role, is_active=True)
+    if query:
+        # Match against first/last individually AND the combined full name,
+        # so a two-word search like "Juan Cruz" or "Cruz Juan" also matches —
+        # searching by only first_name/last_name separately missed these.
+        qs = qs.annotate(
+            full_name_concat=Concat('first_name', Value(' '), 'last_name'),
+            full_name_concat_rev=Concat('last_name', Value(' '), 'first_name'),
+        ).filter(
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query) |
+            Q(id_number__icontains=query) |
+            Q(username__icontains=query) |
+            Q(full_name_concat__icontains=query) |
+            Q(full_name_concat_rev__icontains=query)
+        )
+    qs = qs.order_by('last_name', 'first_name')[:200]
+
+    def _rank(u):
+        # Exact ID match first, then "starts with" name matches, so the
+        # most likely intended person isn't buried among loose partial
+        # matches — avoids an ambiguous, hard-to-scan result list.
+        q = query.lower()
+        if not q:
+            return 0
+        if u.id_number.lower() == q:
+            return 0
+        full_name = (u.get_full_name() or u.username).lower()
+        if full_name.startswith(q) or u.last_name.lower().startswith(q):
+            return 1
+        return 2
+
+    results = sorted(qs, key=_rank)[:15]
+    results = [{
+        'id': u.pk,
+        'full_name': u.get_full_name() or u.username,
+        'id_number': u.id_number,
+        'course_year_section': u.course_year_section,
+        'department': u.department,
+    } for u in results]
+    return JsonResponse({'results': results})

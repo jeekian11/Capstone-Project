@@ -46,24 +46,59 @@ def check_pc(pc):
 
 def unlock_pc(pc):
     """
-    Runs the OS command that releases this lab computer's lock/kiosk screen
-    once a student's Student ID and password have been verified.
+    Tells this specific lab PC to release its own lock/kiosk screen, once a
+    student's Student ID and password have been verified.
 
-    How a lab PC is actually "locked" down (a kiosk browser, a custom lock
-    screen service, etc.) is a deployment decision this project can't assume,
-    so the command itself is configured in settings.PC_UNLOCK_COMMAND rather
-    than hardcoded here — same idea as ip_address being something each site
-    has to fill in for their own machines.
+    Internet-cafe style: the server doesn't log into the PC or run anything
+    on it directly. Instead it sends a small signed HTTP request to the
+    agent running locally on that PC (see lab_pc_agent/agent.py), addressed
+    with the PC's own ip_address. The agent is the one that actually knows
+    how to unlock that machine (Windows lock screen, kiosk browser, etc.)
+    and runs the real command itself, locally.
+
+    Falls back to settings.PC_UNLOCK_COMMAND (run on the server itself) only
+    if the agent can't be reached — useful for local testing, or a lab where
+    the server IS one of the PCs.
 
     Returns (success: bool, message: str). A False success still means the
-    student was verified; it only means the unlock command itself didn't run
-    (e.g. not configured yet, or the local command failed).
+    student was verified; it only means the unlock signal didn't get through
+    (e.g. agent not running yet, PC offline, wrong IP on file).
     """
     from django.conf import settings
+    import json
+    import urllib.request
+    import urllib.error
 
+    if pc.ip_address:
+        port = getattr(settings, 'PC_AGENT_PORT', 5555)
+        secret = getattr(settings, 'PC_AGENT_SHARED_SECRET', '')
+        timeout = getattr(settings, 'PC_AGENT_TIMEOUT_SECONDS', 4)
+        url = f'http://{pc.ip_address}:{port}/unlock'
+        payload = json.dumps({'secret': secret}).encode('utf-8')
+        request = urllib.request.Request(
+            url,
+            data=payload,
+            headers={'Content-Type': 'application/json'},
+            method='POST',
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                if 200 <= response.status < 300:
+                    return True, f'Unlock signal sent to agent at {pc.ip_address}.'
+                return False, f'Agent at {pc.ip_address} responded with status {response.status}.'
+        except urllib.error.HTTPError as e:
+            if e.code == 403:
+                return False, f'Agent at {pc.ip_address} rejected the request — check PC_AGENT_SHARED_SECRET matches on both sides.'
+            return False, f'Agent at {pc.ip_address} returned an error: {e.code} {e.reason}'
+        except urllib.error.URLError as e:
+            return False, f'Could not reach agent at {pc.ip_address}:{port} — is the agent running on that PC? ({e.reason})'
+        except Exception as e:
+            return False, f'Unlock request to {pc.ip_address} failed: {e}'
+
+    # No IP on file for this PC — fall back to a server-local command, if any.
     command = getattr(settings, 'PC_UNLOCK_COMMAND', None)
     if not command:
-        return False, 'No PC_UNLOCK_COMMAND is configured in settings — the student was verified but no unlock command was run.'
+        return False, 'This PC has no IP address on file and no PC_UNLOCK_COMMAND fallback is configured — the student was verified but nothing was unlocked.'
 
     system = platform.system().lower()
     try:
@@ -73,9 +108,9 @@ def unlock_pc(pc):
             timeout=10,
             check=True,
         )
-        return True, 'Unlock command executed.'
+        return True, 'Unlock command executed on the server (fallback — no IP on file for this PC).'
     except Exception as e:
-        return False, f'Unlock command failed: {e}'
+        return False, f'Fallback unlock command failed: {e}'
 
 
 def refresh_pc_statuses(pcs):

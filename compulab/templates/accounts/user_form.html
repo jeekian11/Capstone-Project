@@ -34,7 +34,7 @@
     <div class="form-group">
       <label class="form-label" for="{{ form.username.id_for_label }}">Username</label>
       {{ form.username }}
-      <span class="helptext">Used to log into CompuLab (the dashboard). Not the same as ID Number below.</span>
+      <span class="helptext">Used to log into SCLAMS (the dashboard). Not the same as ID Number below.</span>
       {% if form.username.errors %}<div class="form-errors">{{ form.username.errors|join:", " }}</div>{% endif %}
     </div>
     {% endif %}
@@ -45,6 +45,24 @@
       {{ form.id_number }}
       <span class="helptext">Student/Instructor ID — this is what they present at the lab PC and what reservation requests are matched against. Required for the account to be linked to a reservation.</span>
       {% if form.id_number.errors %}<div class="form-errors">{{ form.id_number.errors|join:", " }}</div>{% endif %}
+    </div>
+    {% endif %}
+
+    {% if form.course_year_section %}
+    <div class="form-group" data-role-field="student">
+      <label class="form-label" for="{{ form.course_year_section.id_for_label }}">Course &amp; Year/Section</label>
+      {{ form.course_year_section }}
+      <span class="helptext">Students only — e.g. "BSIS 4A". Shown automatically when this student is picked as a requester.</span>
+      {% if form.course_year_section.errors %}<div class="form-errors">{{ form.course_year_section.errors|join:", " }}</div>{% endif %}
+    </div>
+    {% endif %}
+
+    {% if form.department %}
+    <div class="form-group" data-role-field="instructor">
+      <label class="form-label" for="{{ form.department.id_for_label }}">Department</label>
+      {{ form.department }}
+      <span class="helptext">Instructors only — e.g. "College of Computer Studies". Shown automatically when this instructor is picked as a requester.</span>
+      {% if form.department.errors %}<div class="form-errors">{{ form.department.errors|join:", " }}</div>{% endif %}
     </div>
     {% endif %}
 
@@ -97,5 +115,20 @@
     </div>
   </form>
 </div>
+
+<script>
+(function() {
+  var roleSelect = document.getElementById('{{ form.role.id_for_label }}');
+  if (!roleSelect) return;
+  function updateVisibility() {
+    var role = roleSelect.value;
+    document.querySelectorAll('[data-role-field]').forEach(function(el) {
+      el.style.display = (el.dataset.roleField === role) ? '' : 'none';
+    });
+  }
+  roleSelect.addEventListener('change', updateVisibility);
+  updateVisibility();
+})();
+</script>
 
 {% endblock %}

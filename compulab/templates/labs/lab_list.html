@@ -24,7 +24,12 @@
       <span style="margin-left:auto; display:flex; gap:8px;">
         <a href="{% url 'pc_create' %}?lab={{ lab.pk }}" class="action-btn small">+ Add PC</a>
         <a href="{% url 'lab_update' lab.pk %}" class="action-btn small">Edit</a>
-        <a href="{% url 'lab_delete' lab.pk %}" class="action-btn small danger">Delete</a>
+        <form method="post" action="{% url 'lab_delete' lab.pk %}"
+              onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this lab?', text: 'This action cannot be undone. {{ lab.name|escapejs }}{% with n=lab.pcs.count %}{% if n %} and its {{ n }} PC{{ n|pluralize }}{% endif %}{% endwith %} will be removed.', confirmButtonText: 'Yes, delete lab'}); return false;"
+              style="display:inline">
+          {% csrf_token %}
+          <button type="submit" class="action-btn small danger">Delete</button>
+        </form>
       </span>
     </div>
     <table class="table">
@@ -39,7 +44,12 @@
             <td><span class="status-pill pill-{{ pc.status }}">{{ pc.get_status_display }}</span></td>
             <td style="white-space:nowrap">
               <a href="{% url 'pc_edit' pc.pk %}" class="action-btn small">Edit</a>
-              <a href="{% url 'pc_delete' pc.pk %}" class="action-btn small danger">Delete</a>
+              <form method="post" action="{% url 'pc_delete' pc.pk %}"
+                    onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Remove this PC?', text: 'This action cannot be undone. {{ pc.pc_id|escapejs }} will be removed from {{ lab.name|escapejs }}.', confirmButtonText: 'Yes, remove PC'}); return false;"
+                    style="display:inline">
+                {% csrf_token %}
+                <button type="submit" class="action-btn small danger">Delete</button>
+              </form>
             </td>
           </tr>
         {% empty %}

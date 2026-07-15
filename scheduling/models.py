@@ -37,6 +37,7 @@ class Session(models.Model):
     REQUESTER_TYPE = [
         ('instructor', 'Instructor'),
         ('student', 'Student'),
+        ('group', 'Group of students'),
     ]
     lab = models.ForeignKey('labs.Lab', on_delete=models.CASCADE, related_name='sessions')
     instructor = models.ForeignKey(
@@ -65,10 +66,31 @@ class Session(models.Model):
         return f'{self.subject} — {self.date}'
 
 
+class SessionCheckIn(models.Model):
+    """One row per distinct ID number that has checked in to a Session via
+    the shared reservation code. Used to cap 'Group of students' bookings
+    (which accept any ID) at the declared student_count, so a shared code
+    can't be handed out beyond the group size that was actually requested.
+    Re-checking in with the same ID (e.g. logging into a different PC) does
+    not count again — it's the same person.
+    """
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='check_ins')
+    id_number = models.CharField(max_length=50)
+    checked_in_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [('session', 'id_number')]
+        ordering = ['checked_in_at']
+
+    def __str__(self):
+        return f'{self.id_number} → {self.session}'
+
+
 class SessionRequest(models.Model):
     REQUESTER_TYPE = [
         ('instructor', 'Instructor'),
         ('student', 'Student'),
+        ('group', 'Group of students'),
     ]
     STATUS = [
         ('pending', 'Pending'),
@@ -84,6 +106,15 @@ class SessionRequest(models.Model):
     requester_name = models.CharField(max_length=150, default='', help_text='Name of the instructor or student who asked for this reservation in person.')
     requester_id_number = models.CharField(
         max_length=50, default='', help_text='Student ID or Instructor ID — this is what they will present at the lab PC.'
+    )
+    roster = models.ForeignKey(
+        ClassRoster, on_delete=models.SET_NULL, null=True, blank=True, related_name='session_requests',
+        help_text=(
+            'Optional — link a roster to let everyone on it check in with this same reservation code, '
+            'not just the requester. Use this for an Instructor booking their whole class, so attendance '
+            'shows real names. Not needed for "Group of students" — any ID works with the shared code for '
+            'that type. Leave blank for a single individual (Student) request.'
+        )
     )
     lab = models.ForeignKey('labs.Lab', on_delete=models.CASCADE)
     subject = models.CharField(max_length=200)

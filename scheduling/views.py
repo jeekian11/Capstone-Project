@@ -1,7 +1,5 @@
 from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DetailView, DeleteView
 from django.contrib import messages
-from django.contrib.auth import get_user_model
-from django.db.models import Q
 from django.shortcuts import redirect, get_object_or_404
 from django.utils import timezone
 from django.urls import reverse_lazy
@@ -86,22 +84,11 @@ class SessionUpdateView(RoleRequiredMixin, UpdateView):
             form.add_error(None, 'Time slot conflict. Choose a different time.')
             return self.form_invalid(form)
 
-        User = get_user_model()
-        account = User.objects.filter(
-            Q(id_number__iexact=form.instance.requester_id_number) |
-            Q(username__iexact=form.instance.requester_id_number),
-            role=form.instance.requester_type,
-        ).first()
-        form.instance.instructor = account
+        # Form validation (RequiresRegisteredAccountMixin) guarantees this
+        # matches an active, admin-registered account before we ever get here.
+        form.instance.instructor = form.cleaned_data['_matched_account']
         response = super().form_valid(form)
-        if account is None:
-            messages.warning(
-                self.request,
-                f'Schedule updated, but no registered account matches ID "{form.instance.requester_id_number}". '
-                'They won\u2019t be able to log in at the lab PC until an Admin registers an account for them under Users.'
-            )
-        else:
-            messages.success(self.request, 'Schedule updated.')
+        messages.success(self.request, 'Schedule updated.')
         return response
 
     def get_success_url(self):
@@ -261,22 +248,11 @@ class RequestUpdateView(RoleRequiredMixin, UpdateView):
         return super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
-        User = get_user_model()
-        account = User.objects.filter(
-            Q(id_number__iexact=form.instance.requester_id_number) |
-            Q(username__iexact=form.instance.requester_id_number),
-            role=form.instance.requester_type,
-        ).first()
-        form.instance.instructor = account
+        # Form validation (RequiresRegisteredAccountMixin) guarantees this
+        # matches an active, admin-registered account before we ever get here.
+        form.instance.instructor = form.cleaned_data['_matched_account']
         response = super().form_valid(form)
-        if account is None:
-            messages.warning(
-                self.request,
-                f'Request updated, but no registered account matches ID "{form.instance.requester_id_number}". '
-                'They won\u2019t be able to log in at the lab PC until an Admin registers an account for them under Users.'
-            )
-        else:
-            messages.success(self.request, 'Request updated.')
+        messages.success(self.request, 'Request updated.')
         return response
 
     def get_success_url(self):
@@ -310,6 +286,7 @@ def approve_request(request, pk):
             requester_type=req.requester_type,
             requester_name=req.requester_name,
             requester_id_number=req.requester_id_number,
+            roster=req.roster,
             reservation_code=code,
             subject=req.subject,
             date=req.date,
@@ -448,26 +425,13 @@ class RequestCreateView(RoleRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.status = 'pending'
-        # Link to a real account if the ID number they gave matches one —
-        # this is now REQUIRED for the requester to unlock a lab PC, since
-        # only registered accounts (added by an Admin/Lab In-Charge under
-        # Users) are allowed to check in.
-        User = get_user_model()
-        account = User.objects.filter(
-            Q(id_number__iexact=form.instance.requester_id_number) |
-            Q(username__iexact=form.instance.requester_id_number),
-            role=form.instance.requester_type,
-        ).first()
-        form.instance.instructor = account
+        # Only accounts registered by an Admin/Lab In-Charge (under Users)
+        # may hold a reservation — SessionRequestForm's
+        # RequiresRegisteredAccountMixin already rejected this submission
+        # if no matching active account exists, so this is guaranteed here.
+        form.instance.instructor = form.cleaned_data['_matched_account']
         response = super().form_valid(form)
-        if account is None:
-            messages.warning(
-                self.request,
-                f'Reservation logged, but no registered account matches ID "{form.instance.requester_id_number}". '
-                'They won\u2019t be able to log in at the lab PC until an Admin registers an account for them under Users.'
-            )
-        else:
-            messages.success(self.request, 'Reservation logged. Review the details and approve or reject it.')
+        messages.success(self.request, 'Reservation logged. Review the details and approve or reject it.')
         return response
 
     def get_success_url(self):

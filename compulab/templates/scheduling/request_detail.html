@@ -15,10 +15,26 @@
   <div class="card" style="max-width:560px; border-color:#3ed6c4; background:rgba(62,214,196,0.06);">
     <div class="section-title" style="margin-bottom:6px">Reservation code</div>
     <div style="font-family:monospace; font-size:28px; font-weight:700; letter-spacing:0.12em;">{{ req.reservation_code }}</div>
-    <p style="font-size:13px; color:#666; margin-top:8px;">
-      Give this code to {{ req.requester_name }}. At the lab PC, they'll enter their
-      {{ req.get_requester_type_display }} ID (<strong>{{ req.requester_id_number }}</strong>) together with this code to log in.
-    </p>
+    {% if req.roster %}
+      <p style="font-size:13px; color:#666; margin-top:8px;">
+        Linked to roster <strong>{{ req.roster.name }}</strong> ({{ req.roster.students.count }} student{{ req.roster.students.count|pluralize }}).
+        Anyone on that roster can log in at the lab PC with this code, using their own ID number —
+        not just {{ req.requester_name }}.
+      </p>
+    {% elif req.requester_type == 'group' %}
+      <p style="font-size:13px; color:#666; margin-top:8px;">
+        This is a <strong>Group of students</strong> request — any ID number will work with this code
+        at the lab PC, so the whole group can check in without needing a roster or name list.
+        Capped at <strong>{{ req.student_count }}</strong> distinct ID{{ req.student_count|pluralize }}
+        checking in, based on the number of students on this request.
+      </p>
+    {% else %}
+      <p style="font-size:13px; color:#666; margin-top:8px;">
+        Give this code to {{ req.requester_name }}. At the lab PC, they'll enter their
+        {{ req.get_requester_type_display }} ID (<strong>{{ req.requester_id_number }}</strong>) together with this code to log in.
+        No roster is linked, so only this ID number will work with this code.
+      </p>
+    {% endif %}
   </div>
 {% endif %}
 
@@ -27,6 +43,7 @@
     <tr><td>Requester</td><td>{{ req.requester_name }}</td></tr>
     <tr><td>Type</td><td>{{ req.get_requester_type_display }}</td></tr>
     <tr><td>ID number</td><td>{{ req.requester_id_number }}</td></tr>
+    <tr><td>Roster</td><td>{% if req.roster %}{{ req.roster.name }} ({{ req.roster.students.count }} student{{ req.roster.students.count|pluralize }}){% else %}— (individual only){% endif %}</td></tr>
     <tr><td>Lab</td><td>{{ req.lab.name }}</td></tr>
     <tr><td>Subject</td><td>{{ req.subject }}</td></tr>
     <tr><td>Date</td><td>{{ req.date|date:"M d, Y" }}</td></tr>
@@ -42,11 +59,13 @@
 
   {% if req.status == 'pending' %}
     <div class="form-actions" style="margin-top:20px">
-      <form method="post" action="{% url 'approve_request' req.pk %}" style="display:inline">
+      <form method="post" action="{% url 'approve_request' req.pk %}" style="display:inline"
+            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Approve this reservation?', text: 'A reservation code will be generated and the lab PC will accept it.', icon: 'question', confirmButtonText: 'Yes, approve', confirmButtonColor: '#3ed6c4'}); return false;">
         {% csrf_token %}
         <button type="submit" class="action-btn primary">Approve</button>
       </form>
-      <form method="post" action="{% url 'decline_request' req.pk %}" style="display:inline">
+      <form method="post" action="{% url 'decline_request' req.pk %}" style="display:inline"
+            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Reject this reservation?', text: 'The requester will be notified that this request was declined.', confirmButtonText: 'Yes, reject'}); return false;">
         {% csrf_token %}
         <button type="submit" class="action-btn danger">Reject</button>
       </form>

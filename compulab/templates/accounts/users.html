@@ -45,7 +45,8 @@
           <td style="white-space:nowrap; display:flex; gap:6px;">
             <a href="{% url 'user_update' u.pk %}" class="action-btn small">Edit</a>
             {% if u.is_active %}
-              <form method="post" action="{% url 'user_deactivate' u.pk %}" style="display:inline">
+              <form method="post" action="{% url 'user_deactivate' u.pk %}" style="display:inline"
+                    onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Deactivate this account?', text: '{{ u.get_full_name|default:u.username|escapejs }} won\'t be able to log in or hold a reservation until reactivated.', confirmButtonText: 'Yes, deactivate'}); return false;">
                 {% csrf_token %}
                 <button type="submit" class="action-btn small">Deactivate</button>
               </form>
@@ -56,7 +57,11 @@
               </form>
             {% endif %}
             <a href="{% url 'user_reset_password' u.pk %}" class="action-btn small">Reset password</a>
-            <a href="{% url 'user_delete' u.pk %}" class="action-btn small danger">Delete</a>
+            <form method="post" action="{% url 'user_delete' u.pk %}" style="display:inline"
+                  onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this user?', text: 'This action cannot be undone. {{ u.get_full_name|default:u.username|escapejs }} and all of their account data will be permanently removed.', confirmButtonText: 'Yes, delete user'}); return false;">
+              {% csrf_token %}
+              <button type="submit" class="action-btn small danger">Delete</button>
+            </form>
           </td>
         </tr>
       {% empty %}

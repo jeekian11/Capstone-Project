@@ -50,7 +50,12 @@
             <a href="{% url 'inventory_detail' item.pk %}" class="action-btn small">View</a>
             {% if request.user.role == 'admin' %}
               <a href="{% url 'inventory_update' item.pk %}" class="action-btn small">Edit</a>
-              <a href="{% url 'inventory_delete' item.pk %}" class="action-btn small danger">Delete</a>
+              <form method="post" action="{% url 'inventory_delete' item.pk %}"
+                    onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Remove this item?', text: 'This action cannot be undone. {{ item.name|escapejs }} will be removed from {{ item.lab.name|escapejs }}\'s inventory.', confirmButtonText: 'Yes, remove item'}); return false;"
+                    style="display:inline">
+                {% csrf_token %}
+                <button type="submit" class="action-btn small danger">Delete</button>
+              </form>
             {% endif %}
           </td>
         </tr>
