@@ -11,7 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 from accounts.mixins import RoleRequiredMixin
 from labs.models import PC, Lab, InventoryItem, MaintenanceLog, EquipmentIssue
 from labs.network import refresh_pc_statuses
-from labs.forms import ReservationPCLoginForm, MaintenanceScheduleForm, LabForm, InventoryItemForm
+from labs.forms import ReservationPCLoginForm, MaintenanceScheduleForm, LabForm, InventoryItemForm, PCForm
 
 
 # admin main dashboard
@@ -551,7 +551,7 @@ class LabDeleteView(RoleRequiredMixin, DeleteView):
 class PCCreateView(RoleRequiredMixin, CreateView):
     allowed_roles = ['admin']
     model = PC
-    fields = ['lab', 'pc_id', 'ip_address', 'status']
+    form_class = PCForm
     template_name = 'labs/pc_edit_form.html'
     success_url = reverse_lazy('lab_list')
 
@@ -570,7 +570,7 @@ class PCCreateView(RoleRequiredMixin, CreateView):
 class PCEditView(RoleRequiredMixin, UpdateView):
     allowed_roles = ['admin']
     model = PC
-    fields = ['lab', 'pc_id', 'ip_address', 'status']
+    form_class = PCForm
     template_name = 'labs/pc_edit_form.html'
     success_url = reverse_lazy('lab_list')
 

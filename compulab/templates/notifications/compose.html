@@ -11,7 +11,8 @@
 </div>
 
 <div class="card" style="max-width:560px">
-  <form method="post" novalidate id="compose-form">
+  <form method="post" novalidate id="compose-form"
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Send this notification?', text: 'This will be sent to the recipients you selected.', icon: 'question', confirmButtonText: 'Yes, send', confirmButtonColor: '#3ed6c4'}); return false;">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div class="form-errors">{{ form.non_field_errors }}</div>

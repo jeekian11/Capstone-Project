@@ -10,7 +10,8 @@
   </div>
   <div style="display:flex; gap:8px">
     <a href="{% url 'notification_settings' %}" class="action-btn">Settings</a>
-    <form method="post" action="{% url 'mark_all_read' %}">
+    <form method="post" action="{% url 'mark_all_read' %}"
+          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Mark all as read?', text: 'All of your notifications will be marked as read.', icon: 'question', confirmButtonText: 'Yes, mark all read', confirmButtonColor: '#3ed6c4'}); return false;">
       {% csrf_token %}
       <button type="submit" class="action-btn">Mark all as read</button>
     </form>

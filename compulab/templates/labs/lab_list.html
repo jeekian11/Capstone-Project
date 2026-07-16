@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Manage Labs{% endblock %}
 
 {% block content %}
@@ -9,7 +10,8 @@
     <div class="sub">{{ labs|length }} lab{{ labs|length|pluralize }}</div>
   </div>
   <div style="display:flex; gap:8px">
-    <form method="post" action="{% url 'pc_status_refresh' %}">
+    <form method="post" action="{% url 'pc_status_refresh' %}"
+          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Check all PC status now?', text: 'This will ping every PC across all labs right away — it may take a few seconds.', icon: 'question', confirmButtonText: 'Yes, check now', confirmButtonColor: '#3ed6c4'}); return false;">
       {% csrf_token %}
       <button type="submit" class="action-btn">Check all PC status now</button>
     </form>
@@ -23,12 +25,12 @@
       {{ lab.name }} <span style="font-weight:400; color:#999; font-size:12.5px">{{ lab.location }}</span>
       <span style="margin-left:auto; display:flex; gap:8px;">
         <a href="{% url 'pc_create' %}?lab={{ lab.pk }}" class="action-btn small">+ Add PC</a>
-        <a href="{% url 'lab_update' lab.pk %}" class="action-btn small">Edit</a>
+        <a href="{% url 'lab_update' lab.pk %}" class="action-btn icon-only" title="Edit lab"><svg><use href="#icon-edit"/></svg></a>
         <form method="post" action="{% url 'lab_delete' lab.pk %}"
               onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this lab?', text: 'This action cannot be undone. {{ lab.name|escapejs }}{% with n=lab.pcs.count %}{% if n %} and its {{ n }} PC{{ n|pluralize }}{% endif %}{% endwith %} will be removed.', confirmButtonText: 'Yes, delete lab'}); return false;"
               style="display:inline">
           {% csrf_token %}
-          <button type="submit" class="action-btn small danger">Delete</button>
+          <button type="submit" class="action-btn icon-only danger" title="Delete lab"><svg><use href="#icon-trash"/></svg></button>
         </form>
       </span>
     </div>
@@ -38,17 +40,17 @@
       </thead>
       <tbody>
         {% for pc in lab.pcs.all %}
-          <tr>
+          <tr data-pc="{{ pc.pc_id }}">
             <td>{{ pc.pc_id }}</td>
             <td>{{ pc.ip_address|default:"—" }}</td>
-            <td><span class="status-pill pill-{{ pc.status }}">{{ pc.get_status_display }}</span></td>
+            <td><span class="status-pill pill-{{ pc.status }}" data-role="status-pill">{{ pc.get_status_display }}</span></td>
             <td style="white-space:nowrap">
-              <a href="{% url 'pc_edit' pc.pk %}" class="action-btn small">Edit</a>
+              <a href="{% url 'pc_edit' pc.pk %}" class="action-btn icon-only" title="Edit PC"><svg><use href="#icon-edit"/></svg></a>
               <form method="post" action="{% url 'pc_delete' pc.pk %}"
                     onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Remove this PC?', text: 'This action cannot be undone. {{ pc.pc_id|escapejs }} will be removed from {{ lab.name|escapejs }}.', confirmButtonText: 'Yes, remove PC'}); return false;"
                     style="display:inline">
                 {% csrf_token %}
-                <button type="submit" class="action-btn small danger">Delete</button>
+                <button type="submit" class="action-btn icon-only danger" title="Delete PC"><svg><use href="#icon-trash"/></svg></button>
               </form>
             </td>
           </tr>
@@ -63,5 +65,7 @@
     <p class="empty">No labs yet. Click "+ Add lab" to create your first one.</p>
   </div>
 {% endfor %}
+
+<script src="{% static 'js/dashboard.js' %}"></script>
 
 {% endblock %}

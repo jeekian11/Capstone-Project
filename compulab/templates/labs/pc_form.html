@@ -11,7 +11,8 @@
 </div>
 
 <div class="card" style="max-width:480px">
-  <form method="post" novalidate>
+  <form method="post" novalidate
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Update PC status?', text: 'The status of {{ object.pc_id|escapejs }} will be changed.', icon: 'question', confirmButtonText: 'Yes, update', confirmButtonColor: '#3ed6c4'}); return false;">
     {% csrf_token %}
     <div class="form-group">
       <label class="form-label" for="{{ form.status.id_for_label }}">Status</label>

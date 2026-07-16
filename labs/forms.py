@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from labs.models import MaintenanceLog, Lab, InventoryItem
+from labs.models import MaintenanceLog, Lab, InventoryItem, PC
+import ipaddress
 
 
 class LabForm(forms.ModelForm):
@@ -11,6 +12,36 @@ class LabForm(forms.ModelForm):
             'opening_time': forms.TimeInput(attrs={'type': 'time'}),
             'closing_time': forms.TimeInput(attrs={'type': 'time'}),
         }
+
+
+class PCForm(forms.ModelForm):
+    """
+    Same fields as the plain PC ModelForm, plus one guardrail: reject
+    loopback/reserved IP addresses (127.0.0.0/8, 0.0.0.0, etc). Those always
+    "ping back" the server itself, not the actual lab PC, so the status
+    checker would report the PC as online forever regardless of whether it's
+    really on — a confusing, hard-to-debug false positive. A blank IP is
+    still allowed (that PC is simply excluded from auto-checks, as before).
+    """
+    class Meta:
+        model = PC
+        fields = ['lab', 'pc_id', 'ip_address', 'status']
+
+    def clean_ip_address(self):
+        ip_address = self.cleaned_data.get('ip_address')
+        if not ip_address:
+            return ip_address
+        try:
+            addr = ipaddress.ip_address(ip_address)
+        except ValueError:
+            return ip_address  # let the model field's own validator handle malformed input
+        if addr.is_loopback:
+            raise forms.ValidationError(
+                'This is a loopback address (127.x.x.x) — it always pings back the '
+                'server itself, not the lab PC, so status checks would be meaningless. '
+                'Enter the PC\'s real network IP address, or leave this field blank.'
+            )
+        return ip_address
 
 
 class MaintenanceScheduleForm(forms.ModelForm):

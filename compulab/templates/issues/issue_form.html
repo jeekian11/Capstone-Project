@@ -11,7 +11,8 @@
 </div>
 
 <div class="card" style="max-width:640px">
-  <form method="post" novalidate>
+  <form method="post" novalidate
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: '{% if object %}Save changes?{% else %}Log this issue?{% endif %}', text: '{% if object %}Details for this issue will be updated.{% else %}A new issue report will be logged.{% endif %}', icon: 'question', confirmButtonText: '{% if object %}Yes, save{% else %}Yes, log issue{% endif %}', confirmButtonColor: '#3ed6c4'}); return false;">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div class="form-errors">{{ form.non_field_errors }}</div>

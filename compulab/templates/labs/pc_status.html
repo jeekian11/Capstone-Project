@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}PC Power Status{% endblock %}
 
 {% block content %}
@@ -11,7 +12,8 @@
       &middot; auto-checks every {{ auto_check_interval_seconds }}s
     </div>
   </div>
-  <form method="post" action="{% url 'pc_status_refresh' %}">
+  <form method="post" action="{% url 'pc_status_refresh' %}"
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Check all PC status now?', text: 'This will ping every PC across all labs right away — it may take a few seconds.', icon: 'question', confirmButtonText: 'Yes, check now', confirmButtonColor: '#3ed6c4'}); return false;">
     {% csrf_token %}
     <button type="submit" class="action-btn primary">Check now</button>
   </form>
@@ -107,11 +109,11 @@
           </thead>
           <tbody>
             {% for pc in lab.filtered_pcs %}
-              <tr>
+              <tr data-pc="{{ pc.pc_id }}">
                 <td>{{ pc.pc_id }}</td>
                 <td>{{ pc.ip_address|default:"—" }}</td>
-                <td><span class="status-pill pill-{{ pc.status }}">{{ pc.get_status_display }}</span></td>
-                <td>{% if pc.current_user %}{{ pc.current_user.get_full_name|default:pc.current_user.username }}{% else %}—{% endif %}</td>
+                <td><span class="status-pill pill-{{ pc.status }}" data-role="status-pill">{{ pc.get_status_display }}</span></td>
+                <td data-role="current-user">{% if pc.current_user %}{{ pc.current_user.get_full_name|default:pc.current_user.username }}{% else %}—{% endif %}</td>
                 <td>{{ pc.last_active|timesince|default:"—" }}{% if pc.last_active %} ago{% endif %}</td>
                 <td><a href="{% url 'pc_update' pc.pk %}" class="action-btn small">Update</a></td>
               </tr>
@@ -133,5 +135,7 @@
     <div class="card"><p class="empty">No PCs match this filter.</p></div>
   {% endif %}
 {% endif %}
+
+<script src="{% static 'js/dashboard.js' %}"></script>
 
 {% endblock %}

@@ -27,7 +27,8 @@
     <p style="font-size:12px; color:#888">Resolved {{ equipment_issue.resolved_at|date:"M d, Y H:i" }}</p>
   {% else %}
     <div class="section-title" style="margin-top:18px">Resolve this issue</div>
-    <form method="post" action="{% url 'equipment_issue_resolve' equipment_issue.pk %}">
+    <form method="post" action="{% url 'equipment_issue_resolve' equipment_issue.pk %}"
+          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Mark as resolved?', text: 'This equipment issue will be marked as resolved.', icon: 'question', confirmButtonText: 'Yes, mark resolved', confirmButtonColor: '#3ed6c4'}); return false;">
       {% csrf_token %}
       <div class="form-group">
         <label class="form-label" for="resolution_notes">Resolution notes</label>

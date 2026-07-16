@@ -10,7 +10,8 @@
 </div>
 
 <div class="card" style="max-width:480px">
-  <form method="post" novalidate>
+  <form method="post" novalidate
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Submit this report?', text: 'This equipment issue report will be submitted.', icon: 'question', confirmButtonText: 'Yes, submit', confirmButtonColor: '#3ed6c4'}); return false;">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div class="form-errors">{{ form.non_field_errors }}</div>

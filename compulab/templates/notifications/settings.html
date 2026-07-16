@@ -11,7 +11,8 @@
 </div>
 
 <div class="card" style="max-width:420px">
-  <form method="post">
+  <form method="post"
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Save these settings?', text: 'Your notification preferences will be updated.', icon: 'question', confirmButtonText: 'Yes, save', confirmButtonColor: '#3ed6c4'}); return false;">
     {% csrf_token %}
     <div class="form-group">
       <label class="form-label">

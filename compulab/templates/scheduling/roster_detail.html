@@ -9,12 +9,12 @@
     <div class="sub">{{ roster.subject|default:"No subject set" }} &middot; {{ roster.lab.name|default:"No lab set" }} &middot; {{ roster.instructor.get_full_name|default:"No instructor set" }}</div>
   </div>
   <div style="display:flex; gap:10px;">
-    <a href="{% url 'roster_edit' roster.pk %}" class="action-btn">Edit details</a>
+    <a href="{% url 'roster_edit' roster.pk %}" class="action-btn icon-only" title="Edit details"><svg><use href="#icon-edit"/></svg></a>
     <form method="post" action="{% url 'roster_delete' roster.pk %}"
           onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this roster?', text: 'This action cannot be undone. {{ roster.name|escapejs }}{% with n=roster.students.count %}{% if n %} and its {{ n }} student{{ n|pluralize }}{% endif %}{% endwith %} will be removed.', confirmButtonText: 'Yes, delete roster'}); return false;"
           style="display:inline">
       {% csrf_token %}
-      <button type="submit" class="action-btn danger">Delete</button>
+      <button type="submit" class="action-btn icon-only danger" title="Delete roster"><svg><use href="#icon-trash"/></svg></button>
     </form>
   </div>
 </div>
@@ -34,7 +34,7 @@
                     onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Remove student?', text: 'Remove {{ s.full_name|escapejs }} from this roster?', confirmButtonText: 'Yes, remove'}); return false;"
                     style="display:inline">
                 {% csrf_token %}
-                <button type="submit" class="action-btn small danger">Remove</button>
+                <button type="submit" class="action-btn icon-only danger" title="Remove student"><svg><use href="#icon-trash"/></svg></button>
               </form>
             </td>
           </tr>
@@ -47,7 +47,8 @@
 
   <div class="card">
     <div class="section-title">Add a student</div>
-    <form method="post" action="{% url 'roster_add_student' roster.pk %}">
+    <form method="post" action="{% url 'roster_add_student' roster.pk %}"
+          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Add this student?', text: 'This student will be added to the roster.', icon: 'question', confirmButtonText: 'Yes, add', confirmButtonColor: '#3ed6c4'}); return false;">
       {% csrf_token %}
       <div class="form-group">
         <label class="form-label" for="{{ student_form.id_number.id_for_label }}">ID number</label>

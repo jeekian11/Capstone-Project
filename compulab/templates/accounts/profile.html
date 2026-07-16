@@ -11,7 +11,8 @@
 </div>
 
 <div class="card" style="max-width:520px">
-  <form method="post" enctype="multipart/form-data" novalidate>
+  <form method="post" enctype="multipart/form-data" novalidate
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Save profile changes?', text: 'Your name, email, and profile picture will be updated.', icon: 'question', confirmButtonText: 'Yes, save', confirmButtonColor: '#3ed6c4'}); return false;">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div class="form-errors">{{ form.non_field_errors }}</div>

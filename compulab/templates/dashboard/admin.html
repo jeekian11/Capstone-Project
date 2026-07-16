@@ -145,7 +145,7 @@
     </div>
     <div class="metric neutral">
       <div class="metric-label">PCs offline</div>
-      <div class="metric-val">{{ offline_count }}</div>
+      <div class="metric-val">{{ offline_count }} <span class="trend">/ {{ offline_count|add:online_count }}</span></div>
     </div>
     <div class="metric red">
       <div class="metric-label">Issues open</div>

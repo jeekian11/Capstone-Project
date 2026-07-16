@@ -62,11 +62,11 @@
             <td>{{ session.requester_name }} <span class="status-pill">{{ session.get_requester_type_display }}</span></td>
             <td><code>{{ session.reservation_code }}</code></td>
             <td style="white-space:nowrap">
-              <a href="{% url 'session_edit' session.pk %}" class="action-btn small">Edit</a>
+              <a href="{% url 'session_edit' session.pk %}" class="action-btn icon-only" title="Edit session"><svg><use href="#icon-edit"/></svg></a>
               <form method="post" action="{% url 'session_delete' session.pk %}" style="display:inline"
                     onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Remove this session?', text: 'This will remove {{ session.subject|escapejs }} ({{ session.reservation_code|escapejs }}) from the schedule.', confirmButtonText: 'Yes, remove'}); return false;">
                 {% csrf_token %}
-                <button type="submit" class="action-btn small danger">Delete</button>
+                <button type="submit" class="action-btn icon-only danger" title="Delete session"><svg><use href="#icon-trash"/></svg></button>
               </form>
             </td>
           </tr>

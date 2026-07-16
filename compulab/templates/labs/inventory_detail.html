@@ -26,7 +26,8 @@
 
   <div class="card">
     <div class="section-title">Update status</div>
-    <form method="post" action="{% url 'inventory_status_update' item.pk %}" style="display:flex; gap:8px; align-items:center;">
+    <form method="post" action="{% url 'inventory_status_update' item.pk %}" style="display:flex; gap:8px; align-items:center;"
+          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Update item status?', text: 'The status of this inventory item will be changed.', icon: 'question', confirmButtonText: 'Yes, update', confirmButtonColor: '#3ed6c4'}); return false;">
       {% csrf_token %}
       <input type="hidden" name="next" value="detail">
       <select name="status" class="form-control" style="max-width:220px;">

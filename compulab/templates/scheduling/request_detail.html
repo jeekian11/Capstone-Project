@@ -69,7 +69,7 @@
         {% csrf_token %}
         <button type="submit" class="action-btn danger">Reject</button>
       </form>
-      <a href="{% url 'request_edit' req.pk %}" class="action-btn">Edit</a>
+      <a href="{% url 'request_edit' req.pk %}" class="action-btn icon-only" title="Edit request"><svg><use href="#icon-edit"/></svg></a>
     </div>
   {% else %}
     <div class="form-actions" style="margin-top:20px">

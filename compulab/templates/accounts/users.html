@@ -43,7 +43,7 @@
             {% endif %}
           </td>
           <td style="white-space:nowrap; display:flex; gap:6px;">
-            <a href="{% url 'user_update' u.pk %}" class="action-btn small">Edit</a>
+            <a href="{% url 'user_update' u.pk %}" class="action-btn icon-only" title="Edit user"><svg><use href="#icon-edit"/></svg></a>
             {% if u.is_active %}
               <form method="post" action="{% url 'user_deactivate' u.pk %}" style="display:inline"
                     onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Deactivate this account?', text: '{{ u.get_full_name|default:u.username|escapejs }} won\'t be able to log in or hold a reservation until reactivated.', confirmButtonText: 'Yes, deactivate'}); return false;">
@@ -51,7 +51,8 @@
                 <button type="submit" class="action-btn small">Deactivate</button>
               </form>
             {% else %}
-              <form method="post" action="{% url 'user_activate' u.pk %}" style="display:inline">
+              <form method="post" action="{% url 'user_activate' u.pk %}" style="display:inline"
+                    onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Activate this account?', text: '{{ u.get_full_name|default:u.username|escapejs }} will be able to log in again.', icon: 'question', confirmButtonText: 'Yes, activate', confirmButtonColor: '#3ed6c4'}); return false;">
                 {% csrf_token %}
                 <button type="submit" class="action-btn small primary">Activate</button>
               </form>
@@ -60,7 +61,7 @@
             <form method="post" action="{% url 'user_delete' u.pk %}" style="display:inline"
                   onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this user?', text: 'This action cannot be undone. {{ u.get_full_name|default:u.username|escapejs }} and all of their account data will be permanently removed.', confirmButtonText: 'Yes, delete user'}); return false;">
               {% csrf_token %}
-              <button type="submit" class="action-btn small danger">Delete</button>
+              <button type="submit" class="action-btn icon-only danger" title="Delete user"><svg><use href="#icon-trash"/></svg></button>
             </form>
           </td>
         </tr>

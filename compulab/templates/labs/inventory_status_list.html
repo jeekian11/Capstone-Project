@@ -24,7 +24,8 @@
           <td><span class="status-pill pill-{{ item.status }}">{{ item.get_status_display }}</span></td>
           {% if request.user.role == 'admin' or request.user.role == 'incharge' %}
             <td style="white-space:nowrap">
-              <form method="post" action="{% url 'inventory_status_update' item.pk %}" style="display:flex; gap:6px;">
+              <form method="post" action="{% url 'inventory_status_update' item.pk %}" style="display:flex; gap:6px;"
+                    onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Update item status?', text: 'The status of this inventory item will be changed.', icon: 'question', confirmButtonText: 'Yes, update', confirmButtonColor: '#3ed6c4'}); return false;">
                 {% csrf_token %}
                 <select name="status" class="form-control" style="width:auto; padding:6px 10px; font-size:12.5px;">
                   <option value="operational" {% if item.status == 'operational' %}selected{% endif %}>Operational</option>

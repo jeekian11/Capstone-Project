@@ -11,7 +11,8 @@
 </div>
 
 <div class="card" style="max-width:480px">
-  <form method="post">
+  <form method="post"
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Mark as completed?', text: 'This maintenance task will be marked as completed.', icon: 'question', confirmButtonText: 'Yes, mark completed', confirmButtonColor: '#3ed6c4'}); return false;">
     {% csrf_token %}
     <div class="form-group">
       <label class="form-label" for="completion_notes">Completion notes</label>

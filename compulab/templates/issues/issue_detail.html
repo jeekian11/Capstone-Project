@@ -46,7 +46,8 @@
 <div class="two-col">
   <div class="card">
     <div class="section-title">Assign to technician</div>
-    <form method="post" action="{% url 'issue_assign' issue.pk %}">
+    <form method="post" action="{% url 'issue_assign' issue.pk %}"
+          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Update assignment?', text: 'The technician assignment and status for this issue will be updated.', icon: 'question', confirmButtonText: 'Yes, update', confirmButtonColor: '#3ed6c4'}); return false;">
       {% csrf_token %}
       <div class="form-group">
         <label class="form-label" for="assigned_technician">Technician</label>
@@ -65,7 +66,8 @@
 
   <div class="card">
     <div class="section-title">Mark as resolved</div>
-    <form method="post" action="{% url 'issue_resolve' issue.pk %}">
+    <form method="post" action="{% url 'issue_resolve' issue.pk %}"
+          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Mark as resolved?', text: 'This issue will be marked as resolved.', icon: 'question', confirmButtonText: 'Yes, mark resolved', confirmButtonColor: '#3ed6c4'}); return false;">
       {% csrf_token %}
       <div class="form-group">
         <label class="form-label" for="resolution_notes">Resolution notes</label>

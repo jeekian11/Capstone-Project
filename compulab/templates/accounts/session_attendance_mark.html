@@ -17,7 +17,8 @@
     Use this for classes where students didn't need to log into a lab PC (e.g. lecture-only sessions).
     Marking a status here overrides the automatic PC-unlock estimate for that student.
   </p>
-  <form method="post">
+  <form method="post"
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Save attendance?', text: 'Present/absent status for this session will be recorded.', icon: 'question', confirmButtonText: 'Yes, save', confirmButtonColor: '#3ed6c4'}); return false;">
     {% csrf_token %}
     <table class="table">
       <thead>
@@ -57,7 +58,8 @@
   <p style="font-size:12px; color:#8b98a3; margin-top:-6px; margin-bottom:14px;">
     For a student who attended but isn't on the roster or didn't use a lab PC (e.g. no roster attached to this session).
   </p>
-  <form method="post" class="form-row" style="grid-template-columns: 1fr 1fr 1fr auto; align-items:end; gap:10px;">
+  <form method="post" class="form-row" style="grid-template-columns: 1fr 1fr 1fr auto; align-items:end; gap:10px;"
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Add this student?', text: 'A manual attendance entry will be added for this session.', icon: 'question', confirmButtonText: 'Yes, add', confirmButtonColor: '#3ed6c4'}); return false;">
     {% csrf_token %}
     <input type="hidden" name="action" value="add_student">
     <div class="form-group" style="margin-bottom:0">

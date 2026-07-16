@@ -35,7 +35,7 @@
           <td>{{ req.student_count }}</td>
           <td>
             <a href="{% url 'request_detail' req.pk %}" class="action-btn small primary">Select</a>
-            <a href="{% url 'request_edit' req.pk %}" class="action-btn small">Edit</a>
+            <a href="{% url 'request_edit' req.pk %}" class="action-btn icon-only" title="Edit request"><svg><use href="#icon-edit"/></svg></a>
           </td>
         </tr>
       {% empty %}
