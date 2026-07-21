@@ -220,6 +220,53 @@ def submit_logout_in_background(server_url, secret, reason):
     threading.Thread(target=worker, daemon=True).start()
 
 
+def get_active_window_title():
+    """Returns the foreground window's title bar text, or None if it can't
+    be read (non-Windows OS, no window focused, permissions issue, etc).
+    Uses only ctypes + the standard library — no pywin32/extra installs.
+
+    NOTE: this reads whatever text Windows puts in the title bar of the
+    currently focused window. For a browser that's normally the page
+    title (e.g. "Facebook - Google Chrome"), not the address bar's URL —
+    this agent never reads the address bar, page content, or keystrokes.
+    """
+    if os.name != 'nt':
+        return None  # only meaningful on the actual Windows lab PCs
+    try:
+        import ctypes
+        user32 = ctypes.windll.user32
+        hwnd = user32.GetForegroundWindow()
+        if not hwnd:
+            return None
+        length = user32.GetWindowTextLengthW(hwnd)
+        if length <= 0:
+            return None
+        buf = ctypes.create_unicode_buffer(length + 1)
+        user32.GetWindowTextW(hwnd, buf, length + 1)
+        return buf.value
+    except Exception:
+        return None
+
+
+def report_activity_in_background(server_url, secret, window_title):
+    """Fire-and-forget POST of one active-window-title sample. Same pattern
+    as submit_logout_in_background — never blocks the UI thread, and a
+    failed/slow request here just means one missed sample, not a problem
+    worth surfacing to the student."""
+    def worker():
+        url = server_url.rstrip('/') + '/labs/api/pc-agent-activity/'
+        payload = json.dumps({'secret': secret, 'window_title': window_title or ''}).encode('utf-8')
+        request = urllib.request.Request(
+            url, data=payload, headers={'Content-Type': 'application/json'}, method='POST',
+        )
+        try:
+            urllib.request.urlopen(request, timeout=5).close()
+        except Exception:
+            pass  # best-effort; next interval will just try again
+
+    threading.Thread(target=worker, daemon=True).start()
+
+
 class StatusBar:
     """Small floating widget shown only while the PC is unlocked — a
     reminder of when the reservation ends, plus a manual 'Log Out' button
@@ -461,6 +508,8 @@ class LockScreen:
         self.warning_banner = None  # created after root exists; see main()
         self.status_bar = None
         self.relock_after_id = None
+        self._activity_stop_event = threading.Event()
+        self._activity_thread = None
 
         root.title('CompuLab')
         root.configure(bg=self.BG)
@@ -705,6 +754,7 @@ class LockScreen:
         moment — or seemingly "never", if the PC thinks it's earlier than
         it actually is."""
         self.hide()  # login API call already updated server state
+        self.start_activity_reporting()
 
         self._session_end_dt = None
         self._warning_shown = False
@@ -746,6 +796,38 @@ class LockScreen:
                 # Less than the warning window remains right from login —
                 # show the warning immediately instead of skipping it.
                 self._show_warning()
+
+    def start_activity_reporting(self):
+        """Kicks off a background loop that samples the active window's
+        title every `activity_report_interval_seconds` and reports it to
+        the server, for as long as the PC stays unlocked. No-op if the
+        interval is configured to 0/blank (feature disabled) or a loop is
+        already running."""
+        interval = self.config.get('activity_report_interval_seconds', 8)
+        try:
+            interval = float(interval)
+        except (TypeError, ValueError):
+            interval = 0
+        if interval <= 0 or self._activity_thread is not None:
+            return
+
+        self._activity_stop_event.clear()
+        server_url = self.config.get('server_url', 'http://127.0.0.1:8000')
+        secret = self.config.get('secret', '')
+
+        def loop():
+            while not self._activity_stop_event.is_set():
+                title = get_active_window_title()
+                if title:
+                    report_activity_in_background(server_url, secret, title)
+                self._activity_stop_event.wait(interval)
+
+        self._activity_thread = threading.Thread(target=loop, name='compulab-agent-activity', daemon=True)
+        self._activity_thread.start()
+
+    def stop_activity_reporting(self):
+        self._activity_stop_event.set()
+        self._activity_thread = None
 
     def _server_synced_now(self):
         """This PC's best estimate of the server's current wall-clock time:
@@ -826,6 +908,7 @@ class LockScreen:
         how the PC behaves before the very first login of the day (locked
         overlay, desktop untouched underneath). If a clean desktop is needed
         for the next student, use the Restart button on this screen."""
+        self.stop_activity_reporting()
         self._cancel_timers()
         self._session_end_dt = None
         if self.mini_panel:

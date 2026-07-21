@@ -14,6 +14,7 @@ class Notification(models.Model):
     message = models.TextField(blank=True)
     notification_type = models.CharField(max_length=30, choices=TYPE_CHOICES, default='general')
     read = models.BooleanField(default=False)
+    pinned = models.BooleanField(default=False)
     is_system_alert = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

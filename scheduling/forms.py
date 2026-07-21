@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from scheduling.models import ClassRoster, RosterStudent, Session, SessionRequest
+from accounts.constants import DEPARTMENT_CHOICES
 
 User = get_user_model()
 
@@ -76,54 +77,87 @@ class SessionRequestForm(RequiresRegisteredAccountMixin, forms.ModelForm):
 
 
 class ClassRosterForm(forms.ModelForm):
-    """Create/edit a class roster. On creation, students can be bulk-pasted
-    one per line as 'ID Number, Full Name' instead of adding them one by one."""
-    students_bulk = forms.CharField(
-        required=False,
-        widget=forms.Textarea(attrs={'rows': 8, 'placeholder': '2023-00123, Juan Dela Cruz\n2023-00124, Maria Santos'}),
-        label='Students (one per line: ID number, Full name)',
-        help_text='Optional — you can also add students one at a time after creating the roster.'
+    """Create/edit a class roster — class-level info only. Students are
+    added afterwards, on the roster's detail page, by searching already-
+    registered student accounts."""
+
+    schedule_days = forms.MultipleChoiceField(
+        choices=ClassRoster.DAY_CHOICES, widget=forms.CheckboxSelectMultiple, required=False,
+        label='Meeting day(s)',
     )
 
     class Meta:
         model = ClassRoster
-        fields = ['name', 'subject', 'lab', 'instructor']
+        fields = [
+            'course_code', 'subject', 'section', 'lab', 'instructor',
+            'semester', 'academic_year', 'schedule_days', 'schedule_start_time', 'schedule_end_time', 'status',
+        ]
+        widgets = {
+            'academic_year': forms.TextInput(attrs={'placeholder': 'e.g. 2026-2027'}),
+            'schedule_start_time': forms.TimeInput(attrs={'type': 'time'}),
+            'schedule_end_time': forms.TimeInput(attrs={'type': 'time'}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['instructor'].queryset = User.objects.filter(role='instructor').order_by('first_name', 'last_name')
         self.fields['instructor'].required = False
         self.fields['lab'].required = False
+        self.fields['schedule_start_time'].required = False
+        self.fields['schedule_end_time'].required = False
+        if self.instance and self.instance.pk and self.instance.schedule_days:
+            self.initial['schedule_days'] = self.instance.schedule_days.split(',')
 
-    def clean_students_bulk(self):
-        raw = self.cleaned_data.get('students_bulk', '')
-        parsed = []
-        for line in raw.splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            parts = [p.strip() for p in line.split(',', 1)]
-            if len(parts) != 2 or not parts[0] or not parts[1]:
-                raise forms.ValidationError(
-                    f'Could not read this line — expected "ID number, Full name": "{line}"'
-                )
-            parsed.append((parts[0], parts[1]))
-        return parsed
+    def clean_schedule_days(self):
+        return ','.join(self.cleaned_data.get('schedule_days') or [])
 
-    def save_students(self, roster):
-        parsed = self.cleaned_data.get('students_bulk') or []
-        existing_ids = set(roster.students.values_list('id_number', flat=True))
-        created = 0
-        for id_number, full_name in parsed:
-            if id_number in existing_ids:
-                continue
-            RosterStudent.objects.create(roster=roster, id_number=id_number, full_name=full_name)
-            existing_ids.add(id_number)
-            created += 1
-        return created
+    def clean(self):
+        cleaned = super().clean()
+        days = cleaned.get('schedule_days')
+        start = cleaned.get('schedule_start_time')
+        end = cleaned.get('schedule_end_time')
+        if days and (not start or not end):
+            raise forms.ValidationError('Set both a start and end time for the selected meeting day(s).')
+        if start and end and start >= end:
+            self.add_error('schedule_end_time', 'End time must be after start time.')
+        return cleaned
 
 
-class RosterStudentForm(forms.ModelForm):
-    class Meta:
-        model = RosterStudent
-        fields = ['id_number', 'full_name']
+class RosterAddStudentForm(forms.Form):
+    """Adds one already-registered student account (role='student') to a
+    roster, picked via the search-and-select UI on the roster detail page —
+    not typed in freehand, so only officially registered students can be
+    enrolled and there's no duplicate/typo'd entry risk."""
+    student_id = forms.IntegerField()
+
+    def clean_student_id(self):
+        pk = self.cleaned_data['student_id']
+        try:
+            student = User.objects.get(pk=pk, role='student')
+        except User.DoesNotExist:
+            raise forms.ValidationError('That student account was not found — it may have been removed.')
+        if not student.is_active:
+            raise forms.ValidationError(f'The account for "{student.get_full_name() or student.username}" is deactivated.')
+        self.cleaned_data['student'] = student
+        return pk
+
+
+
+class RosterImportStudentsForm(forms.Form):
+    """Step one of the roster's 'Import Students (Excel/CSV)': pick the
+    Department to match against, then upload a file of ID Numbers. Only
+    already-registered student accounts in that Department get added —
+    matching the roster's existing 'only officially registered students'
+    rule, just done in bulk instead of one search-and-add at a time."""
+    department = forms.ChoiceField(choices=DEPARTMENT_CHOICES, label='Department')
+    file = forms.FileField(
+        label='Excel or CSV file',
+        help_text='Needs an ID Number column at minimum; Name columns are only used for reference.'
+    )
+
+    def clean_file(self):
+        f = self.cleaned_data['file']
+        name = (f.name or '').lower()
+        if not (name.endswith('.csv') or name.endswith('.xlsx')):
+            raise forms.ValidationError('Please upload a .csv or .xlsx file.')
+        return f

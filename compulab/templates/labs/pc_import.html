@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Import Computers{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Import computers</h1>
+    <div class="sub">Bulk-add PCs from a CSV or Excel file instead of one at a time</div>
+  </div>
+  <a href="{% url 'lab_list' %}" class="action-btn">&larr; Back to Manage Labs</a>
+</div>
+
+<div class="card" style="max-width:560px">
+  <div class="section-title">File format</div>
+  <p style="font-size:13px; color:#8b98a3; line-height:1.6; margin:0 0 12px;">
+    Your file needs a header row with these columns — <strong>Lab</strong> and <strong>PC ID</strong>
+    are required, the rest are optional:
+  </p>
+  <table class="table" style="margin-bottom:14px;">
+    <thead><tr><th>Lab</th><th>PC ID</th><th>IP Address</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Lab 01</td><td>PC01</td><td>192.168.1.11</td><td>Available</td></tr>
+      <tr><td>Lab 01</td><td>PC02</td><td></td><td></td></tr>
+    </tbody>
+  </table>
+  <ul style="font-size:12.5px; color:#8b98a3; line-height:1.7; margin:0 0 16px; padding-left:18px;">
+    <li>The lab name must already exist under Manage Labs — rows with an unknown lab are skipped.</li>
+    <li>Leave IP Address blank if you don't know it yet; it just won't be included in automatic status checks.</li>
+    <li>Leave Status blank to default to "Offline". Valid values: Available, Offline, In Use, Under Maintenance, Has Issue.</li>
+    <li>A PC ID that already exists in that lab is skipped, not overwritten.</li>
+    <li>Accepted formats: .csv or .xlsx</li>
+  </ul>
+
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+    <div class="form-group">
+      <label class="form-label" for="{{ form.file.id_for_label }}">{{ form.file.label }}</label>
+      {{ form.file }}
+      <span class="helptext">{{ form.file.help_text }}</span>
+      {% if form.file.errors %}<div class="form-errors">{{ form.file.errors|join:", " }}</div>{% endif %}
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="action-btn primary">Upload and import</button>
+    </div>
+  </form>
+</div>
+
+{% if results %}
+  <div class="card" style="max-width:560px; margin-top:16px;">
+    <div class="section-title">Import results</div>
+    {% if results.created %}
+      <p style="font-size:13px; color:#3ed6c4; font-weight:600; margin:0 0 6px;">
+        {{ results.created|length }} PC{{ results.created|length|pluralize }} imported
+      </p>
+      <ul style="font-size:12.5px; color:#c7cdd3; line-height:1.7; margin:0 0 14px; padding-left:18px;">
+        {% for line in results.created %}<li>{{ line }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+    {% if results.errors %}
+      <p style="font-size:13px; color:#f2a93b; font-weight:600; margin:0 0 6px;">
+        {{ results.errors|length }} row{{ results.errors|length|pluralize }} skipped or adjusted
+      </p>
+      <ul style="font-size:12.5px; color:#c7cdd3; line-height:1.7; margin:0; padding-left:18px;">
+        {% for line in results.errors %}<li>{{ line }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+    {% if not results.created and not results.errors %}
+      <p class="empty">No rows found in that file.</p>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% endblock %}

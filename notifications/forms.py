@@ -9,7 +9,6 @@ TARGET_AUDIENCE_CHOICES = [
     ('admin', 'All admins'),
     ('incharge', 'All lab in-charges'),
     ('instructor', 'All instructors'),
-    ('student', 'All students'),
     ('specific', 'Specific user(s)'),
 ]
 
@@ -23,7 +22,7 @@ class NotificationComposeForm(forms.Form):
     ])
     target_audience = forms.ChoiceField(choices=TARGET_AUDIENCE_CHOICES)
     specific_recipients = forms.ModelMultipleChoiceField(
-        queryset=User.objects.all(), required=False
+        queryset=User.objects.exclude(role='student'), required=False
     )
 
     # Booking Confirmation
@@ -93,14 +92,17 @@ class NotificationComposeForm(forms.Form):
     def resolve_recipients(self):
         audience = self.cleaned_data['target_audience']
         if audience == 'all':
-            return User.objects.filter(is_active=True)
+            return User.objects.filter(is_active=True).exclude(role='student')
         if audience == 'specific':
             return self.cleaned_data['specific_recipients']
         return User.objects.filter(is_active=True, role=audience)
 
 
 class NotificationSettingsForm(forms.ModelForm):
+    """Notifications are in-app only now that the system doesn't collect
+    email addresses, so there are currently no per-user delivery settings
+    to configure — kept as an empty ModelForm so the settings page/URL and
+    its view keep working if a non-email setting is added here later."""
     class Meta:
         model = User
-        fields = ['email_notifications_enabled']
-        labels = {'email_notifications_enabled': 'Email notifications'}
+        fields = []

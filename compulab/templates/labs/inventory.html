@@ -3,67 +3,406 @@
 
 {% block content %}
 
-<div class="page-header">
-  <div>
-    <h1>Inventory</h1>
-    <div class="sub">{{ total_items }} items tracked</div>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+<style>
+.inv{ font-family:'Inter',sans-serif; }
+.inv h1,.inv h2,.inv h3{ font-family:'Space Grotesk',sans-serif; }
+
+/* stat cards */
+.inv-metrics{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:18px; }
+.inv-metric{ display:flex; align-items:center; gap:12px; }
+.inv-metric-icon{ width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.inv-metric-icon svg{ width:19px; height:19px; }
+.inv-metric-label{ font-size:11.5px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; color:var(--text-dim); }
+.inv-metric-val{ font-family:var(--font-display); font-size:22px; font-weight:700; letter-spacing:-.01em; margin-top:2px; }
+.inv-metric-sub{ font-size:11px; color:var(--text-faint); margin-top:2px; }
+.ic-blue{ background:var(--blue); color:#0a0e12; }
+.ic-green{ background:var(--green); color:#0a0e12; }
+.ic-amber{ background:var(--amber); color:#0a0e12; }
+.ic-red{ background:var(--red); color:#0a0e12; }
+.ic-purple{ background:#a78bfa; color:#0a0e12; }
+@media (max-width:1200px){ .inv-metrics{ grid-template-columns:repeat(3,1fr); } }
+@media (max-width:640px){ .inv-metrics{ grid-template-columns:repeat(2,1fr); } }
+
+/* filter bar */
+.inv-filter-form{ display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr 1fr auto auto; gap:12px; align-items:end; }
+.inv-label{ font-size:12px; font-weight:500; color:var(--text-dim); margin-bottom:6px; display:block; }
+@media (max-width:1100px){ .inv-filter-form{ grid-template-columns:1fr 1fr; } }
+
+/* table */
+.inv-table{ width:100%; border-collapse:collapse; font-size:13px; }
+.inv-table th{ text-align:left; padding:8px; color:var(--text-dim); font-weight:500; border-bottom:1px solid var(--border); font-size:11px; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
+.inv-table td{ padding:9px 8px; border-bottom:1px solid var(--border-soft); color:var(--text); white-space:nowrap; }
+.inv-table tr:hover td{ background:var(--surface-raised); }
+.inv-status{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:500; }
+.inv-status-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.inv-status.working{ color:var(--green); } .inv-status.working .inv-status-dot{ background:var(--green); }
+.inv-status.under_repair{ color:var(--amber); } .inv-status.under_repair .inv-status-dot{ background:var(--amber); }
+.inv-status.retired{ color:var(--text-dim); } .inv-status.retired .inv-status-dot{ background:var(--text-faint); }
+.inv-actions{ display:flex; gap:6px; }
+
+/* pagination */
+.inv-pagination{ display:flex; align-items:center; justify-content:space-between; margin-top:14px; font-size:12px; color:var(--text-dim); flex-wrap:wrap; gap:10px; }
+.inv-page-btns{ display:flex; gap:6px; align-items:center; }
+.inv-page-btn{ min-width:28px; height:28px; padding:0 4px; display:flex; align-items:center; justify-content:center; border-radius:6px; border:1px solid var(--border); color:var(--text); font-size:12px; }
+.inv-page-btn.active{ background:var(--topbar-accent); border-color:var(--topbar-accent); color:#0a0e12; font-weight:700; }
+.inv-page-btn.disabled{ opacity:.35; pointer-events:none; }
+
+/* bottom panel row */
+.inv-row4{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:18px; align-items:stretch; }
+@media (max-width:1200px){ .inv-row4{ grid-template-columns:repeat(2,1fr); } }
+@media (max-width:640px){ .inv-row4{ grid-template-columns:1fr; } }
+.inv-panel{ display:flex; flex-direction:column; }
+.inv-panel-title{ font-size:12.5px; font-weight:700; letter-spacing:.02em; color:var(--text); margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; }
+.inv-panel-title a{ font-size:11.5px; font-weight:500; color:var(--blue); text-decoration:none; }
+.inv-panel-title a:hover{ text-decoration:underline; }
+
+.inv-donut-wrap{ display:flex; align-items:center; gap:16px; }
+.inv-donut-canvas{ width:96px; height:96px; flex-shrink:0; position:relative; }
+.inv-donut-center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; }
+.inv-donut-center .n{ font-family:var(--font-display); font-size:18px; font-weight:700; color:var(--text); line-height:1; }
+.inv-donut-center .lbl{ font-size:9px; color:var(--text-faint); margin-top:2px; }
+.inv-donut-legend{ flex:1; display:flex; flex-direction:column; gap:8px; min-width:0; }
+.inv-donut-legend-item{ display:flex; align-items:center; gap:7px; font-size:11.5px; color:var(--text-dim); }
+.inv-donut-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.inv-donut-legend-item .lbl{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.inv-donut-legend-item .val{ font-weight:600; color:var(--text); flex-shrink:0; }
+
+.inv-lowstock-item{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border-soft); }
+.inv-lowstock-item:first-child{ padding-top:0; }
+.inv-lowstock-item:last-child{ border-bottom:none; padding-bottom:0; }
+.inv-lowstock-icon{ width:30px; height:30px; border-radius:8px; background:var(--red-dim); color:var(--red-soft); flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.inv-lowstock-icon svg{ width:15px; height:15px; }
+.inv-lowstock-name{ font-size:12.5px; font-weight:500; color:var(--text); }
+.inv-lowstock-sub{ font-size:11px; color:var(--text-faint); margin-top:1px; }
+.inv-lowstock-remaining{ text-align:right; flex-shrink:0; }
+.inv-lowstock-remaining .n{ font-family:var(--font-display); font-weight:700; font-size:14px; color:var(--red-soft); }
+.inv-lowstock-remaining .lbl{ font-size:9.5px; color:var(--text-faint); }
+
+.inv-feed-item{ display:flex; align-items:flex-start; gap:10px; padding:9px 0; border-bottom:1px solid var(--border-soft); }
+.inv-feed-item:first-child{ padding-top:0; }
+.inv-feed-item:last-child{ border-bottom:none; padding-bottom:0; }
+.inv-feed-icon{ width:26px; height:26px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:var(--surface-raised); color:var(--text-dim); }
+.inv-feed-icon svg{ width:13px; height:13px; }
+.inv-feed-title{ font-size:12.5px; font-weight:500; color:var(--text); line-height:1.35; }
+.inv-feed-time{ font-size:10.5px; color:var(--text-faint); margin-top:1px; }
+.inv-empty-small{ color:var(--text-faint); font-size:12.5px; padding:10px 0; }
+</style>
+
+<div class="inv">
+
+  <div class="page-header">
+    <div>
+      <h1>Inventory</h1>
+      <div class="sub">Manage and track all laboratory equipment and supplies.</div>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <a href="{% url 'inventory_status_list' %}" class="action-btn">Equipment Status</a>
+      <a href="{% url 'maintenance_logs' %}" class="action-btn">Maintenance Logs</a>
+      <a href="{% url 'equipment_issues' %}" class="action-btn">Reported Issues</a>
+      {% if request.user.role == 'admin' %}
+        <a href="{% url 'inventory_create' %}" class="action-btn primary">+ Add Equipment</a>
+      {% endif %}
+    </div>
   </div>
-  <div style="display:flex; gap:8px">
-    <a href="{% url 'inventory_status_list' %}" class="action-btn">Equipment status</a>
-    <a href="{% url 'maintenance_logs' %}" class="action-btn">Maintenance logs</a>
-    <a href="{% url 'equipment_issues' %}" class="action-btn">Reported issues</a>
-    {% if request.user.role == 'admin' %}
-      <a href="{% url 'inventory_create' %}" class="action-btn primary">+ Add item</a>
+
+  <div class="inv-metrics">
+    <div class="card inv-metric">
+      <div class="inv-metric-icon ic-blue">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 8l9-5 9 5-9 5-9-5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 8v8l9 5 9-5V8" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="inv-metric-label">Total Items</div>
+        <div class="inv-metric-val">{{ total_items }}</div>
+        <div class="inv-metric-sub">All Equipment</div>
+      </div>
+    </div>
+    <div class="card inv-metric">
+      <div class="inv-metric-icon ic-green">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="inv-metric-label">Working</div>
+        <div class="inv-metric-val">{{ working_count }}</div>
+        <div class="inv-metric-sub">{{ working_pct }}%</div>
+      </div>
+    </div>
+    <div class="card inv-metric">
+      <div class="inv-metric-icon ic-amber">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="inv-metric-label">Needs Check</div>
+        <div class="inv-metric-val">{{ needs_check_count }}</div>
+        <div class="inv-metric-sub">{{ needs_check_pct }}%</div>
+      </div>
+    </div>
+    <div class="card inv-metric">
+      <div class="inv-metric-icon ic-red">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="inv-metric-label">Faulty</div>
+        <div class="inv-metric-val">{{ faulty_count }}</div>
+        <div class="inv-metric-sub">{{ faulty_pct }}%</div>
+      </div>
+    </div>
+    <div class="card inv-metric">
+      <div class="inv-metric-icon ic-purple">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 0 0 1.4 0l1.6-1.6a1 1 0 0 1 1.4 0l.2.2a1 1 0 0 1 0 1.4l-1.6 1.6a1 1 0 0 0 0 1.4l.5.5a1 1 0 0 0 1.4 0l1.6-1.6a1 1 0 0 1 1.4 0l.2.2a1 1 0 0 1 0 1.4l-3.6 3.6a3 3 0 0 1-4-4l3.5-3.1Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="m11 13-6.5 6.5a1.5 1.5 0 0 1-2.1-2.1L9 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="inv-metric-label">Under Repair</div>
+        <div class="inv-metric-val">{{ under_repair_count }}</div>
+        <div class="inv-metric-sub">{{ under_repair_pct }}%</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <form method="get" class="inv-filter-form">
+      <div>
+        <label class="inv-label" for="q">Search</label>
+        <input type="text" name="q" id="q" class="form-control" placeholder="Search equipment..." value="{{ search_q }}">
+      </div>
+      <div>
+        <label class="inv-label" for="lab">Lab</label>
+        <select name="lab" id="lab" class="form-control">
+          <option value="">All Labs</option>
+          {% for lab in all_labs %}
+            <option value="{{ lab.pk }}" {% if selected_lab == lab.pk|stringformat:"s" %}selected{% endif %}>{{ lab.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="inv-label" for="category">Category</label>
+        <select name="category" id="category" class="form-control">
+          <option value="">All Categories</option>
+          {% for cat in all_categories %}
+            <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="inv-label" for="condition">Condition</label>
+        <select name="condition" id="condition" class="form-control">
+          <option value="">All Conditions</option>
+          {% for value, label in condition_choices %}
+            <option value="{{ value }}" {% if selected_condition == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="inv-label" for="status">Status</label>
+        <select name="status" id="status" class="form-control">
+          <option value="">All Status</option>
+          {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% if filters_active %}
+        <div><a href="{% url 'inventory' %}" class="action-btn">Clear</a></div>
+      {% endif %}
+      <div><button type="submit" class="action-btn primary"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;"><use href="#icon-search"/></svg> Filter</button></div>
+    </form>
+  </div>
+
+  <div class="card">
+    {% if page_obj.object_list %}
+    <div style="overflow-x:auto;">
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Item Name</th>
+            <th>Category</th>
+            <th>Lab</th>
+            <th>Quantity</th>
+            <th>Condition</th>
+            <th>Status</th>
+            <th>Last Checked</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in page_obj.object_list %}
+            <tr>
+              <td>{{ forloop.counter0|add:page_obj.start_index }}</td>
+              <td>{{ item.name }}</td>
+              <td>{{ item.category }}</td>
+              <td>{{ item.lab.name }}</td>
+              <td>{{ item.quantity }}</td>
+              <td><span class="status-pill pill-{{ item.condition }}">{{ item.get_condition_display }}</span></td>
+              <td>
+                <span class="inv-status {% if item.status == 'operational' %}working{% elif item.status == 'under_repair' %}under_repair{% else %}retired{% endif %}">
+                  <span class="inv-status-dot"></span>
+                  {% if item.status == 'operational' %}Working{% else %}{{ item.get_status_display }}{% endif %}
+                </span>
+              </td>
+              <td>{{ item.last_checked|date:"M d, Y"|default:"—" }}</td>
+              <td>
+                <div class="inv-actions">
+                  <a href="{% url 'inventory_detail' item.pk %}" class="action-btn icon-only" title="View item"><svg><use href="#icon-eye"/></svg></a>
+                  {% if request.user.role == 'admin' %}
+                    <a href="{% url 'inventory_update' item.pk %}" class="action-btn icon-only" title="Edit item"><svg><use href="#icon-edit"/></svg></a>
+                    <form method="post" action="{% url 'inventory_delete' item.pk %}"
+                          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Remove this item?', text: 'This action cannot be undone. {{ item.name|escapejs }} will be removed from {{ item.lab.name|escapejs }}\'s inventory.', confirmButtonText: 'Yes, remove item'}); return false;"
+                          style="display:inline">
+                      {% csrf_token %}
+                      <button type="submit" class="action-btn icon-only danger" title="Delete item"><svg><use href="#icon-trash"/></svg></button>
+                    </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="inv-pagination">
+      <span>Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} entries</span>
+      <div class="inv-page-btns">
+        {% if page_obj.has_previous %}
+          <a class="inv-page-btn" href="?{{ request.GET.urlencode }}&page={{ page_obj.previous_page_number }}">&lsaquo;</a>
+        {% else %}
+          <span class="inv-page-btn disabled">&lsaquo;</span>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+          {% if num == page_obj.number %}
+            <span class="inv-page-btn active">{{ num }}</span>
+          {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+            <a class="inv-page-btn" href="?{{ request.GET.urlencode }}&page={{ num }}">{{ num }}</a>
+          {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+          <a class="inv-page-btn" href="?{{ request.GET.urlencode }}&page={{ page_obj.next_page_number }}">&rsaquo;</a>
+        {% else %}
+          <span class="inv-page-btn disabled">&rsaquo;</span>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+      <p class="empty">No inventory items recorded.</p>
     {% endif %}
   </div>
-</div>
 
-<div class="toolbar-stats" style="margin-bottom:14px">
-  <div><b>{{ total_items }}</b> total items</div>
-  <div><b>{{ needs_replacement }}</b> faulty</div>
-  <div><b>{{ under_repair }}</b> needs check</div>
-</div>
+  <div class="inv-row4">
+    <div class="card inv-panel">
+      <div class="inv-panel-title">Equipment by Category</div>
+      <div class="inv-donut-wrap">
+        <div class="inv-donut-canvas">
+          <canvas id="invCategoryDonut"></canvas>
+          <div class="inv-donut-center"><span class="n">{{ total_items }}</span><span class="lbl">Total</span></div>
+        </div>
+        <div class="inv-donut-legend">
+          {% for row in category_breakdown %}
+            <div class="inv-donut-legend-item">
+              <span class="inv-donut-dot" style="background:{{ row.color }};"></span>
+              <span class="lbl">{{ row.category }}</span>
+              <span class="val">{{ row.n }} ({{ row.pct }}%)</span>
+            </div>
+          {% empty %}
+            <p class="inv-empty-small">No categories yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
 
-<div class="card">
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Item</th>
-        <th>Category</th>
-        <th>Lab</th>
-        <th>Quantity</th>
-        <th>Condition</th>
-        <th>Last checked</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in items %}
-        <tr>
-          <td>{{ item.name }}</td>
-          <td>{{ item.category }}</td>
-          <td>{{ item.lab.name }}</td>
-          <td>{{ item.quantity }}</td>
-          <td><span class="status-pill pill-{{ item.condition }}">{{ item.get_condition_display }}</span></td>
-          <td>{{ item.last_checked|date:"M d, Y"|default:"—" }}</td>
-          <td style="white-space:nowrap">
-            <a href="{% url 'inventory_detail' item.pk %}" class="action-btn small">View</a>
-            {% if request.user.role == 'admin' %}
-              <a href="{% url 'inventory_update' item.pk %}" class="action-btn icon-only" title="Edit item"><svg><use href="#icon-edit"/></svg></a>
-              <form method="post" action="{% url 'inventory_delete' item.pk %}"
-                    onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Remove this item?', text: 'This action cannot be undone. {{ item.name|escapejs }} will be removed from {{ item.lab.name|escapejs }}\'s inventory.', confirmButtonText: 'Yes, remove item'}); return false;"
-                    style="display:inline">
-                {% csrf_token %}
-                <button type="submit" class="action-btn icon-only danger" title="Delete item"><svg><use href="#icon-trash"/></svg></button>
-              </form>
-            {% endif %}
-          </td>
-        </tr>
+    <div class="card inv-panel">
+      <div class="inv-panel-title">Equipment Condition</div>
+      <div class="inv-donut-wrap">
+        <div class="inv-donut-canvas">
+          <canvas id="invConditionDonut"></canvas>
+          <div class="inv-donut-center"><span class="n">{{ total_items }}</span><span class="lbl">Total</span></div>
+        </div>
+        <div class="inv-donut-legend">
+          {% for row in condition_breakdown %}
+            <div class="inv-donut-legend-item">
+              <span class="inv-donut-dot" style="background:{{ row.color }};"></span>
+              <span class="lbl">{{ row.label }}</span>
+              <span class="val">{{ row.n }} ({{ row.pct }}%)</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card inv-panel">
+      <div class="inv-panel-title">Low Stock Alert</div>
+      {% for item in low_stock_items %}
+        <div class="inv-lowstock-item">
+          <div class="inv-lowstock-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 8l9-5 9 5-9 5-9-5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 8v8l9 5 9-5V8" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
+          <div style="flex:1; min-width:0;">
+            <div class="inv-lowstock-name">{{ item.name }}</div>
+            <div class="inv-lowstock-sub">{{ item.lab.name }}</div>
+          </div>
+          <div class="inv-lowstock-remaining">
+            <div class="n">{{ item.quantity }}</div>
+            <div class="lbl">Remaining</div>
+          </div>
+        </div>
       {% empty %}
-        <tr><td colspan="7"><p class="empty">No inventory items recorded.</p></td></tr>
+        <p class="inv-empty-small">No low stock items.</p>
       {% endfor %}
-    </tbody>
-  </table>
+    </div>
+
+    <div class="card inv-panel">
+      <div class="inv-panel-title">Recent Activity</div>
+      {% for a in recent_activity %}
+        <div class="inv-feed-item">
+          <div class="inv-feed-icon">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 8v4l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/></svg>
+          </div>
+          <div style="flex:1; min-width:0;">
+            <div class="inv-feed-title">{{ a.title }}</div>
+            <div class="inv-feed-time">{{ a.time|timesince }} ago</div>
+          </div>
+        </div>
+      {% empty %}
+        <p class="inv-empty-small">No recent activity yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+
 </div>
+
+<script>
+(function () {
+  Chart.defaults.font.family = 'Inter, sans-serif';
+  Chart.defaults.color = '#8b98a3';
+
+  new Chart(document.getElementById('invCategoryDonut'), {
+    type: 'doughnut',
+    data: {
+      labels: [{% for row in category_breakdown %}'{{ row.category|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+      datasets: [{
+        data: [{% for row in category_breakdown %}{{ row.n }}{% if not forloop.last %},{% endif %}{% endfor %}],
+        backgroundColor: [{% for row in category_breakdown %}'{{ row.color }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        borderColor: '#12171d',
+        borderWidth: 2,
+      }]
+    },
+    options: { cutout: '68%', plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false }
+  });
+
+  new Chart(document.getElementById('invConditionDonut'), {
+    type: 'doughnut',
+    data: {
+      labels: [{% for row in condition_breakdown %}'{{ row.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+      datasets: [{
+        data: [{% for row in condition_breakdown %}{{ row.n }}{% if not forloop.last %},{% endif %}{% endfor %}],
+        backgroundColor: [{% for row in condition_breakdown %}'{{ row.color }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        borderColor: '#12171d',
+        borderWidth: 2,
+      }]
+    },
+    options: { cutout: '68%', plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false }
+  });
+})();
+</script>
 
 {% endblock %}

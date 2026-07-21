@@ -2,6 +2,7 @@
 {% block title %}Notifications{% endblock %}
 
 {% block content %}
+{% include "notifications/_item_assets.html" %}
 
 <div class="page-header">
   <div>
@@ -20,21 +21,7 @@
 
 <div class="card">
   {% for notif in notifications %}
-    <div class="alert-item" style="padding:12px 0; border-bottom:1px solid #f0f0f0; {% if not notif.read %}font-weight:500;{% endif %}">
-      <div style="flex:1">
-        <div class="alert-title" style="font-weight:500">{{ notif.title }}</div>
-        <div class="alert-sub" style="color:#888; font-size:12.5px">{{ notif.message }}</div>
-      </div>
-      <div style="display:flex; align-items:center; gap:10px">
-        <span class="alert-time" style="color:#aaa; font-size:11px">{{ notif.created_at|timesince }} ago</span>
-        {% if not notif.read %}
-          <form method="post" action="{% url 'mark_read' notif.pk %}">
-            {% csrf_token %}
-            <button type="submit" class="action-btn small">Mark read</button>
-          </form>
-        {% endif %}
-      </div>
-    </div>
+    {% include "notifications/_item.html" %}
   {% empty %}
     <p class="empty">No notifications yet.</p>
   {% endfor %}

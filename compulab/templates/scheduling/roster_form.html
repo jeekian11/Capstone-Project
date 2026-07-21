@@ -12,27 +12,37 @@
 
 <div class="card" style="max-width:640px">
   <form method="post" novalidate
-        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: '{% if object %}Save changes?{% else %}Create this roster?{% endif %}', text: '{% if object %}Details for this roster will be updated.{% else %}A new roster will be created.{% endif %}', icon: 'question', confirmButtonText: '{% if object %}Yes, save{% else %}Yes, create{% endif %}', confirmButtonColor: '#3ed6c4'}); return false;">
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: '{% if object %}Save changes?{% else %}Create this roster?{% endif %}', text: '{% if object %}Details for this roster will be updated.{% else %}A new roster will be created — you can add students on the next page.{% endif %}', icon: 'question', confirmButtonText: '{% if object %}Yes, save{% else %}Yes, create{% endif %}', confirmButtonColor: '#3ed6c4'}); return false;">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div class="form-errors">{{ form.non_field_errors }}</div>
     {% endif %}
 
-    <div class="form-group">
-      <label class="form-label" for="{{ form.name.id_for_label }}">Roster name</label>
-      {{ form.name }}
-      {% if form.name.errors %}<div class="form-errors">{{ form.name.errors|join:", " }}</div>{% endif %}
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.course_code.id_for_label }}">Course code</label>
+        {{ form.course_code }}
+        <span class="helptext">{{ form.course_code.help_text }}</span>
+        {% if form.course_code.errors %}<div class="form-errors">{{ form.course_code.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.section.id_for_label }}">Section</label>
+        {{ form.section }}
+        <span class="helptext">{{ form.section.help_text }}</span>
+        {% if form.section.errors %}<div class="form-errors">{{ form.section.errors|join:", " }}</div>{% endif %}
+      </div>
     </div>
 
     <div class="form-group">
-      <label class="form-label" for="{{ form.subject.id_for_label }}">Subject</label>
+      <label class="form-label" for="{{ form.subject.id_for_label }}">Course / Subject</label>
       {{ form.subject }}
+      <span class="helptext">{{ form.subject.help_text }}</span>
       {% if form.subject.errors %}<div class="form-errors">{{ form.subject.errors|join:", " }}</div>{% endif %}
     </div>
 
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label" for="{{ form.lab.id_for_label }}">Laboratory</label>
+        <label class="form-label" for="{{ form.lab.id_for_label }}">Laboratory room</label>
         {{ form.lab }}
         {% if form.lab.errors %}<div class="form-errors">{{ form.lab.errors|join:", " }}</div>{% endif %}
       </div>
@@ -43,14 +53,49 @@
       </div>
     </div>
 
-    {% if form.students_bulk %}
+    <div class="form-row">
       <div class="form-group">
-        <label class="form-label" for="{{ form.students_bulk.id_for_label }}">{{ form.students_bulk.label }}</label>
-        {{ form.students_bulk }}
-        <span class="helptext">{{ form.students_bulk.help_text }}</span>
-        {% if form.students_bulk.errors %}<div class="form-errors">{{ form.students_bulk.errors|join:", " }}</div>{% endif %}
+        <label class="form-label" for="{{ form.semester.id_for_label }}">Semester</label>
+        {{ form.semester }}
+        {% if form.semester.errors %}<div class="form-errors">{{ form.semester.errors|join:", " }}</div>{% endif %}
       </div>
-    {% endif %}
+      <div class="form-group">
+        <label class="form-label" for="{{ form.academic_year.id_for_label }}">Academic year</label>
+        {{ form.academic_year }}
+        {% if form.academic_year.errors %}<div class="form-errors">{{ form.academic_year.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Meeting day(s)</label>
+      <div style="display:flex; flex-wrap:wrap; gap:12px; padding:8px 0;">
+        {% for checkbox in form.schedule_days %}
+          <label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:400; cursor:pointer;">
+            {{ checkbox.tag }} {{ checkbox.choice_label }}
+          </label>
+        {% endfor %}
+      </div>
+      {% if form.schedule_days.errors %}<div class="form-errors">{{ form.schedule_days.errors|join:", " }}</div>{% endif %}
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.schedule_start_time.id_for_label }}">Start time</label>
+        {{ form.schedule_start_time }}
+        {% if form.schedule_start_time.errors %}<div class="form-errors">{{ form.schedule_start_time.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.schedule_end_time.id_for_label }}">End time</label>
+        {{ form.schedule_end_time }}
+        {% if form.schedule_end_time.errors %}<div class="form-errors">{{ form.schedule_end_time.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.status.id_for_label }}">Status</label>
+      {{ form.status }}
+      {% if form.status.errors %}<div class="form-errors">{{ form.status.errors|join:", " }}</div>{% endif %}
+    </div>
 
     <div class="form-actions">
       <button type="submit" class="action-btn primary">{% if object %}Save changes{% else %}Create roster{% endif %}</button>

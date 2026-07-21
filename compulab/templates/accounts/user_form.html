@@ -59,19 +59,23 @@
     {% endif %}
 
     {% if form.department %}
-    <div class="form-group" data-role-field="instructor">
-      <label class="form-label" for="{{ form.department.id_for_label }}">Department</label>
-      {{ form.department }}
-      <span class="helptext">Instructors only — e.g. "College of Computer Studies". Shown automatically when this instructor is picked as a requester.</span>
-      {% if form.department.errors %}<div class="form-errors">{{ form.department.errors|join:", " }}</div>{% endif %}
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.department.id_for_label }}">Department</label>
+        {{ form.department }}
+        <span class="helptext">Which department/college this account belongs to. Shown wherever this user's details are displayed.</span>
+        {% if form.department.errors %}<div class="form-errors">{{ form.department.errors|join:", " }}</div>{% endif %}
+      </div>
+      {% if form.year_level %}
+      <div class="form-group" data-role-field="student">
+        <label class="form-label" for="{{ form.year_level.id_for_label }}">Year Level</label>
+        {{ form.year_level }}
+        <span class="helptext">Students only — options depend on the Department selected above.</span>
+        {% if form.year_level.errors %}<div class="form-errors">{{ form.year_level.errors|join:", " }}</div>{% endif %}
+      </div>
+      {% endif %}
     </div>
     {% endif %}
-
-    <div class="form-group">
-      <label class="form-label" for="{{ form.email.id_for_label }}">Email</label>
-      {{ form.email }}
-      {% if form.email.errors %}<div class="form-errors">{{ form.email.errors|join:", " }}</div>{% endif %}
-    </div>
 
     <div class="form-row">
       <div class="form-group">
@@ -120,15 +124,45 @@
 <script>
 (function() {
   var roleSelect = document.getElementById('{{ form.role.id_for_label }}');
-  if (!roleSelect) return;
+  var deptSelect = document.getElementById('{{ form.department.id_for_label }}');
+  var yearSelect = document.getElementById('{{ form.year_level.id_for_label }}');
+  var deptYearLevels = {{ department_year_levels_json|default:"{}"|safe }};
+  var initialYearLevel = "{{ form.year_level.value|default_if_none:'' }}";
+
   function updateVisibility() {
+    if (!roleSelect) return;
     var role = roleSelect.value;
     document.querySelectorAll('[data-role-field]').forEach(function(el) {
       el.style.display = (el.dataset.roleField === role) ? '' : 'none';
     });
   }
-  roleSelect.addEventListener('change', updateVisibility);
-  updateVisibility();
+
+  function updateYearLevelOptions(keepValue) {
+    if (!yearSelect || !deptSelect) return;
+    var options = deptYearLevels[deptSelect.value] || [];
+    var previous = keepValue !== undefined ? keepValue : yearSelect.value;
+    yearSelect.innerHTML = '';
+    var blank = document.createElement('option');
+    blank.value = '';
+    blank.textContent = '---------';
+    yearSelect.appendChild(blank);
+    options.forEach(function(opt) {
+      var el = document.createElement('option');
+      el.value = opt.value;
+      el.textContent = opt.label;
+      if (String(opt.value) === String(previous)) el.selected = true;
+      yearSelect.appendChild(el);
+    });
+  }
+
+  if (roleSelect) {
+    roleSelect.addEventListener('change', updateVisibility);
+    updateVisibility();
+  }
+  if (deptSelect) {
+    deptSelect.addEventListener('change', function() { updateYearLevelOptions(); });
+    updateYearLevelOptions(initialYearLevel);
+  }
 })();
 </script>
 

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Lab, PC, InventoryItem
+from .models import Lab, PC, InventoryItem, PCActivityLog
 
 @admin.register(Lab)
 class LabAdmin(admin.ModelAdmin):
@@ -9,6 +9,13 @@ class LabAdmin(admin.ModelAdmin):
 class PCAdmin(admin.ModelAdmin):
     list_display = ['pc_id', 'lab', 'status', 'current_user', 'last_active']
     list_filter = ['status', 'lab']
+
+@admin.register(PCActivityLog)
+class PCActivityLogAdmin(admin.ModelAdmin):
+    list_display = ['pc', 'student', 'window_title', 'captured_at']
+    list_filter = ['pc__lab', 'pc']
+    search_fields = ['window_title', 'student__username', 'student__first_name', 'student__last_name']
+    date_hierarchy = 'captured_at'
 
 @admin.register(InventoryItem)
 class InventoryAdmin(admin.ModelAdmin):

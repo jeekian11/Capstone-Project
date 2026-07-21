@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-z$q0s-rr3%osqk_q^tm=*xm$z(k7so(m&e5@li_znp6v-)2(9g
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '192.168.1.96', '0.0.0.0']
 
 
 # Application definition
@@ -158,7 +158,7 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 # PC_AGENT_SHARED_SECRET must match the secret configured in each agent's
 # agent_config.json — treat it like a password. Change this before deploying.
 PC_AGENT_PORT = 5555
-PC_AGENT_SHARED_SECRET = 'change-me-to-a-long-random-string'
+PC_AGENT_SHARED_SECRET = 'danao_technological_college'
 PC_AGENT_TIMEOUT_SECONDS = 4
 
 # Legacy fallback: if PC_AGENT is not reachable (or you're not using the
@@ -172,3 +172,12 @@ PC_UNLOCK_COMMAND = None
 # status now" for the dashboard to stay accurate. See labs/network.py's
 # start_background_status_checker(), started from labs/apps.py.
 PC_STATUS_CHECK_INTERVAL_SECONDS = 20
+
+# Hour (0-23, local time / Asia/Manila) that PCActivityLog gets backed up
+# to media/activity_log_backups/*.xlsx and then fully wiped every day.
+# Change to e.g. 3 to run at 3 AM instead of midnight.
+PC_ACTIVITY_LOG_WIPE_HOUR = 0
+
+# How many days' worth of activity_log_backups/*.xlsx files to keep before
+# those are pruned too, so the backup folder doesn't grow forever either.
+PC_ACTIVITY_LOG_BACKUP_KEEP_DAYS = 30

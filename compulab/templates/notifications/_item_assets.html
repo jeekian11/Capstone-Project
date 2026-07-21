@@ -1,0 +1,47 @@
+<style>
+  .notif-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 14px 4px; border-bottom: 1px solid var(--border-soft); }
+  .notif-item:last-child { border-bottom: none; }
+  .notif-item.unread .notif-title { font-weight: 600; }
+  .notif-body { flex: 1; min-width: 0; }
+  .notif-title { font-size: 13.5px; color: var(--text); display: flex; align-items: center; gap: 6px; }
+  .notif-message { font-size: 12.5px; color: var(--text-dim); margin-top: 3px; }
+  .notif-meta { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .notif-time { font-size: 11px; color: var(--text-faint); white-space: nowrap; }
+  .pin-icon { color: var(--topbar-accent); flex-shrink: 0; }
+
+  .notif-menu { position: relative; }
+  .notif-menu-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 6px;
+    border: 1px solid transparent; background: transparent;
+    color: var(--text-dim); cursor: pointer;
+  }
+  .notif-menu-btn:hover { background: var(--surface-raised); border-color: var(--border); color: var(--text); }
+  .notif-menu-dropdown {
+    display: none; position: absolute; right: 0; top: 32px; min-width: 150px;
+    background: var(--surface-raised); border: 1px solid var(--border); border-radius: 8px;
+    padding: 4px; z-index: 20; box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  }
+  .notif-menu-dropdown.open { display: block; }
+  .notif-menu-item {
+    display: block; width: 100%; text-align: left; padding: 8px 10px; border-radius: 6px;
+    border: none; background: transparent; color: var(--text); font-size: 12.5px;
+    font-family: inherit; cursor: pointer;
+  }
+  .notif-menu-item:hover { background: var(--border-soft); }
+  .notif-menu-item.danger { color: var(--red-soft); }
+  .notif-menu-item.danger:hover { background: var(--red-dim); }
+</style>
+<script>
+  function notifMenuToggle(btn) {
+    var dropdown = btn.nextElementSibling;
+    var wasOpen = dropdown.classList.contains('open');
+    document.querySelectorAll('.notif-menu-dropdown.open').forEach(function (el) { el.classList.remove('open'); });
+    if (!wasOpen) dropdown.classList.add('open');
+  }
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.notif-menu')) {
+      document.querySelectorAll('.notif-menu-dropdown.open').forEach(function (el) { el.classList.remove('open'); });
+    }
+  });
+</script>

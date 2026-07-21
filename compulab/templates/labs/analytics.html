@@ -1,69 +1,484 @@
 {% extends "base.html" %}
-{% block title %}Analytics{% endblock %}
+{% block title %}Reporting & analytics{% endblock %}
 
 {% block content %}
 
-<div class="page-header">
-  <div>
-    <h1>Reporting &amp; analytics</h1>
-    <div class="sub">Last 30 days</div>
-  </div>
-</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 
-<div class="card">
-  <div class="section-title">Generate a report</div>
-  <div class="two-col" style="grid-template-columns: repeat(4, 1fr);">
-    <a href="{% url 'report_lab_utilization' %}" class="action-btn" style="justify-content:center; padding:16px;">Lab Utilization Report</a>
-    <a href="{% url 'report_equipment_status' %}" class="action-btn" style="justify-content:center; padding:16px;">Equipment Status Report</a>
-    <a href="{% url 'report_instructor_usage' %}" class="action-btn" style="justify-content:center; padding:16px;">Instructor Usage Report</a>
-    <a href="{% url 'report_attendance' %}" class="action-btn" style="justify-content:center; padding:16px;">Attendance Report</a>
-    <a href="{% url 'report_maintenance' %}" class="action-btn" style="justify-content:center; padding:16px;">Maintenance Report</a>
-  </div>
-</div>
+<style>
+.ra{ font-family:'Inter',sans-serif; }
+.ra .card{ margin-bottom:0; }
 
-<div class="metrics">
-  <div class="metric neutral">
-    <div class="metric-label">Sessions this month</div>
-    <div class="metric-val">{{ sessions_this_month }}</div>
-  </div>
-  <div class="metric green">
-    <div class="metric-label">Issues resolved</div>
-    <div class="metric-val">{{ resolved_issues }}</div>
-  </div>
-  <div class="metric">
-    <div class="metric-label">Labs monitored</div>
-    <div class="metric-val">{{ labs|length }}</div>
-  </div>
-</div>
+/* header */
+.ra-header{ display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:14px; margin-bottom:18px; }
+.ra-actions{ display:flex; gap:10px; flex-wrap:wrap; }
 
-<div class="two-col">
-  <div class="card">
-    <div class="section-title">Issue breakdown by type</div>
-    <table class="table">
-      <thead><tr><th>Type</th></tr></thead>
-      <tbody>
-        {% for row in issue_breakdown %}
-          <tr><td>{{ row.issue_type }}</td></tr>
-        {% empty %}
-          <tr><td><p class="empty">No issues logged yet.</p></td></tr>
+/* filter bar */
+.ra-filters{ display:grid; grid-template-columns:repeat(4,1fr) auto; gap:12px; align-items:end; padding:16px; margin-bottom:18px; }
+.ra-filters .form-group{ margin-bottom:0; }
+@media (max-width:1000px){ .ra-filters{ grid-template-columns:repeat(2,1fr); } }
+
+/* metric cards */
+.ra-metrics{ display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:18px; }
+.ra-metric{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; display:flex; align-items:flex-start; gap:10px; }
+.ra-metric-icon{ width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.ra-metric-icon svg{ width:17px; height:17px; }
+.ra-metric-label{ font-size:10.5px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; color:var(--text-dim); }
+.ra-metric-val{ font-family:var(--font-display); font-size:21px; font-weight:700; color:var(--text); margin-top:2px; letter-spacing:-.01em; }
+.ra-metric-sub{ font-size:10.5px; color:var(--text-faint); margin-top:2px; }
+@media (max-width:1200px){ .ra-metrics{ grid-template-columns:repeat(3,1fr); } }
+@media (max-width:640px){ .ra-metrics{ grid-template-columns:repeat(2,1fr); } }
+
+/* panel grid */
+.ra-row4{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:18px; align-items:stretch; }
+@media (max-width:1200px){ .ra-row4{ grid-template-columns:repeat(2,1fr); } }
+@media (max-width:640px){ .ra-row4{ grid-template-columns:1fr; } }
+
+.ra-panel{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; display:flex; flex-direction:column; }
+.ra-panel-title{ font-size:12.5px; font-weight:700; letter-spacing:.02em; color:var(--text); margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; }
+.ra-panel-title a{ font-size:11.5px; font-weight:500; color:var(--blue2); text-decoration:none; }
+.ra-panel-title a:hover{ text-decoration:underline; }
+.ra-chart-wrap{ position:relative; height:170px; }
+
+/* utilization bars */
+.ra-bar-row{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.ra-bar-row:last-child{ margin-bottom:0; }
+.ra-bar-label{ width:46px; flex-shrink:0; font-size:11.5px; color:var(--text-dim); font-weight:500; }
+.ra-bar-track{ flex:1; height:9px; border-radius:5px; background:var(--surface-raised); overflow:hidden; }
+.ra-bar-fill{ height:100%; border-radius:5px; background:linear-gradient(90deg,#5b9dff,#3ed6c4); }
+.ra-bar-pct{ width:36px; text-align:right; flex-shrink:0; font-size:11.5px; color:var(--text-dim); font-family:var(--font-mono); }
+
+/* legend for donut */
+.ra-legend{ display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+.ra-legend-item{ display:flex; align-items:center; justify-content:space-between; font-size:11.5px; color:var(--text-dim); }
+.ra-legend-left{ display:flex; align-items:center; gap:7px; }
+.ra-legend-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+/* generate a report */
+.ra-report-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
+@media (max-width:900px){ .ra-report-grid{ grid-template-columns:repeat(2,1fr); } }
+.ra-report-btn{ display:flex; flex-direction:column; align-items:center; gap:8px; padding:18px 10px; border-radius:10px; border:1px solid var(--border); background:var(--surface-raised); color:var(--text); text-decoration:none; font-size:12px; font-weight:500; text-align:center; transition:border-color .15s ease; }
+.ra-report-btn:hover{ border-color:var(--text-faint); }
+.ra-report-icon{ width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; }
+.ra-report-icon svg{ width:17px; height:17px; }
+
+/* recent reports table */
+.ra-table{ width:100%; border-collapse:collapse; font-size:12px; }
+.ra-table th{ text-align:left; padding:6px 6px; color:var(--text-faint); font-weight:500; border-bottom:1px solid var(--border); font-size:10px; text-transform:uppercase; letter-spacing:.03em; }
+.ra-table td{ padding:8px 6px; border-bottom:1px solid var(--border-soft); color:var(--text); vertical-align:middle; }
+.ra-table tr:last-child td{ border-bottom:none; }
+.ra-pill{ display:inline-block; padding:2px 8px; border-radius:8px; font-size:10px; font-weight:600; }
+.ra-pill.pdf{ background:rgba(255,93,93,0.14); color:#ff5d5d; }
+.ra-pill.excel{ background:rgba(62,214,196,0.14); color:#3ed6c4; }
+.ra-dl{ color:var(--blue2); text-decoration:none; }
+.ra-dl:hover{ text-decoration:underline; }
+
+/* top instructors */
+.ra-instr{ display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border-soft); }
+.ra-instr:last-child{ border-bottom:none; padding-bottom:0; }
+.ra-instr:first-child{ padding-top:0; }
+.ra-instr-rank{ width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
+.ra-instr-avatar{ width:32px; height:32px; border-radius:50%; background:var(--surface-raised); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; color:var(--text-faint); flex-shrink:0; }
+.ra-instr-avatar svg{ width:16px; height:16px; }
+.ra-instr-name{ font-size:12.5px; font-weight:500; color:var(--text); }
+.ra-instr-count{ font-size:10.5px; color:var(--text-dim); }
+.ra-instr-bar{ height:5px; border-radius:3px; background:var(--surface-raised); margin-top:5px; overflow:hidden; }
+.ra-instr-bar-fill{ height:100%; border-radius:3px; background:#3ed6c4; }
+
+/* maintenance summary */
+.ra-msum-item{ display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border-soft); }
+.ra-msum-item:last-child{ border-bottom:none; padding-bottom:0; }
+.ra-msum-item:first-child{ padding-top:0; }
+.ra-msum-left{ display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--text); }
+.ra-msum-icon{ width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.ra-msum-icon svg{ width:13px; height:13px; }
+.ra-msum-val{ font-family:var(--font-mono); font-weight:600; font-size:13px; padding:2px 10px; border-radius:6px; }
+
+.ra-empty{ color:var(--text-faint); font-size:12.5px; text-align:center; padding:20px 0; }
+
+:root{ --blue2:#5b9dff; }
+
+@media print{
+  .sidebar, .app-navbar, .app-footer, .ra-actions, .ra-filters, form{ display:none !important; }
+}
+</style>
+
+<div class="ra">
+
+  <div class="ra-header">
+    <div>
+      <h1 style="font-family:var(--font-display); font-size:20px; font-weight:600; color:#e7ebee; letter-spacing:-0.01em;">Reporting &amp; Analytics</h1>
+      <div class="sub" style="font-size:13px; color:#8b98a3; margin-top:2px;">Overview of laboratory usage and system reports</div>
+    </div>
+    <div class="ra-actions">
+      <a href="{% url 'analytics_export' %}?{{ request.GET.urlencode }}&format=pdf" class="action-btn">
+        <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z" stroke="currentColor" stroke-width="1.6"/><path d="M14 2v6h6" stroke="currentColor" stroke-width="1.6"/></svg>
+        Export PDF
+      </a>
+      <a href="{% url 'analytics_export' %}?{{ request.GET.urlencode }}&format=excel" class="action-btn">
+        <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 8l8 8M16 8l-8 8" stroke="currentColor" stroke-width="1.6"/></svg>
+        Export Excel
+      </a>
+      <button type="button" onclick="window.print()" class="action-btn">
+        <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.6"/><rect x="6" y="14" width="12" height="8" stroke="currentColor" stroke-width="1.6"/></svg>
+        Print Report
+      </button>
+    </div>
+  </div>
+
+  <form method="get" class="card ra-filters">
+    <div class="form-group">
+      <label class="form-label">Date Range</label>
+      <select name="range" class="form-control" id="raRangeSelect" onchange="document.getElementById('raCustomDates').style.display = (this.value==='custom') ? 'contents' : 'none';">
+        <option value="this_month" {% if range_key == 'this_month' %}selected{% endif %}>This Month</option>
+        <option value="last_month" {% if range_key == 'last_month' %}selected{% endif %}>Last Month</option>
+        <option value="this_week" {% if range_key == 'this_week' %}selected{% endif %}>This Week</option>
+        <option value="last_7_days" {% if range_key == 'last_7_days' %}selected{% endif %}>Last 7 Days</option>
+        <option value="custom" {% if range_key == 'custom' %}selected{% endif %}>Custom Range</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Laboratory</label>
+      {% if is_incharge %}
+        <select class="form-control" disabled><option>{{ all_labs.0.name }}</option></select>
+      {% else %}
+        <select name="lab" class="form-control">
+          <option value="">All Labs</option>
+          {% for lab in all_labs %}
+            <option value="{{ lab.pk }}" {% if selected_lab == lab.pk|stringformat:"s" %}selected{% endif %}>{{ lab.name }}</option>
+          {% endfor %}
+        </select>
+      {% endif %}
+    </div>
+    <div class="form-group">
+      <label class="form-label">Instructor</label>
+      <select name="instructor" class="form-control">
+        <option value="">All Instructors</option>
+        {% for instr in instructors %}
+          <option value="{{ instr.pk }}" {% if selected_instructor == instr.pk|stringformat:"s" %}selected{% endif %}>{{ instr.get_full_name|default:instr.username }}</option>
         {% endfor %}
-      </tbody>
-    </table>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Status</label>
+      <select name="status" class="form-control">
+        <option value="">All Status</option>
+        {% for key, label in status_choices %}
+          <option value="{{ key }}" {% if selected_status == key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div id="raCustomDates" style="{% if range_key != 'custom' %}display:none;{% else %}display:flex;{% endif %} gap:10px; grid-column:1/-1;">
+      <div class="form-group" style="flex:1; margin-bottom:0;">
+        <label class="form-label">From</label>
+        <input type="date" name="date_from" class="form-control" value="{{ date_from|date:'Y-m-d' }}">
+      </div>
+      <div class="form-group" style="flex:1; margin-bottom:0;">
+        <label class="form-label">To</label>
+        <input type="date" name="date_to" class="form-control" value="{{ date_to|date:'Y-m-d' }}">
+      </div>
+    </div>
+    <button type="submit" class="action-btn primary" style="white-space:nowrap;">
+      <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M4 4h16l-6.5 8v6l-3 2v-8L4 4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      Apply Filter
+    </button>
+  </form>
+
+  <div class="ra-metrics">
+    <div class="ra-metric">
+      <div class="ra-metric-icon" style="background:rgba(91,157,255,0.14); color:#5b9dff;">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="4" width="19" height="12" rx="1.5" stroke="currentColor" stroke-width="1.8"/><path d="M9 20h6M12 16v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <div class="ra-metric-label">Total Labs</div>
+        <div class="ra-metric-val">{{ total_labs }}</div>
+        <div class="ra-metric-sub">All Laboratories</div>
+      </div>
+    </div>
+    <div class="ra-metric">
+      <div class="ra-metric-icon" style="background:rgba(62,214,196,0.14); color:#3ed6c4;">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="4" width="19" height="12" rx="1.5" stroke="currentColor" stroke-width="1.8"/><path d="M9 20h6M12 16v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="7" r="3" fill="currentColor"/></svg>
+      </div>
+      <div>
+        <div class="ra-metric-label">Total PCs</div>
+        <div class="ra-metric-val">{{ total_pcs }}</div>
+        <div class="ra-metric-sub">All Computers</div>
+      </div>
+    </div>
+    <div class="ra-metric">
+      <div class="ra-metric-icon" style="background:rgba(167,139,250,0.14); color:#a78bfa;">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <div class="ra-metric-label">Total Reservations</div>
+        <div class="ra-metric-val">{{ total_reservations }}</div>
+        <div class="ra-metric-sub">This Period</div>
+      </div>
+    </div>
+    <div class="ra-metric">
+      <div class="ra-metric-icon" style="background:rgba(242,169,59,0.14); color:#f2a93b;">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 20v-2a4 4 0 0 0-2.5-3.7M17 3.3a4 4 0 0 1 0 7.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="ra-metric-label">Attendance Rate</div>
+        <div class="ra-metric-val">{{ attendance_rate }}%</div>
+        <div class="ra-metric-sub">This Period</div>
+      </div>
+    </div>
+    <div class="ra-metric">
+      <div class="ra-metric-icon" style="background:rgba(255,93,93,0.14); color:#ff5d5d;">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l2.4-2.4a5 5 0 0 1-6.4 6.4L7.4 19.6a2 2 0 0 1-2.8-2.8l6.3-6.3a5 5 0 0 1 6.4-6.4l-2.4 2.4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="ra-metric-label">Maintenance Issues</div>
+        <div class="ra-metric-val">{{ maintenance_issues_pending }}</div>
+        <div class="ra-metric-sub">Pending</div>
+      </div>
+    </div>
+    <div class="ra-metric">
+      <div class="ra-metric-icon" style="background:rgba(91,157,255,0.14); color:#5b9dff;">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 17l5-5 4 4 8-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 8h6v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="ra-metric-label">Lab Utilization</div>
+        <div class="ra-metric-val">{{ lab_utilization_avg }}%</div>
+        <div class="ra-metric-sub">Average Usage</div>
+      </div>
+    </div>
   </div>
 
-  <div class="card">
-    <div class="section-title">Labs overview</div>
-    <table class="table">
-      <thead><tr><th>Lab</th><th>PCs</th></tr></thead>
-      <tbody>
-        {% for lab in labs %}
-          <tr><td>{{ lab.name }}</td><td>{{ lab.pcs.all|length }}</td></tr>
-        {% empty %}
-          <tr><td colspan="2"><p class="empty">No labs set up.</p></td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <div class="ra-row4">
+    <div class="ra-panel">
+      <div class="ra-panel-title">Lab Utilization <span style="font-weight:400; color:var(--text-faint); text-transform:none;">(This Period)</span></div>
+      {% for row in utilization_rows %}
+        <div class="ra-bar-row">
+          <div class="ra-bar-label">{{ row.lab.name }}</div>
+          <div class="ra-bar-track"><div class="ra-bar-fill" style="width:{{ row.pct }}%;"></div></div>
+          <div class="ra-bar-pct">{{ row.pct }}%</div>
+        </div>
+      {% empty %}
+        <p class="ra-empty">No labs to show.</p>
+      {% endfor %}
+    </div>
+
+    <div class="ra-panel">
+      <div class="ra-panel-title">Equipment Status</div>
+      <div class="ra-chart-wrap"><canvas id="raEquipmentChart"></canvas></div>
+      <div class="ra-legend">
+        <div class="ra-legend-item"><span class="ra-legend-left"><span class="ra-legend-dot" style="background:#3ed6c4;"></span>Working</span><span>{{ equipment_status.working_pct }}% ({{ equipment_status.working }})</span></div>
+        <div class="ra-legend-item"><span class="ra-legend-left"><span class="ra-legend-dot" style="background:#f2a93b;"></span>Maintenance</span><span>{{ equipment_status.maintenance_pct }}% ({{ equipment_status.maintenance }})</span></div>
+        <div class="ra-legend-item"><span class="ra-legend-left"><span class="ra-legend-dot" style="background:#ff5d5d;"></span>Damaged</span><span>{{ equipment_status.damaged_pct }}% ({{ equipment_status.damaged }})</span></div>
+      </div>
+    </div>
+
+    <div class="ra-panel">
+      <div class="ra-panel-title">Attendance Trend <span style="font-weight:400; color:var(--text-faint); text-transform:none;">(This Period)</span></div>
+      <div class="ra-chart-wrap"><canvas id="raAttendanceChart"></canvas></div>
+    </div>
+
+    <div class="ra-panel">
+      <div class="ra-panel-title">Reservations Trend <span style="font-weight:400; color:var(--text-faint); text-transform:none;">(6 Months)</span></div>
+      <div class="ra-chart-wrap"><canvas id="raReservationsChart"></canvas></div>
+    </div>
   </div>
+
+  <div class="card" style="margin-bottom:18px;">
+    <div class="section-title">Generate a Report</div>
+    <div class="ra-report-grid">
+      <a href="{% url 'report_lab_utilization' %}" class="ra-report-btn">
+        <div class="ra-report-icon" style="background:rgba(91,157,255,0.14); color:#5b9dff;">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 20V10M12 20V4M20 20v-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        Lab Utilization Report
+      </a>
+      <a href="{% url 'report_equipment_status' %}" class="ra-report-btn">
+        <div class="ra-report-icon" style="background:rgba(62,214,196,0.14); color:#3ed6c4;">
+          <svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="4" width="19" height="12" rx="1.5" stroke="currentColor" stroke-width="1.8"/><path d="M9 20h6M12 16v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        Equipment Status Report
+      </a>
+      <a href="{% url 'report_instructor_usage' %}" class="ra-report-btn">
+        <div class="ra-report-icon" style="background:rgba(167,139,250,0.14); color:#a78bfa;">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21v-1a8 8 0 0 1 16 0v1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        Instructor Usage Report
+      </a>
+      <a href="{% url 'report_attendance' %}" class="ra-report-btn">
+        <div class="ra-report-icon" style="background:rgba(242,169,59,0.14); color:#f2a93b;">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 20v-2a4 4 0 0 0-2.5-3.7M17 3.3a4 4 0 0 1 0 7.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        Attendance Report
+      </a>
+      <a href="{% url 'report_maintenance' %}" class="ra-report-btn">
+        <div class="ra-report-icon" style="background:rgba(255,93,93,0.14); color:#ff5d5d;">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l2.4-2.4a5 5 0 0 1-6.4 6.4L7.4 19.6a2 2 0 0 1-2.8-2.8l6.3-6.3a5 5 0 0 1 6.4-6.4l-2.4 2.4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </div>
+        Maintenance Report
+      </a>
+    </div>
+  </div>
+
+  <div class="ra-row4">
+    <div class="ra-panel">
+      <div class="ra-panel-title">Recent Generated Reports</div>
+      {% if recent_reports %}
+        <table class="ra-table">
+          <thead><tr><th>Report</th><th>Type</th><th>Generated</th><th></th></tr></thead>
+          <tbody>
+            {% for r in recent_reports %}
+              <tr>
+                <td>{{ r.get_report_type_display }}</td>
+                <td><span class="ra-pill {{ r.format }}">{{ r.get_format_display }}</span></td>
+                <td>{{ r.generated_at|date:"M j, Y g:i A" }}</td>
+                <td><a class="ra-dl" href="{% url r.export_url_name %}?{{ r.params }}&format={{ r.format }}" title="Download again">&darr;</a></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="ra-empty">No reports generated yet. Try one from "Generate a Report" above.</p>
+      {% endif %}
+    </div>
+
+    <div class="ra-panel">
+      <div class="ra-panel-title">Top Active Instructors <span style="font-weight:400; color:var(--text-faint); text-transform:none;">(This Period)</span></div>
+      {% for row in top_instructors %}
+        <div class="ra-instr">
+          {% if forloop.counter == 1 %}
+            <div class="ra-instr-rank" style="background:rgba(242,169,59,0.18); color:#f2a93b;">1</div>
+          {% elif forloop.counter == 2 %}
+            <div class="ra-instr-rank" style="background:rgba(139,152,163,0.18); color:#c7cdd3;">2</div>
+          {% elif forloop.counter == 3 %}
+            <div class="ra-instr-rank" style="background:rgba(180,120,60,0.18); color:#c98a4b;">3</div>
+          {% else %}
+            <div class="ra-instr-rank" style="background:var(--surface-raised); color:var(--text-faint);">{{ forloop.counter }}</div>
+          {% endif %}
+          <div class="ra-instr-avatar"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21v-1a8 8 0 0 1 16 0v1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          <div style="flex:1">
+            <div class="ra-instr-name">{{ row.instructor.get_full_name|default:row.instructor.username }}</div>
+            <div class="ra-instr-count">{{ row.sessions }} Reservation{{ row.sessions|pluralize }}</div>
+            <div class="ra-instr-bar"><div class="ra-instr-bar-fill" style="width:{{ row.bar_pct }}%;"></div></div>
+          </div>
+        </div>
+      {% empty %}
+        <p class="ra-empty">No instructor activity this period.</p>
+      {% endfor %}
+    </div>
+
+    <div class="ra-panel">
+      <div class="ra-panel-title">Most Used Laboratories</div>
+      {% for row in utilization_rows %}
+        <div class="ra-bar-row">
+          <div class="ra-bar-label">{{ row.lab.name }}</div>
+          <div class="ra-bar-track"><div class="ra-bar-fill" style="width:{{ row.pct }}%;"></div></div>
+          <div class="ra-bar-pct">{{ row.pct }}%</div>
+        </div>
+      {% empty %}
+        <p class="ra-empty">No labs to show.</p>
+      {% endfor %}
+    </div>
+
+    <div class="ra-panel">
+      <div class="ra-panel-title">Maintenance Summary</div>
+      <div class="ra-msum-item">
+        <div class="ra-msum-left">
+          <div class="ra-msum-icon" style="background:rgba(242,169,59,0.14); color:#f2a93b;"><svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          Pending Issues
+        </div>
+        <div class="ra-msum-val" style="background:rgba(255,93,93,0.14); color:#ff5d5d;">{{ maintenance_summary.pending }}</div>
+      </div>
+      <div class="ra-msum-item">
+        <div class="ra-msum-left">
+          <div class="ra-msum-icon" style="background:rgba(62,214,196,0.14); color:#3ed6c4;"><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          Resolved Issues
+        </div>
+        <div class="ra-msum-val" style="background:rgba(62,214,196,0.14); color:#3ed6c4;">{{ maintenance_summary.resolved }}</div>
+      </div>
+      <div class="ra-msum-item">
+        <div class="ra-msum-left">
+          <div class="ra-msum-icon" style="background:rgba(91,157,255,0.14); color:#5b9dff;"><svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l2.4-2.4a5 5 0 0 1-6.4 6.4L7.4 19.6a2 2 0 0 1-2.8-2.8l6.3-6.3a5 5 0 0 1 6.4-6.4l-2.4 2.4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+          Under Repair
+        </div>
+        <div class="ra-msum-val" style="background:rgba(91,157,255,0.14); color:#5b9dff;">{{ maintenance_summary.under_repair }}</div>
+      </div>
+      <div class="ra-msum-item">
+        <div class="ra-msum-left">
+          <div class="ra-msum-icon" style="background:var(--surface-raised); color:var(--text-dim);"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          Total Issues
+        </div>
+        <div class="ra-msum-val" style="background:var(--surface-raised); color:var(--text-dim);">{{ maintenance_summary.total }}</div>
+      </div>
+    </div>
+  </div>
+
 </div>
+
+<script>
+(function() {
+  var mono = "'JetBrains Mono', monospace";
+  var dim = '#8b98a3';
+  var gridColor = 'rgba(139,152,163,0.12)';
+  Chart.defaults.color = dim;
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.font.size = 10.5;
+
+  new Chart(document.getElementById('raEquipmentChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Working', 'Maintenance', 'Damaged'],
+      datasets: [{
+        data: [{{ equipment_status.working }}, {{ equipment_status.maintenance }}, {{ equipment_status.damaged }}],
+        backgroundColor: ['#3ed6c4', '#f2a93b', '#ff5d5d'],
+        borderColor: '#12171d',
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '68%',
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  new Chart(document.getElementById('raAttendanceChart'), {
+    type: 'line',
+    data: {
+      labels: [{% for w in attendance_trend %}'{{ w.label }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+      datasets: [{
+        data: [{% for w in attendance_trend %}{{ w.pct }}{% if not forloop.last %},{% endif %}{% endfor %}],
+        borderColor: '#3ed6c4', backgroundColor: 'rgba(62,214,196,0.12)',
+        tension: 0.35, fill: true, pointRadius: 3, pointBackgroundColor: '#3ed6c4',
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: gridColor } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  new Chart(document.getElementById('raReservationsChart'), {
+    type: 'line',
+    data: {
+      labels: [{% for m in reservations_trend %}'{{ m.label }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+      datasets: [{
+        data: [{% for m in reservations_trend %}{{ m.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+        borderColor: '#5b9dff', backgroundColor: 'rgba(91,157,255,0.12)',
+        tension: 0.35, fill: true, pointRadius: 3, pointBackgroundColor: '#5b9dff',
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: gridColor } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+})();
+</script>
 
 {% endblock %}

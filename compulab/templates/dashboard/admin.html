@@ -5,233 +5,420 @@
 {% block content %}
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 
 <style>
-:root{
-  --bg:#0a0e12;
-  --surface:#12171d;
-  --surface-raised:#171d24;
-  --border:#232b34;
-  --border-soft:#232b3480;
-  --text:#e7ebee;
-  --text-dim:#8b98a3;
-  --text-faint:#4d5761;
-  --green:#3ed6c4;
-  --green-dim:#3ed6c422;
-  --red:#ff5d5d;
-  --red-dim:#ff5d5d22;
-  --amber:#f2a93b;
-  --amber-dim:#f2a93b22;
-  --blue:#5b9dff;
-  --blue-dim:#5b9dff22;
-  --font-display:'Space Grotesk',sans-serif;
-  --font-body:'Inter',sans-serif;
-  --font-mono:'JetBrains Mono',monospace;
+.ld{
+  --ld-bg:#0a0e12;
+  --ld-card:#12171d;
+  --ld-border:#232b34;
+  --ld-text:#e7ebee;
+  --ld-dim:#8b98a3;
+  --ld-faint:#4d5761;
+  --ld-purple:#a78bfa; --ld-purple-tint:rgba(167,139,250,0.14);
+  --ld-green:#3ed6c4; --ld-green-tint:rgba(62,214,196,0.14);
+  --ld-blue:#5b9dff; --ld-blue-tint:rgba(91,157,255,0.14);
+  --ld-orange:#f2a93b; --ld-orange-tint:rgba(242,169,59,0.14);
+  --ld-teal:#3ed6c4; --ld-teal-tint:rgba(62,214,196,0.14);
+  --ld-red:#ff5d5d; --ld-red-tint:rgba(255,93,93,0.14);
+  --ld-amber:#f2a93b; --ld-amber-tint:rgba(242,169,59,0.14);
+  font-family:'Inter',sans-serif;
+  background:var(--ld-bg);
+  color:var(--ld-text);
+  margin:-20px;
+  padding:20px;
+  min-height:100%;
 }
+.ld h1,.ld h2,.ld h3{font-family:'Space Grotesk',sans-serif;}
+.ld a{color:var(--ld-blue); text-decoration:none;}
+.ld a:hover{text-decoration:underline;}
 
-/* content wrapper needs to size correctly inside base.html's .content scroll area */
-.dash-wrap{ min-height:0; }
+.ld-card{background:var(--ld-card); border:1px solid var(--ld-border); border-radius:14px; padding:18px 20px; box-shadow:0 1px 2px rgba(0,0,0,.2);}
 
-.topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; flex-wrap:wrap; gap:16px;}
-.brand{display:flex; align-items:center; gap:12px;}
-.brand-mark{width:34px; height:34px; border-radius:8px; background:linear-gradient(135deg,var(--green),var(--blue)); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-weight:600; font-size:14px; color:#0a0e12;}
-.brand-text h1{font-family:var(--font-display); font-size:19px; margin:0; font-weight:600; letter-spacing:-0.01em; color:var(--text);}
-.brand-text span{font-size:12px; color:var(--text-faint); font-family:var(--font-mono);}
-.topbar-right{display:flex; align-items:center; gap:18px;}
-.live-pill{display:flex; align-items:center; gap:7px; font-family:var(--font-mono); font-size:12px; color:var(--text-dim); background:var(--surface); border:1px solid var(--border); padding:6px 12px 6px 10px; border-radius:20px;}
-.live-dot{width:7px; height:7px; border-radius:50%; background:var(--green); animation:pulse 2s infinite;}
-@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(62,214,196,.5);} 70%{box-shadow:0 0 0 7px rgba(62,214,196,0);} 100%{box-shadow:0 0 0 0 rgba(62,214,196,0);}}
-.lab-select{font-family:var(--font-body); font-size:13px; color:var(--text); background:var(--surface); border:1px solid var(--border); padding:8px 14px; border-radius:8px; cursor:pointer;}
+.ld-metrics{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:20px;}
+.ld-metric{display:flex; align-items:center; gap:12px;}
+.ld-metric-icon{width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.ld-metric-icon svg{width:20px; height:20px;}
+.ld-metric-label{font-size:12px; color:var(--ld-dim); font-weight:500;}
+.ld-metric-val{font-size:22px; font-weight:700; letter-spacing:-0.01em; margin-top:2px;}
+.ld-metric-sub{font-size:11.5px; color:var(--ld-faint); margin-top:2px;}
+.ld-metric-sub.up{color:var(--ld-green);}
 
-.metrics{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:32px;}
-.metric{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px 20px; position:relative; overflow:hidden;}
-.metric::before{content:''; position:absolute; top:0; left:0; width:3px; height:100%; background:var(--bar-color,var(--text-faint));}
-.metric-label{font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px; font-weight:500;}
-.metric-val{font-family:var(--font-display); font-size:32px; font-weight:600; letter-spacing:-0.01em; color:var(--text); display:flex; align-items:baseline; gap:8px;}
-.metric-val .trend{font-family:var(--font-mono); font-size:12px; font-weight:500; color:var(--text-faint);}
-.metric.green{--bar-color:var(--green);} .metric.green .metric-val{color:var(--green);}
-.metric.red{--bar-color:var(--red);} .metric.red .metric-val{color:var(--red);}
-.metric.amber{--bar-color:var(--amber);} .metric.amber .metric-val{color:var(--amber);}
-.metric.neutral{--bar-color:var(--blue);}
+.ic-purple{background:var(--ld-purple-tint); color:var(--ld-purple);}
+.ic-green{background:var(--ld-green-tint); color:var(--ld-green);}
+.ic-blue{background:var(--ld-blue-tint); color:var(--ld-blue);}
+.ic-orange{background:var(--ld-orange-tint); color:var(--ld-orange);}
+.ic-teal{background:var(--ld-teal-tint); color:var(--ld-teal);}
+.ic-red{background:var(--ld-red-tint); color:var(--ld-red);}
 
-.section-title{font-family:var(--font-display); font-size:14px; font-weight:600; color:var(--text); margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;}
-.section-title .count{font-family:var(--font-mono); font-size:11px; color:var(--text-faint); font-weight:400; background:var(--surface-raised); padding:2px 8px; border-radius:10px; border:1px solid var(--border);}
-.section-title a{font-size:12px; color:var(--blue); text-decoration:none; font-weight:500; font-family:var(--font-body);}
-.section-title a:hover{text-decoration:underline;}
+.ld-section-title{font-size:13px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--ld-text); margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;}
+.ld-section-title a{font-size:12px; font-weight:500; text-transform:none; letter-spacing:0;}
 
-.pc-panel{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:24px;}
-.pc-legend{display:flex; gap:16px; margin-bottom:16px;}
-.legend-item{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-dim); font-family:var(--font-mono);}
-.legend-dot{width:8px; height:8px; border-radius:50%; display:inline-block;}
-.dot-green{background:var(--green);} .dot-dim{background:var(--text-faint);} .dot-red{background:var(--red);}
+.ld-row-2{display:grid; grid-template-columns:1.3fr 1fr; gap:16px; margin-bottom:16px;}
+.ld-overview-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px;}
+.ld-overview-item{text-align:center;}
+.ld-overview-icon{width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 10px;}
+.ld-overview-icon svg{width:20px; height:20px;}
+.ld-overview-val{font-size:22px; font-weight:700;}
+.ld-overview-label{font-size:12px; color:var(--ld-dim); margin-top:4px;}
+.ld-overview-sub{font-size:11px; color:var(--ld-faint); margin-top:2px;}
 
-.pc-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(56px,1fr)); gap:8px;}
-.pc-node{position:relative; aspect-ratio:1; border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-family:var(--font-mono); font-size:10px; font-weight:500; border:1px solid var(--border); background:var(--surface-raised); color:var(--text-dim); transition:transform .12s ease, border-color .12s ease;}
-.pc-node:hover{transform:translateY(-2px); border-color:var(--text-faint); z-index:2;}
-.pc-icon{width:20px; height:20px; flex-shrink:0;}
-.pc-label{line-height:1;}
-.pc-node.online{background:var(--green-dim); border-color:#3ed6c440; color:var(--green);}
-.pc-node.online::after{content:''; position:absolute; top:4px; right:4px; width:5px; height:5px; border-radius:50%; background:var(--green); animation:nodepulse 2.4s infinite;}
-.pc-node.offline{background:transparent; color:var(--text-faint); opacity:.55;}
-.pc-node.issue{background:var(--red-dim); border-color:#ff5d5d40; color:var(--red);}
-@keyframes nodepulse{0%{box-shadow:0 0 0 0 rgba(62,214,196,.5);} 70%{box-shadow:0 0 0 5px rgba(62,214,196,0);} 100%{box-shadow:0 0 0 0 rgba(62,214,196,0);}}
+.ld-donut-wrap{display:flex; align-items:center; gap:20px;}
+.ld-donut-legend{flex:1; display:flex; flex-direction:column; gap:10px;}
+.ld-donut-legend-item{display:flex; align-items:center; gap:8px; font-size:12.5px;}
+.ld-donut-dot{width:9px; height:9px; border-radius:50%; flex-shrink:0;}
+.ld-donut-legend-item .lbl{flex:1; color:var(--ld-dim);}
+.ld-donut-legend-item .val{font-weight:600; color:var(--ld-text);}
 
-.two-col{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
-.card{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px;}
+.ld-row-3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:16px;}
+.ld-chart-card{min-width:0;}
+.ld-chart-select{font-size:11.5px; color:var(--ld-dim); background:var(--ld-bg); border:1px solid var(--ld-border); border-radius:6px; padding:4px 8px;}
+.ld-chart-canvas-wrap{height:180px; position:relative;}
 
-.alert-item{display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-bottom:1px solid var(--border-soft);}
-.alert-item:last-child{border-bottom:none; padding-bottom:0;}
-.alert-item:first-child{padding-top:0;}
-.alert-icon{width:26px; height:26px; border-radius:7px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; font-family:var(--font-mono);}
-.alert-icon.critical{background:var(--red-dim); color:var(--red);}
-.alert-icon.warning{background:var(--amber-dim); color:var(--amber);}
-.alert-icon.info{background:var(--blue-dim); color:var(--blue);}
-.alert-title{font-size:13.5px; font-weight:500; color:var(--text); margin-bottom:2px;}
-.alert-sub{font-size:12.5px; color:var(--text-dim); line-height:1.4;}
-.alert-time{margin-left:auto; font-size:11px; color:var(--text-faint); font-family:var(--font-mono); white-space:nowrap; padding-top:2px;}
-.empty{color:var(--text-faint); font-size:13px; text-align:center; padding:24px 0; grid-column:1/-1;}
+.ld-feed-item{display:flex; align-items:flex-start; gap:12px; padding:11px 0; border-bottom:1px solid var(--ld-border);}
+.ld-feed-item:first-child{padding-top:0;}
+.ld-feed-item:last-child{border-bottom:none; padding-bottom:0;}
+.ld-feed-icon{width:28px; height:28px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center;}
+.ld-feed-icon svg{width:14px; height:14px;}
+.ld-feed-title{font-size:13px; font-weight:500; color:var(--ld-text); line-height:1.35;}
+.ld-feed-sub{font-size:11.5px; color:var(--ld-faint); margin-top:2px;}
+.ld-feed-time{font-size:10.5px; color:var(--ld-faint); white-space:nowrap; margin-left:auto; padding-top:2px;}
 
-.schedule-row{display:flex; gap:14px; padding:12px 0; border-bottom:1px solid var(--border-soft); align-items:center;}
-.schedule-row:last-child{border-bottom:none; padding-bottom:0;}
-.schedule-row:first-child{padding-top:0;}
-.schedule-time{font-family:var(--font-mono); font-size:12px; color:var(--text-dim); width:92px; flex-shrink:0;}
-.schedule-block{flex:1; padding:10px 14px; background:var(--surface-raised); border-radius:8px; border-left:3px solid var(--blue);}
-.schedule-block.now{border-left-color:var(--green);}
-.schedule-block.free{border-left-color:var(--border); background:transparent;}
-.s-title{font-size:13.5px; font-weight:500; color:var(--text);}
-.s-sub{font-size:12px; color:var(--text-dim); margin-top:2px;}
-.now-badge{font-family:var(--font-mono); font-size:9.5px; color:var(--green); background:var(--green-dim); padding:2px 6px; border-radius:4px; margin-left:8px; vertical-align:middle;}
+.ld-sched-row{display:flex; align-items:flex-start; gap:12px; padding:11px 0; border-bottom:1px solid var(--ld-border);}
+.ld-sched-row:first-child{padding-top:0;}
+.ld-sched-row:last-child{border-bottom:none; padding-bottom:0;}
+.ld-sched-time{font-size:12px; color:var(--ld-dim); width:66px; flex-shrink:0; padding-top:2px;}
+.ld-sched-dot{width:7px; height:7px; border-radius:50%; background:var(--ld-blue); margin-top:6px; flex-shrink:0;}
+.ld-sched-dot.ongoing{background:var(--ld-green);}
+.ld-sched-body{flex:1;}
+.ld-sched-title{font-size:13px; font-weight:600; color:var(--ld-text);}
+.ld-sched-sub{font-size:11.5px; color:var(--ld-faint); margin-top:2px;}
+.ld-badge{font-size:10px; font-weight:600; padding:3px 8px; border-radius:10px; white-space:nowrap;}
+.ld-badge.ongoing{background:var(--ld-green-tint); color:var(--ld-green);}
+.ld-badge.upcoming{background:var(--ld-blue-tint); color:var(--ld-blue);}
+.ld-badge.done{background:var(--ld-bg); color:var(--ld-faint);}
 
-@media (max-width:860px){
-  .metrics{grid-template-columns:repeat(2,1fr);}
-  .two-col{grid-template-columns:1fr;}
-}
+.ld-empty{color:var(--ld-faint); font-size:13px; text-align:center; padding:24px 0;}
+.ld-footer{text-align:center; font-size:12px; color:var(--ld-faint); padding:24px 0 4px;}
 
-@media (prefers-reduced-motion: reduce){
-  .live-dot, .pc-node.online::after{animation:none;}
+@media (max-width:1100px){
+  .ld-row-2{grid-template-columns:1fr;}
+  .ld-row-3{grid-template-columns:1fr;}
+  .ld-overview-grid{grid-template-columns:repeat(2,1fr); gap:20px;}
 }
 </style>
 
-<div class="dash-wrap">
+<div class="ld">
 
-  <div class="topbar">
-    <div class="brand">
-      <div class="brand-mark">L</div>
-      <div class="brand-text">
-        <h1>Lab Console</h1>
-        <span>Computer Lab Monitoring</span>
+  <div class="ld-metrics">
+    <div class="ld-card ld-metric">
+      <div class="ld-metric-icon ic-purple">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M17 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M10 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM21 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="ld-metric-label">Total Students</div>
+        <div class="ld-metric-val">{{ total_students }}</div>
+        <div class="ld-metric-sub up">↗ {{ new_students_this_week }} this week</div>
       </div>
     </div>
-    <div class="topbar-right">
-      {% if labs %}
-        <select class="lab-select" onchange="location.href=this.value">
-          {% for lab in labs %}
-            <option value="?lab={{ lab.id }}" {% if lab.id == current_lab.id %}selected{% endif %}>
-              {{ lab.name }} — {{ lab.pc_count }} PCs
-            </option>
-          {% endfor %}
-        </select>
-      {% endif %}
-      <div class="live-pill"><span class="live-dot"></span>Live · updated <span id="lastUpdated">just now</span></div>
-    </div>
-  </div>
-
-  <!-- metric cards -->
-  <div class="metrics">
-    <div class="metric green">
-      <div class="metric-label">PCs online</div>
-      <div class="metric-val">{{ online_count }} <span class="trend">/ {{ online_count|add:offline_count }}</span></div>
-    </div>
-    <div class="metric neutral">
-      <div class="metric-label">PCs offline</div>
-      <div class="metric-val">{{ offline_count }} <span class="trend">/ {{ offline_count|add:online_count }}</span></div>
-    </div>
-    <div class="metric red">
-      <div class="metric-label">Issues open</div>
-      <div class="metric-val">{{ open_issues_count }}</div>
-    </div>
-    <div class="metric amber">
-      <div class="metric-label">Today's sessions</div>
-      <div class="metric-val">{{ todays_sessions_count }}</div>
-    </div>
-  </div>
-
-  <!-- PC grid -->
-  <div class="pc-panel">
-    <div class="section-title">
-      PC power status — {{ current_lab.name|default:"Lab A" }}
-      <span class="count">{{ pcs|length }} units</span>
-    </div>
-    <div class="pc-legend">
-      <div class="legend-item"><span class="legend-dot dot-green"></span>Online</div>
-      <div class="legend-item"><span class="legend-dot dot-dim"></span>Offline</div>
-      <div class="legend-item"><span class="legend-dot dot-red"></span>Needs attention</div>
-    </div>
-    <div class="pc-grid">
-      {% for pc in pcs %}
-        <div class="pc-node {{ pc.status }}" title="{{ pc.pc_id }} · {{ pc.get_status_display }}">
-          <svg class="pc-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="2.5" y="4" width="19" height="12" rx="1.5" stroke="currentColor" stroke-width="1.6"/>
-            <path d="M9 20h6M12 16v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-          </svg>
-          <span class="pc-label">{{ pc.pc_id }}</span>
-        </div>
-      {% empty %}
-        <p class="empty">No PCs registered for this lab yet.</p>
-      {% endfor %}
-    </div>
-  </div>
-
-  <div class="two-col">
-
-    <!-- recent alerts -->
-    <div class="card">
-      <div class="section-title">
-        Recent alerts
-        {% if recent_alerts %}<a href="{% url 'alerts' %}">View all</a>{% endif %}
+    <div class="ld-card ld-metric">
+      <div class="ld-metric-icon ic-green">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 20v-2a4 4 0 0 0-2.5-3.7M17 3.3a4 4 0 0 1 0 7.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
-      {% for alert in recent_alerts %}
-        <div class="alert-item">
-          <div class="alert-icon {{ alert.level }}">!</div>
-          <div style="flex:1">
-            <div class="alert-title">{{ alert.title }}</div>
-            <div class="alert-sub">{{ alert.description }}</div>
-          </div>
-          <div class="alert-time">{{ alert.created_at|timesince }} ago</div>
-        </div>
-      {% empty %}
-        <p class="empty">No recent alerts. Everything's running smoothly.</p>
-      {% endfor %}
+      <div>
+        <div class="ld-metric-label">Total Instructors</div>
+        <div class="ld-metric-val">{{ total_instructors }}</div>
+        <div class="ld-metric-sub up">↗ {{ new_instructors_this_week }} this week</div>
+      </div>
     </div>
-
-    <!-- today's schedule -->
-    <div class="card">
-      <div class="section-title">Today's schedule</div>
-      {% for session in todays_sessions %}
-        <div class="schedule-row">
-          <div class="schedule-time">
-            {{ session.start_time|time:"H:i" }}–{{ session.end_time|time:"H:i" }}
-          </div>
-          <div class="schedule-block {% if session.is_current %}now{% endif %}">
-            <div class="s-title">
-              {{ session.subject }}
-              {% if session.is_current %}<span class="now-badge">NOW</span>{% endif %}
-            </div>
-            <div class="s-sub">{{ session.requester_name }} · {{ session.lab.name }}</div>
-          </div>
-        </div>
-      {% empty %}
-        <div class="schedule-row">
-          <div class="schedule-block free">
-            <div class="s-title">No sessions today</div>
-          </div>
-        </div>
-      {% endfor %}
+    <div class="ld-card ld-metric">
+      <div class="ld-metric-icon ic-blue">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="ld-metric-label">Total Laboratories</div>
+        <div class="ld-metric-val">{{ total_labs }}</div>
+        <div class="ld-metric-sub">{{ total_pcs }} PCs total</div>
+      </div>
     </div>
-
+    <div class="ld-card ld-metric">
+      <div class="ld-metric-icon ic-orange">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="4" width="19" height="12" rx="1.5" stroke="currentColor" stroke-width="1.8"/><path d="M9 20h6M12 16v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <div class="ld-metric-label">Total Computers</div>
+        <div class="ld-metric-val">{{ total_pcs }}</div>
+        <div class="ld-metric-sub">Across {{ total_labs }} labs</div>
+      </div>
+    </div>
+    <div class="ld-card ld-metric">
+      <div class="ld-metric-icon ic-teal">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="4" width="19" height="12" rx="1.5" stroke="currentColor" stroke-width="1.8"/><path d="M9 20h6M12 16v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="7" r="3" fill="currentColor"/></svg>
+      </div>
+      <div>
+        <div class="ld-metric-label">Computers In Use</div>
+        <div class="ld-metric-val">{{ in_use_count }}</div>
+        <div class="ld-metric-sub">{{ in_use_pct }}% of total</div>
+      </div>
+    </div>
+    <div class="ld-card ld-metric">
+      <div class="ld-metric-icon ic-green">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="m8.5 12.5 2.3 2.3L15.5 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="ld-metric-label">Available</div>
+        <div class="ld-metric-val">{{ online_count }}</div>
+        <div class="ld-metric-sub">{{ online_pct }}% of total</div>
+      </div>
+    </div>
+    <div class="ld-card ld-metric">
+      <div class="ld-metric-icon" style="background:rgba(250,204,21,0.14); color:#facc15;">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 0 0 1.4 0l1.6-1.6a1 1 0 0 1 1.4 0l.2.2a1 1 0 0 1 0 1.4l-1.6 1.6a1 1 0 0 0 0 1.4l.5.5a1 1 0 0 0 1.4 0l1.6-1.6a1 1 0 0 1 1.4 0l.2.2a1 1 0 0 1 0 1.4l-3.6 3.6a3 3 0 0 1-4-4l3.5-3.1Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="m11 13-6.5 6.5a1.5 1.5 0 0 1-2.1-2.1L9 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="ld-metric-label">Under Maintenance</div>
+        <div class="ld-metric-val">{{ maintenance_count }}</div>
+        <div class="ld-metric-sub">{{ maintenance_pct }}% of total</div>
+      </div>
+    </div>
+    <div class="ld-card ld-metric">
+      <div class="ld-metric-icon" style="background:rgba(167,139,250,0.14); color:#a78bfa;">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="ld-metric-label">Has Issue</div>
+        <div class="ld-metric-val">{{ issue_count }}</div>
+        <div class="ld-metric-sub">{{ issue_pct }}% of total</div>
+      </div>
+    </div>
   </div>
+
+  <div class="ld-row-2">
+    <div class="ld-card">
+      <div class="ld-section-title">Today's Overview</div>
+      <div class="ld-overview-grid">
+        <div class="ld-overview-item">
+          <div class="ld-overview-icon ic-blue">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 20v-2a4 4 0 0 0-2.5-3.7M17 3.3a4 4 0 0 1 0 7.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="ld-overview-val">{{ todays_attendance }}</div>
+          <div class="ld-overview-label">Today's Attendance</div>
+          <div class="ld-overview-sub">{{ todays_attendance_pct }}% of students</div>
+        </div>
+        <div class="ld-overview-item">
+          <div class="ld-overview-icon ic-green">
+            <svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="4" width="19" height="12" rx="1.5" stroke="currentColor" stroke-width="1.8"/><path d="M9 20h6M12 16v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </div>
+          <div class="ld-overview-val">{{ active_sessions_count }}</div>
+          <div class="ld-overview-label">Active Sessions</div>
+          <div class="ld-overview-sub">Ongoing sessions</div>
+        </div>
+        <div class="ld-overview-item">
+          <div class="ld-overview-icon ic-orange">
+            <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </div>
+          <div class="ld-overview-val">{{ todays_sessions_count }}</div>
+          <div class="ld-overview-label">Scheduled Classes</div>
+          <div class="ld-overview-sub">Today's schedule</div>
+        </div>
+        <div class="ld-overview-item">
+          <div class="ld-overview-icon ic-purple">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M9 11h6M9 15h4M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="ld-overview-val">{{ pending_reservations_count }}</div>
+          <div class="ld-overview-label">Pending Reservations</div>
+          <div class="ld-overview-sub">Awaiting approval</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ld-card">
+      <div class="ld-section-title">Computer Status Distribution</div>
+      <div class="ld-donut-wrap">
+        <div style="width:130px; height:130px; flex-shrink:0;"><canvas id="statusDonut"></canvas></div>
+        <div class="ld-donut-legend">
+          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:#3ed6c4"></span><span class="lbl">In Use</span><span class="val">{{ in_use_count }} ({{ in_use_pct }}%)</span></div>
+          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:#5b9dff"></span><span class="lbl">Available</span><span class="val">{{ online_count }} ({{ online_pct }}%)</span></div>
+          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:#facc15"></span><span class="lbl">Under Maintenance</span><span class="val">{{ maintenance_count }} ({{ maintenance_pct }}%)</span></div>
+          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:#ff5d5d"></span><span class="lbl">Offline</span><span class="val">{{ offline_count }} ({{ offline_pct }}%)</span></div>
+          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:#a78bfa"></span><span class="lbl">Has Issue</span><span class="val">{{ issue_count }} ({{ issue_pct }}%)</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ld-row-3">
+    <div class="ld-card ld-chart-card">
+      <div class="ld-section-title">Daily Attendance Trend <span class="ld-chart-select">This Week</span></div>
+      <div class="ld-chart-canvas-wrap"><canvas id="attendanceChart"></canvas></div>
+    </div>
+    <div class="ld-card ld-chart-card">
+      <div class="ld-section-title">Weekly Lab Usage <span class="ld-chart-select">This Week</span></div>
+      <div class="ld-chart-canvas-wrap"><canvas id="labUsageChart"></canvas></div>
+    </div>
+    <div class="ld-card ld-chart-card">
+      <div class="ld-section-title">Monthly Computer Utilization <span class="ld-chart-select">This Month</span></div>
+      <div class="ld-chart-canvas-wrap"><canvas id="monthlyUtilChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="ld-row-3">
+    <div class="ld-card">
+      <div class="ld-section-title">Recent Activity</div>
+      {% for a in recent_activity %}
+        <div class="ld-feed-item">
+          <div class="ld-feed-icon {% if a.icon == 'login' %}ic-blue{% elif a.icon == 'user' %}ic-red{% elif a.icon == 'calendar' %}ic-purple{% else %}ic-orange{% endif %}">
+            {% if a.icon == 'login' %}
+              <svg viewBox="0 0 24 24" fill="none"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            {% elif a.icon == 'user' %}
+              <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            {% elif a.icon == 'calendar' %}
+              <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            {% else %}
+              <svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 0 0 1.4 0l1.6-1.6a1 1 0 0 1 1.4 0l.2.2a1 1 0 0 1 0 1.4l-1.6 1.6a1 1 0 0 0 0 1.4l.5.5a1 1 0 0 0 1.4 0l1.6-1.6a1 1 0 0 1 1.4 0l.2.2a1 1 0 0 1 0 1.4l-3.6 3.6a3 3 0 0 1-4-4l3.5-3.1Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="m11 13-6.5 6.5a1.5 1.5 0 0 1-2.1-2.1L9 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            {% endif %}
+          </div>
+          <div style="flex:1; min-width:0;">
+            <div class="ld-feed-title">{{ a.title }}</div>
+            {% if a.sub %}<div class="ld-feed-sub">{{ a.sub }}</div>{% endif %}
+          </div>
+          <div class="ld-feed-time">{{ a.time|timesince }} ago</div>
+        </div>
+      {% empty %}
+        <p class="ld-empty">No recent activity yet.</p>
+      {% endfor %}
+      <div style="margin-top:12px;"><a href="{% url 'log_history' %}">View all activities →</a></div>
+    </div>
+
+    <div class="ld-card">
+      <div class="ld-section-title">Notifications</div>
+      {% for n in recent_alerts %}
+        <div class="ld-feed-item">
+          <div class="ld-feed-icon ic-orange">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 2a6 6 0 0 0-6 6v3.6c0 .6-.2 1.1-.6 1.5L4 15h16l-1.4-1.9c-.4-.4-.6-.9-.6-1.5V8a6 6 0 0 0-6-6ZM9.5 19a2.5 2.5 0 0 0 5 0" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div style="flex:1; min-width:0;">
+            <div class="ld-feed-title">{{ n.title }}</div>
+            {% if n.message %}<div class="ld-feed-sub">{{ n.message|truncatechars:60 }}</div>{% endif %}
+          </div>
+          <div class="ld-feed-time">{{ n.created_at|timesince }} ago</div>
+        </div>
+      {% empty %}
+        <p class="ld-empty">No notifications right now.</p>
+      {% endfor %}
+      <div style="margin-top:12px;"><a href="{% url 'alerts' %}">View all notifications →</a></div>
+    </div>
+
+    <div class="ld-card">
+      <div class="ld-section-title">
+        Upcoming Schedules
+        <a href="{% url 'view_schedule' %}">View Calendar</a>
+      </div>
+      {% for item in upcoming_schedules %}
+        <div class="ld-sched-row">
+          <div class="ld-sched-time">{{ item.session.start_time|time:"g:i A" }}</div>
+          <div class="ld-sched-dot {% if item.status == 'ongoing' %}ongoing{% endif %}"></div>
+          <div class="ld-sched-body">
+            <div class="ld-sched-title">{{ item.session.subject }}</div>
+            <div class="ld-sched-sub">{{ item.session.lab.name }}</div>
+          </div>
+          <span class="ld-badge {{ item.status }}">
+            {% if item.status == 'ongoing' %}ONGOING{% elif item.status == 'upcoming' %}UPCOMING{% else %}DONE{% endif %}
+          </span>
+        </div>
+      {% empty %}
+        <p class="ld-empty">No sessions scheduled today.</p>
+      {% endfor %}
+      <div style="margin-top:12px;"><a href="{% url 'view_schedule' %}">View full schedule →</a></div>
+    </div>
+  </div>
+
+  <div class="ld-footer">© {% now "Y" %} CompuLab — Computer Laboratory System. All rights reserved.</div>
 
 </div>
+
+<script>
+(function () {
+  Chart.defaults.font.family = 'Inter, sans-serif';
+  Chart.defaults.color = '#8b98a3';
+
+  new Chart(document.getElementById('statusDonut'), {
+    type: 'doughnut',
+    data: {
+      labels: ['In Use', 'Available', 'Under Maintenance', 'Offline', 'Has Issue'],
+      datasets: [{
+        data: [{{ in_use_count }}, {{ online_count }}, {{ maintenance_count }}, {{ offline_count }}, {{ issue_count }}],
+        backgroundColor: ['#3ed6c4', '#5b9dff', '#facc15', '#ff5d5d', '#a78bfa'],
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      cutout: '68%',
+      plugins: { legend: { display: false }, tooltip: { enabled: true } },
+      responsive: true, maintainAspectRatio: false,
+    }
+  });
+
+  new Chart(document.getElementById('attendanceChart'), {
+    type: 'line',
+    data: {
+      labels: {{ attendance_trend_labels|safe }},
+      datasets: [{
+        data: {{ attendance_trend_data|safe }},
+        borderColor: '#5b9dff', backgroundColor: 'rgba(91,157,255,0.12)',
+        fill: true, tension: 0.35, pointRadius: 3, pointBackgroundColor: '#5b9dff',
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.06)' } },
+        x: { grid: { display: false } },
+      }
+    }
+  });
+
+  new Chart(document.getElementById('labUsageChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ lab_usage_labels|safe }},
+      datasets: [{
+        data: {{ lab_usage_data|safe }},
+        backgroundColor: '#5b9dff', borderRadius: 4, maxBarThickness: 26,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, max: 100, ticks: { callback: function (v) { return v + '%'; } }, grid: { color: 'rgba(255,255,255,0.06)' } },
+        x: { grid: { display: false } },
+      }
+    }
+  });
+
+  new Chart(document.getElementById('monthlyUtilChart'), {
+    type: 'line',
+    data: {
+      labels: {{ monthly_util_labels|safe }},
+      datasets: [{
+        data: {{ monthly_util_data|safe }},
+        borderColor: '#3ed6c4', backgroundColor: 'rgba(62,214,196,0.1)',
+        fill: true, tension: 0.35, pointRadius: 4, pointBackgroundColor: '#3ed6c4',
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, max: 100, ticks: { callback: function (v) { return v + '%'; } }, grid: { color: 'rgba(255,255,255,0.06)' } },
+        x: { grid: { display: false } },
+      }
+    }
+  });
+})();
+</script>
 
 {% endblock %}

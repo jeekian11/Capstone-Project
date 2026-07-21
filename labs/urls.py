@@ -5,16 +5,23 @@ from . import reports
 urlpatterns = [
     path('pc-login/', views.ReservationPCLoginView.as_view(), name='pc_login'),
     path('api/pc-agent-login/', views.pc_agent_login_api, name='pc_agent_login_api'),
+    path('api/pc-agent-activity/', views.pc_agent_activity_api, name='pc_agent_activity_api'),
     path('', views.AdminDashboardView.as_view(), name='admin_dashboard'),
     path('pc-status/', views.PCStatusView.as_view(), name='pc_status'),
     path('pc-status/api/', views.pc_status_api, name='pc_status_api'),
     path('pc-status/refresh/', views.refresh_pc_status_view, name='pc_status_refresh'),
+    path('pc-status/export/', reports.export_pc_status_report, name='pc_status_export'),
+    path('pc-status/override-checkin/', views.OverrideCheckInView.as_view(), name='override_checkin'),
+    path('pc-activity/', views.PCActivityLogView.as_view(), name='pc_activity_log'),
+    path('pc-activity/export/', views.export_pc_activity_log, name='export_pc_activity_log'),
+    path('pc-activity/delete/', views.delete_pc_activity_log, name='delete_pc_activity_log'),
     path('pc/<int:pk>/update/', views.PCUpdateView.as_view(), name='pc_update'),
     path('inventory/', views.InventoryView.as_view(), name='inventory'),
     path('inventory/add/', views.InventoryCreateView.as_view(), name='inventory_create'),
     path('inventory/<int:pk>/edit/', views.InventoryUpdateView.as_view(), name='inventory_update'),
     path('inventory/<int:pk>/delete/', views.InventoryDeleteView.as_view(), name='inventory_delete'),
     path('analytics/', views.AnalyticsView.as_view(), name='analytics'),
+    path('analytics/export/', reports.export_analytics_overview, name='analytics_export'),
     path('alerts/', views.AlertsView.as_view(), name='alerts'),
     path('equipment/', views.EquipmentView.as_view(), name='lab_equipment'),
 
@@ -24,6 +31,7 @@ urlpatterns = [
     path('manage/<int:pk>/delete/', views.LabDeleteView.as_view(), name='lab_delete'),
 
     path('manage/pc/add/', views.PCCreateView.as_view(), name='pc_create'),
+    path('manage/pc/import/', views.PCImportView.as_view(), name='pc_import'),
     path('manage/pc/<int:pk>/edit/', views.PCEditView.as_view(), name='pc_edit'),
     path('manage/pc/<int:pk>/delete/', views.PCDeleteView.as_view(), name='pc_delete'),
 

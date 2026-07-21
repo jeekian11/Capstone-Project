@@ -3,12 +3,42 @@
 
 {% block content %}
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.11/index.global.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.11/index.global.min.js"></script>
+
+<style>
+.cal-wrap{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px;}
+#calendar{--fc-border-color:var(--border); --fc-page-bg-color:var(--surface); --fc-neutral-bg-color:var(--surface-raised);
+  --fc-list-event-hover-bg-color:var(--surface-raised); --fc-today-bg-color:rgba(91,157,255,0.08);
+  --fc-button-bg-color:var(--surface-raised); --fc-button-border-color:var(--border);
+  --fc-button-hover-bg-color:var(--border); --fc-button-active-bg-color:var(--border-soft);
+  font-family:var(--font-body); color:var(--text);}
+#calendar .fc-toolbar-title{font-family:var(--font-display); font-size:16px; font-weight:600; color:var(--text);}
+#calendar .fc-col-header-cell-cushion, #calendar .fc-daygrid-day-number{color:var(--text-dim); text-decoration:none; font-size:12px;}
+#calendar .fc-daygrid-day-number{font-family:var(--font-mono);}
+#calendar .fc-event{border:none; font-size:11px; padding:1px 4px; cursor:pointer;}
+#calendar .fc-button{text-transform:capitalize; font-family:var(--font-body); font-size:12.5px; box-shadow:none !important;}
+#calendar .fc-daygrid-day.fc-day-today .fc-daygrid-day-number{color:var(--text); font-weight:600;}
+#calendar a{color:inherit;}
+
+.cal-modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.55); display:none; align-items:center; justify-content:center; z-index:1000;}
+.cal-modal-backdrop.open{display:flex;}
+.cal-modal{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:22px; width:340px; max-width:90vw;}
+.cal-modal h3{font-family:var(--font-display); font-size:16px; margin:0 0 4px; color:var(--text);}
+.cal-modal .cal-modal-lab{font-size:12px; color:var(--text-dim); margin-bottom:14px;}
+.cal-modal-row{display:flex; justify-content:space-between; font-size:12.5px; padding:6px 0; border-bottom:1px solid var(--border-soft); color:var(--text);}
+.cal-modal-row span:first-child{color:var(--text-dim);}
+.cal-modal-actions{display:flex; gap:8px; margin-top:16px;}
+.cal-modal-close{position:absolute; top:14px; right:16px; background:none; border:none; color:var(--text-faint); font-size:18px; cursor:pointer;}
+.cal-modal{position:relative;}
+</style>
+
 <div class="page-header">
   <div>
-    <h1>View schedule</h1>
-    <div class="sub">All approved sessions — filter by lab and/or date if needed</div>
+    <h1>Schedule &amp; requests</h1>
+    <div class="sub">Calendar of all approved sessions — filter by lab, click a session for details</div>
   </div>
-  <a href="{% url 'schedule' %}" class="action-btn">Back</a>
+  <a href="{% url 'manage_requests' %}" class="action-btn primary">Manage requests{% if pending_count %}<span class="count">{{ pending_count }}</span>{% endif %}</a>
 </div>
 
 <div class="card">
@@ -23,11 +53,11 @@
       </select>
     </div>
     <div class="form-group" style="margin-bottom:0">
-      <label class="form-label" for="date">Date</label>
+      <label class="form-label" for="date">Jump to date</label>
       <input type="date" name="date" id="date" class="form-control" value="{{ selected_date }}">
     </div>
     <div class="form-group" style="margin-bottom:0">
-      <button type="submit" class="action-btn primary">Filter</button>
+      <button type="submit" class="action-btn primary">Apply</button>
     </div>
     {% if filtered %}
       <div class="form-group" style="margin-bottom:0">
@@ -37,47 +67,85 @@
   </form>
 </div>
 
-<div class="card">
+<div class="card" style="display:flex; gap:8px; justify-content:flex-end;">
+  <a href="{% url 'view_schedule_export_pdf' %}?lab={{ selected_lab }}&date={{ selected_date }}" class="action-btn">Export PDF</a>
+  <a href="{% url 'view_schedule_export_excel' %}?lab={{ selected_lab }}&date={{ selected_date }}" class="action-btn">Export Excel</a>
+</div>
+
+<div class="cal-wrap">
   {% if schedule_found %}
-    <div class="page-header" style="margin-bottom:14px">
-      <div class="section-title" style="margin-bottom:0">
-        {% if filtered %}Filtered schedule{% else %}All approved sessions{% endif %}
-      </div>
-      <div style="display:flex; gap:8px">
-        <a href="{% url 'view_schedule_export_pdf' %}?lab={{ selected_lab }}&date={{ selected_date }}" class="action-btn">Export PDF</a>
-        <a href="{% url 'view_schedule_export_excel' %}?lab={{ selected_lab }}&date={{ selected_date }}" class="action-btn">Export Excel</a>
-      </div>
-    </div>
-    <table class="table">
-      <thead>
-        <tr><th>Date</th><th>Time</th><th>Lab</th><th>Class / subject</th><th>Requester</th><th>Code</th><th></th></tr>
-      </thead>
-      <tbody>
-        {% for session in sessions %}
-          <tr>
-            <td>{{ session.date|date:"M d, Y" }}</td>
-            <td>{{ session.start_time|time:"H:i" }}–{{ session.end_time|time:"H:i" }}</td>
-            <td>{{ session.lab.name }}</td>
-            <td>{{ session.subject }}</td>
-            <td>{{ session.requester_name }} <span class="status-pill">{{ session.get_requester_type_display }}</span></td>
-            <td><code>{{ session.reservation_code }}</code></td>
-            <td style="white-space:nowrap">
-              <a href="{% url 'session_edit' session.pk %}" class="action-btn icon-only" title="Edit session"><svg><use href="#icon-edit"/></svg></a>
-              <form method="post" action="{% url 'session_delete' session.pk %}" style="display:inline"
-                    onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Remove this session?', text: 'This will remove {{ session.subject|escapejs }} ({{ session.reservation_code|escapejs }}) from the schedule.', confirmButtonText: 'Yes, remove'}); return false;">
-                {% csrf_token %}
-                <button type="submit" class="action-btn icon-only danger" title="Delete session"><svg><use href="#icon-trash"/></svg></button>
-              </form>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div id="calendar"></div>
   {% else %}
     <p class="empty">
-      {% if filtered %}No schedule found for this filter. Try a different lab or date.{% else %}No approved sessions yet.{% endif %}
+      {% if filtered %}No sessions found for this filter. Try a different lab.{% else %}No approved sessions yet.{% endif %}
     </p>
   {% endif %}
 </div>
+
+<div class="cal-modal-backdrop" id="calModal">
+  <div class="cal-modal">
+    <button type="button" class="cal-modal-close" onclick="closeCalModal()">&times;</button>
+    <h3 id="cmSubject"></h3>
+    <div class="cal-modal-lab" id="cmLab"></div>
+    <div class="cal-modal-row"><span>Time</span><span id="cmTime"></span></div>
+    <div class="cal-modal-row"><span>Requester</span><span id="cmRequester"></span></div>
+    <div class="cal-modal-row"><span>Code</span><span id="cmCode" style="font-family:var(--font-mono)"></span></div>
+    <div class="cal-modal-actions">
+      <a id="cmEdit" href="#" class="action-btn" style="flex:1; text-align:center;">Edit</a>
+      <form id="cmDeleteForm" method="post" style="flex:1;">
+        {% csrf_token %}
+        <button type="submit" class="action-btn danger" style="width:100%;">Delete</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var calEl = document.getElementById('calendar');
+  if (!calEl) return;
+
+  var events = {{ calendar_events_json|safe }};
+  var modal = document.getElementById('calModal');
+
+  var calendar = new FullCalendar.Calendar(calEl, {
+    initialView: 'dayGridMonth',
+    initialDate: '{{ initial_date }}',
+    height: 'auto',
+    headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listMonth' },
+    events: events,
+    eventClick: function (info) {
+      var p = info.event.extendedProps;
+      document.getElementById('cmSubject').textContent = p.subject;
+      document.getElementById('cmLab').textContent = p.lab;
+      document.getElementById('cmTime').textContent = info.event.start ? p.time : '';
+      document.getElementById('cmRequester').textContent = p.requester + ' (' + p.requesterType + ')';
+      document.getElementById('cmCode').textContent = p.code || '—';
+      document.getElementById('cmEdit').href = p.editUrl;
+      var delForm = document.getElementById('cmDeleteForm');
+      delForm.action = p.deleteUrl;
+      delForm.onsubmit = function (e) {
+        e.preventDefault();
+        compulabConfirmSubmit(delForm, {
+          title: 'Remove this session?',
+          text: 'This will remove ' + p.subject + ' (' + (p.code || '') + ') from the schedule.',
+          confirmButtonText: 'Yes, remove'
+        });
+        return false;
+      };
+      modal.classList.add('open');
+    }
+  });
+  calendar.render();
+
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) closeCalModal();
+  });
+});
+
+function closeCalModal() {
+  document.getElementById('calModal').classList.remove('open');
+}
+</script>
 
 {% endblock %}

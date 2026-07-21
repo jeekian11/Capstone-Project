@@ -1,13 +1,32 @@
+import json
 from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DetailView, DeleteView
 from django.contrib import messages
-from django.shortcuts import redirect, get_object_or_404
+from django.contrib.auth import get_user_model
+from django.db.models import Q
+from django.shortcuts import redirect, get_object_or_404, render
 from django.utils import timezone
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from accounts.mixins import RoleRequiredMixin
 from scheduling.models import Session, SessionRequest
 from scheduling.forms import SessionForm, SessionRequestForm
 from scheduling.utils import generate_reservation_code
 from labs.models import Lab
+
+User = get_user_model()
+
+
+def _official_schedule_conflict(lab, date, start_time, end_time, exclude_pk=None):
+    """True if the given lab/date/time-range overlaps an already-APPROVED
+    Session on the official schedule. Shared by request creation, request
+    editing, and approval so 'is this slot free' always means the same
+    thing everywhere it's asked."""
+    qs = Session.objects.filter(
+        lab=lab, date=date,
+        start_time__lt=end_time, end_time__gt=start_time,
+    )
+    if exclude_pk:
+        qs = qs.exclude(pk=exclude_pk)
+    return qs.exists()
 
 
 # ============================================================
@@ -34,22 +53,50 @@ class ViewScheduleView(RoleRequiredMixin, TemplateView):
     allowed_roles = ['admin', 'incharge']
     template_name = 'scheduling/view_schedule.html'
 
+    # Fixed color palette cycled per-lab so each lab keeps a consistent
+    # color on the calendar regardless of how many labs exist.
+    LAB_COLORS = ['#5b9dff', '#3ed6c4', '#a78bfa', '#f2a93b', '#ff5d5d', '#e879c9', '#7dd3fc', '#facc15']
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx['labs'] = Lab.objects.order_by('name')
+        ctx['pending_count'] = SessionRequest.objects.filter(status='pending').count()
+        labs = list(Lab.objects.order_by('name'))
+        ctx['labs'] = labs
         lab_id = self.request.GET.get('lab', '')
         date = self.request.GET.get('date', '')
         ctx['selected_lab'] = lab_id
         ctx['selected_date'] = date
         ctx['filtered'] = bool(lab_id or date)
 
-        sessions = Session.objects.select_related('instructor', 'lab').order_by('-date', 'start_time')
+        # Calendar shows the full range for the chosen lab (date is only
+        # used to jump the calendar to that day, not to hide other days).
+        sessions = Session.objects.select_related('instructor', 'lab').order_by('date', 'start_time')
         if lab_id:
             sessions = sessions.filter(lab_id=lab_id)
-        if date:
-            sessions = sessions.filter(date=date)
-        ctx['sessions'] = sessions
         ctx['schedule_found'] = sessions.exists()
+
+        lab_color = {lab.pk: self.LAB_COLORS[i % len(self.LAB_COLORS)] for i, lab in enumerate(labs)}
+        events = []
+        for s in sessions:
+            events.append({
+                'id': s.pk,
+                'title': f'{s.subject} — {s.lab.name}',
+                'start': f'{s.date.isoformat()}T{s.start_time.isoformat(timespec="minutes")}',
+                'end': f'{s.date.isoformat()}T{s.end_time.isoformat(timespec="minutes")}',
+                'color': lab_color.get(s.lab_id, '#5b9dff'),
+                'extendedProps': {
+                    'lab': s.lab.name,
+                    'subject': s.subject,
+                    'time': f'{s.start_time.strftime("%I:%M %p").lstrip("0")}–{s.end_time.strftime("%I:%M %p").lstrip("0")}',
+                    'requester': s.requester_name,
+                    'requesterType': s.get_requester_type_display(),
+                    'code': s.reservation_code or '',
+                    'editUrl': reverse('session_edit', args=[s.pk]),
+                    'deleteUrl': reverse('session_delete', args=[s.pk]),
+                },
+            })
+        ctx['calendar_events_json'] = json.dumps(events)
+        ctx['initial_date'] = date or timezone.localdate().isoformat()
         return ctx
 
 
@@ -74,13 +121,10 @@ class SessionUpdateView(RoleRequiredMixin, UpdateView):
     context_object_name = 'session'
 
     def form_valid(self, form):
-        conflict = Session.objects.filter(
-            lab=form.instance.lab,
-            date=form.instance.date,
-            start_time__lt=form.instance.end_time,
-            end_time__gt=form.instance.start_time,
-        ).exclude(pk=self.object.pk).exists()
-        if conflict:
+        if _official_schedule_conflict(
+            form.instance.lab, form.instance.date, form.instance.start_time, form.instance.end_time,
+            exclude_pk=self.object.pk,
+        ):
             form.add_error(None, 'Time slot conflict. Choose a different time.')
             return self.form_invalid(form)
 
@@ -126,7 +170,7 @@ def export_schedule_pdf(request):
         Paragraph('CompuLab — Lab Schedule', styles['Title']),
         Spacer(1, 6),
         Paragraph(f'Lab: {lab.name if lab else "All labs"} · Date: {date or "All dates"}', styles['Normal']),
-        Paragraph(f'Generated {timezone.now().strftime("%B %d, %Y %H:%M")}', styles['Normal']),
+        Paragraph(f'Generated {timezone.localtime(timezone.now()).strftime("%B %d, %Y %H:%M")}', styles['Normal']),
         Spacer(1, 16),
     ]
 
@@ -248,6 +292,16 @@ class RequestUpdateView(RoleRequiredMixin, UpdateView):
         return super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
+        if _official_schedule_conflict(
+            form.instance.lab, form.instance.date, form.instance.start_time, form.instance.end_time,
+        ):
+            form.add_error(
+                None,
+                'Time slot conflict — this laboratory is already booked for an overlapping time on that date. '
+                'Choose a different laboratory or schedule.'
+            )
+            return self.form_invalid(form)
+
         # Form validation (RequiresRegisteredAccountMixin) guarantees this
         # matches an active, admin-registered account before we ever get here.
         form.instance.instructor = form.cleaned_data['_matched_account']
@@ -263,13 +317,7 @@ class RequestUpdateView(RoleRequiredMixin, UpdateView):
 def approve_request(request, pk):
     req = get_object_or_404(SessionRequest, pk=pk)
     if request.method == 'POST':
-        conflict = Session.objects.filter(
-            lab=req.lab,
-            date=req.date,
-            start_time__lt=req.end_time,
-            end_time__gt=req.start_time,
-        ).exists()
-        if conflict:
+        if _official_schedule_conflict(req.lab, req.date, req.start_time, req.end_time):
             messages.error(request, 'Time slot conflict. Choose a different time.')
             return redirect('request_detail', pk=pk)
 
@@ -346,7 +394,7 @@ def export_request_pdf(request, pk):
     elements = [
         Paragraph('CompuLab — Lab Request', styles['Title']),
         Spacer(1, 6),
-        Paragraph(f'Generated {timezone.now().strftime("%B %d, %Y %H:%M")}', styles['Normal']),
+        Paragraph(f'Generated {timezone.localtime(timezone.now()).strftime("%B %d, %Y %H:%M")}', styles['Normal']),
         Spacer(1, 16),
     ]
 
@@ -424,6 +472,23 @@ class RequestCreateView(RoleRequiredMixin, CreateView):
     template_name = 'scheduling/request_new.html'
 
     def form_valid(self, form):
+        # Per the reservation workflow: check the lab's availability for
+        # this date/time BEFORE saving — a logged request that already
+        # collides with an approved session on the official schedule isn't
+        # useful to anyone (it'll only fail later at approval, after the
+        # Admin/In-Charge has already told the requester it went through).
+        # This is a same-lab check against Session (see approve_request for
+        # why it's re-checked again there too: something else may have been
+        # approved into this slot in the time between logging and approving
+        # this particular request).
+        if _official_schedule_conflict(form.instance.lab, form.instance.date, form.instance.start_time, form.instance.end_time):
+            form.add_error(
+                None,
+                'Time slot conflict — this laboratory is already booked for an overlapping time on that date. '
+                'Choose a different laboratory or schedule.'
+            )
+            return self.form_invalid(form)
+
         form.instance.status = 'pending'
         # Only accounts registered by an Admin/Lab In-Charge (under Users)
         # may hold a reservation — SessionRequestForm's
@@ -447,13 +512,54 @@ class RosterListView(RoleRequiredMixin, ListView):
     allowed_roles = ['admin', 'incharge', 'instructor']
     template_name = 'scheduling/roster_list.html'
     context_object_name = 'rosters'
+    paginate_by = 10
 
-    def get_queryset(self):
+    def _base_queryset(self):
         from scheduling.models import ClassRoster
         qs = ClassRoster.objects.select_related('lab', 'instructor')
         if self.request.user.role == 'instructor':
             qs = qs.filter(instructor=self.request.user)
-        return qs.order_by('name')
+        return qs
+
+    def get_queryset(self):
+        qs = self._base_queryset().order_by('status', 'name')
+        q = self.request.GET.get('q', '').strip()
+        semester = self.request.GET.get('semester', '').strip()
+        course = self.request.GET.get('course', '').strip()
+        status = self.request.GET.get('status', '').strip()
+        if q:
+            qs = qs.filter(
+                Q(name__icontains=q) | Q(course_code__icontains=q) |
+                Q(subject__icontains=q) | Q(section__icontains=q) |
+                Q(instructor__first_name__icontains=q) | Q(instructor__last_name__icontains=q)
+            )
+        if semester:
+            qs = qs.filter(semester=semester)
+        if course:
+            qs = qs.filter(course_code=course)
+        if status:
+            qs = qs.filter(status=status)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        from django.db.models import Count
+        from scheduling.models import ClassRoster
+        ctx = super().get_context_data(**kwargs)
+        base_qs = self._base_queryset()
+        ctx['total_rosters'] = base_qs.count()
+        ctx['total_students'] = base_qs.aggregate(n=Count('students'))['n'] or 0
+        ctx['active_rosters'] = base_qs.filter(status='active').count()
+        ctx['archived_rosters'] = base_qs.filter(status='inactive').count()
+        ctx['course_options'] = (
+            base_qs.exclude(course_code='').order_by('course_code')
+            .values_list('course_code', flat=True).distinct()
+        )
+        ctx['semester_choices'] = ClassRoster.SEMESTER_CHOICES
+        ctx['selected_q'] = self.request.GET.get('q', '')
+        ctx['selected_semester'] = self.request.GET.get('semester', '')
+        ctx['selected_course'] = self.request.GET.get('course', '')
+        ctx['selected_status'] = self.request.GET.get('status', '')
+        return ctx
 
 
 class RosterCreateView(RoleRequiredMixin, CreateView):
@@ -472,11 +578,7 @@ class RosterCreateView(RoleRequiredMixin, CreateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        created = form.save_students(self.object)
-        if created:
-            messages.success(self.request, f'Roster "{self.object.name}" created with {created} student{"s" if created != 1 else ""}.')
-        else:
-            messages.success(self.request, f'Roster "{self.object.name}" created.')
+        messages.success(self.request, f'Roster "{self.object.name}" created. Add students on the next page.')
         return response
 
     def get_success_url(self):
@@ -493,18 +595,50 @@ class RosterDetailView(RoleRequiredMixin, DetailView):
         return ClassRoster.objects.select_related('lab', 'instructor')
 
     def get_context_data(self, **kwargs):
-        from scheduling.forms import RosterStudentForm
         ctx = super().get_context_data(**kwargs)
-        ctx['student_form'] = RosterStudentForm()
-        ctx['students'] = self.object.students.all()
-        ctx['linked_sessions'] = self.object.sessions.order_by('-date')[:20]
+        ctx['students'] = self.object.students.select_related('student').all()
+
+        now = timezone.localtime()
+        today, now_time = now.date(), now.time()
+        sessions = list(self.object.sessions.select_related('lab').order_by('-date', '-start_time')[:20])
+        for s in sessions:
+            if s.date < today or (s.date == today and s.end_time <= now_time):
+                s.reservation_status = 'completed'
+            elif s.date == today and s.start_time <= now_time < s.end_time:
+                s.reservation_status = 'ongoing'
+            else:
+                s.reservation_status = 'scheduled'
+        ctx['linked_sessions'] = sessions
         return ctx
+
+
+def roster_archive(request, pk):
+    """Toggle a roster between active and archived (inactive). Kept as a
+    quick one-click action separate from the full edit form — the actual
+    student/session records are untouched either way."""
+    from django.core.exceptions import PermissionDenied
+    from scheduling.models import ClassRoster
+    if request.user.role not in ('admin', 'incharge', 'instructor'):
+        raise PermissionDenied
+    roster = get_object_or_404(ClassRoster, pk=pk)
+    if request.method == 'POST':
+        roster.status = 'inactive' if roster.status == 'active' else 'active'
+        roster.save(update_fields=['status'])
+        messages.success(
+            request,
+            f'Roster "{roster.name}" archived.' if roster.status == 'inactive'
+            else f'Roster "{roster.name}" reactivated.'
+        )
+    return redirect('roster_detail', pk=roster.pk)
 
 
 class RosterUpdateView(RoleRequiredMixin, UpdateView):
     allowed_roles = ['admin', 'incharge', 'instructor']
     template_name = 'scheduling/roster_form.html'
-    fields = ['name', 'subject', 'lab', 'instructor']
+
+    def get_form_class(self):
+        from scheduling.forms import ClassRosterForm
+        return ClassRosterForm
 
     def get_queryset(self):
         from scheduling.models import ClassRoster
@@ -533,24 +667,63 @@ class RosterDeleteView(RoleRequiredMixin, DeleteView):
         return super().form_valid(form)
 
 
-def roster_add_student(request, pk):
+def roster_search_students(request, pk):
+    """Live-search endpoint for the 'Add student' box on the roster detail
+    page. Only searches role='student' accounts (registered by an Admin
+    under Users) and excludes students already on this roster — matching
+    the 'only officially registered students, no duplicates' requirement."""
+    from django.http import JsonResponse
     from django.core.exceptions import PermissionDenied
     from scheduling.models import ClassRoster
-    from scheduling.forms import RosterStudentForm
+
+    if not request.user.is_authenticated or request.user.role not in ('admin', 'incharge', 'instructor'):
+        raise PermissionDenied
+    roster = get_object_or_404(ClassRoster, pk=pk)
+
+    q = request.GET.get('q', '').strip()
+    if not q:
+        return JsonResponse({'results': []})
+
+    already_on_roster = set(roster.students.exclude(student__isnull=True).values_list('student_id', flat=True))
+    students = User.objects.filter(
+        Q(role='student'), Q(is_active=True),
+    ).filter(
+        Q(first_name__icontains=q) | Q(last_name__icontains=q) |
+        Q(id_number__icontains=q) | Q(username__icontains=q)
+    ).exclude(pk__in=already_on_roster).order_by('first_name', 'last_name')[:15]
+
+    return JsonResponse({
+        'results': [
+            {
+                'id': s.pk,
+                'id_number': s.id_number or s.username,
+                'full_name': s.get_full_name() or s.username,
+                'course_year_section': s.course_year_section,
+                'department': s.department_display,
+            }
+            for s in students
+        ]
+    })
+
+
+def roster_add_student(request, pk):
+    from django.core.exceptions import PermissionDenied
+    from scheduling.models import ClassRoster, RosterStudent
+    from scheduling.forms import RosterAddStudentForm
     if not request.user.is_authenticated or request.user.role not in ('admin', 'incharge', 'instructor'):
         raise PermissionDenied
     roster = get_object_or_404(ClassRoster, pk=pk)
     if request.method == 'POST':
-        form = RosterStudentForm(request.POST)
+        form = RosterAddStudentForm(request.POST)
         if form.is_valid():
-            form.instance.roster = roster
-            try:
-                form.save()
-                messages.success(request, f'Added {form.instance.full_name} to the roster.')
-            except Exception:
-                messages.error(request, 'That ID number is already on this roster.')
+            student = form.cleaned_data['student']
+            _, created = RosterStudent.objects.get_or_create(roster=roster, student=student)
+            if created:
+                messages.success(request, f'Added {student.get_full_name() or student.username} to the roster.')
+            else:
+                messages.error(request, f'{student.get_full_name() or student.username} is already on this roster.')
         else:
-            messages.error(request, 'Could not add that student — check the ID number and name.')
+            messages.error(request, 'Could not add that student — please search and select again.')
     return redirect('roster_detail', pk=pk)
 
 
@@ -564,3 +737,76 @@ def roster_remove_student(request, pk, student_pk):
         RosterStudent.objects.filter(pk=student_pk, roster=roster).delete()
         messages.success(request, 'Student removed from roster.')
     return redirect('roster_detail', pk=pk)
+
+
+def roster_import_students(request, pk):
+    """'Import Students (Excel/CSV)' for a Class Roster — bulk version of
+    the search-and-add box above. Scoped to one Department per upload:
+    only already-registered, active student accounts in that Department
+    get matched and added; nothing is auto-created here (unlike the Users
+    import), since a roster may only contain officially registered accounts."""
+    from django.core.exceptions import PermissionDenied
+    from scheduling.models import ClassRoster, RosterStudent
+    from scheduling.forms import RosterImportStudentsForm
+    from accounts.imports import read_rows
+    from accounts.constants import DEPARTMENT_CHOICES, department_name
+
+    if not request.user.is_authenticated or request.user.role not in ('admin', 'incharge', 'instructor'):
+        raise PermissionDenied
+    roster = get_object_or_404(ClassRoster, pk=pk)
+
+    results = None
+    if request.method == 'POST':
+        form = RosterImportStudentsForm(request.POST, request.FILES)
+        if form.is_valid():
+            department = form.cleaned_data['department']
+            try:
+                rows = read_rows(form.cleaned_data['file'])
+            except ValueError as e:
+                form.add_error('file', str(e))
+                rows = None
+
+            if rows is not None:
+                if not rows:
+                    form.add_error('file', 'No data rows found in that file.')
+                else:
+                    added, skipped = [], []
+                    already_on_roster = set(
+                        roster.students.exclude(student__isnull=True).values_list('student_id', flat=True)
+                    )
+                    for i, row in enumerate(rows, start=2):
+                        id_number = row.get('id_number', '')
+                        if not id_number:
+                            skipped.append({'row': i, 'id_number': '—', 'reason': 'Missing ID Number.'})
+                            continue
+                        student = User.objects.filter(
+                            role='student', id_number=id_number, department=department,
+                        ).first()
+                        if not student:
+                            skipped.append({
+                                'row': i, 'id_number': id_number,
+                                'reason': f'No registered student with this ID in {department_name(department)}.',
+                            })
+                            continue
+                        if not student.is_active:
+                            skipped.append({'row': i, 'id_number': id_number, 'reason': 'That account is deactivated.'})
+                            continue
+                        if student.pk in already_on_roster:
+                            skipped.append({'row': i, 'id_number': id_number, 'reason': 'Already on this roster.'})
+                            continue
+                        RosterStudent.objects.create(roster=roster, student=student)
+                        already_on_roster.add(student.pk)
+                        added.append({'row': i, 'id_number': id_number, 'name': student.get_full_name() or student.username})
+
+                    if added:
+                        messages.success(request, f'Added {len(added)} student{"s" if len(added) != 1 else ""} to the roster.')
+                    if skipped:
+                        messages.warning(request, f'{len(skipped)} row{"s were" if len(skipped) != 1 else " was"} skipped — see details below.')
+                    results = {'added': added, 'skipped': skipped, 'department': department_name(department)}
+                    form = RosterImportStudentsForm()
+    else:
+        form = RosterImportStudentsForm()
+
+    return render(request, 'scheduling/roster_import.html', {
+        'roster': roster, 'form': form, 'results': results, 'department_choices': DEPARTMENT_CHOICES,
+    })

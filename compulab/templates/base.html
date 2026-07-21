@@ -113,7 +113,9 @@
 
     .status-pill { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 500; text-transform: capitalize; }
     .pill-open, .pill-pending, .pill-offline, .pill-faulty, .pill-high, .pill-delete { background: var(--red-dim); color: var(--red-soft); }
-    .pill-in_progress, .pill-in_use, .pill-needs_check, .pill-medium, .pill-issue, .pill-deactivate, .pill-under_repair { background: var(--amber-dim); color: var(--amber); }
+    .pill-in_progress, .pill-in_use, .pill-needs_check, .pill-medium, .pill-deactivate, .pill-under_repair { background: var(--amber-dim); color: var(--amber); }
+    .pill-issue { background: rgba(167,139,250,0.14); color: #a78bfa; }
+    .pill-maintenance { background: rgba(250,204,21,0.14); color: #facc15; }
     .pill-assigned { background: var(--topbar-accent-tint); color: var(--topbar-accent); }
     .pill-resolved, .pill-approved, .pill-online, .pill-good, .pill-low, .pill-activate, .pill-register, .pill-operational { background: var(--green-dim); color: var(--green); }
     .pill-declined, .pill-retired { background: rgba(139,152,163,0.14); color: var(--text-dim); }
@@ -160,9 +162,9 @@
              data-messages='[{% for message in messages %}{"tags": "{{ message.tags|escapejs }}", "text": "{{ message|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]'></div>
       {% endif %}
       {% block content %}{% endblock %}
-
-      {% include "dashboard/footer.html" %}
     </div>
+
+    {% include "dashboard/footer.html" %}
   </div>
 </div>
 

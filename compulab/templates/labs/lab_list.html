@@ -4,68 +4,273 @@
 
 {% block content %}
 
-<div class="page-header">
-  <div>
-    <h1>Manage labs</h1>
-    <div class="sub">{{ labs|length }} lab{{ labs|length|pluralize }}</div>
-  </div>
-  <div style="display:flex; gap:8px">
-    <form method="post" action="{% url 'pc_status_refresh' %}"
-          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Check all PC status now?', text: 'This will ping every PC across all labs right away — it may take a few seconds.', icon: 'question', confirmButtonText: 'Yes, check now', confirmButtonColor: '#3ed6c4'}); return false;">
-      {% csrf_token %}
-      <button type="submit" class="action-btn">Check all PC status now</button>
-    </form>
-    <a href="{% url 'lab_create' %}" class="action-btn primary">+ Add lab</a>
-  </div>
-</div>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-{% for lab in labs %}
-  <div class="card">
-    <div class="section-title">
-      {{ lab.name }} <span style="font-weight:400; color:#999; font-size:12.5px">{{ lab.location }}</span>
-      <span style="margin-left:auto; display:flex; gap:8px;">
-        <a href="{% url 'pc_create' %}?lab={{ lab.pk }}" class="action-btn small">+ Add PC</a>
-        <a href="{% url 'lab_update' lab.pk %}" class="action-btn icon-only" title="Edit lab"><svg><use href="#icon-edit"/></svg></a>
-        <form method="post" action="{% url 'lab_delete' lab.pk %}"
-              onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this lab?', text: 'This action cannot be undone. {{ lab.name|escapejs }}{% with n=lab.pcs.count %}{% if n %} and its {{ n }} PC{{ n|pluralize }}{% endif %}{% endwith %} will be removed.', confirmButtonText: 'Yes, delete lab'}); return false;"
-              style="display:inline">
-          {% csrf_token %}
-          <button type="submit" class="action-btn icon-only danger" title="Delete lab"><svg><use href="#icon-trash"/></svg></button>
-        </form>
-      </span>
+<style>
+.ml{
+  --ml-bg:#0a0e12; --ml-card:#12171d; --ml-border:#232b34;
+  --ml-text:#e7ebee; --ml-dim:#8b98a3; --ml-faint:#4d5761;
+  --ml-purple:#a78bfa; --ml-green:#3ed6c4; --ml-blue:#5b9dff;
+  --ml-orange:#f2a93b; --ml-red:#ff5d5d; --ml-teal:#2dd4bf; --ml-lime:#84cc16;
+  font-family:'Inter',sans-serif; background:var(--ml-bg); color:var(--ml-text);
+  margin:-20px; padding:20px; min-height:100%;
+}
+.ml h1,.ml h2,.ml h3{font-family:'Space Grotesk',sans-serif;}
+.ml a{color:var(--ml-blue); text-decoration:none;}
+.ml a:hover{text-decoration:underline;}
+.ml-card{background:var(--ml-card); border:1px solid var(--ml-border); border-radius:14px; padding:18px 20px; box-shadow:0 1px 2px rgba(0,0,0,.2);}
+
+.ml-metrics{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:20px;}
+.ml-metric{display:flex; align-items:center; gap:12px;}
+.ml-metric-icon{width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 8px rgba(0,0,0,.25);}
+.ml-metric-icon svg{width:19px; height:19px;}
+.ml-metric-label{font-size:11px; color:var(--ml-dim); font-weight:600; text-transform:uppercase; letter-spacing:.03em;}
+.ml-metric-val{font-size:21px; font-weight:700; letter-spacing:-0.01em; margin-top:2px;}
+.ml-metric-sub{font-size:11px; color:var(--ml-faint); margin-top:2px;}
+.ic-teal{background:var(--ml-teal); color:#0a0e12;}
+.ic-blue{background:var(--ml-blue); color:#fff;}
+.ic-green{background:var(--ml-green); color:#0a0e12;}
+.ic-purple{background:var(--ml-purple); color:#fff;}
+.ic-orange{background:var(--ml-orange); color:#0a0e12;}
+.ic-red{background:var(--ml-red); color:#fff;}
+
+.ml-filter-form{display:grid; grid-template-columns:1fr 1fr 1.6fr auto auto; gap:14px; align-items:end;}
+.ml-label{font-size:12px; font-weight:500; color:var(--ml-dim); margin-bottom:6px; display:block;}
+.ml-input, .ml-select{width:100%; padding:9px 12px; border:1px solid var(--ml-border); border-radius:8px; font-size:13px; background:var(--ml-bg); color:var(--ml-text); font-family:inherit;}
+.ml-btn{display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:8px; border:1px solid var(--ml-border); background:var(--ml-card); color:var(--ml-text); font-size:13px; font-weight:500; cursor:pointer; white-space:nowrap;}
+.ml-btn.primary{background:var(--ml-blue); border-color:var(--ml-blue); color:#fff; font-weight:600;}
+.ml-btn:hover{border-color:var(--ml-faint);}
+.ml-btn svg{width:14px; height:14px;}
+
+.ml-row-main{display:grid; grid-template-columns:1fr 300px; gap:16px; align-items:start;}
+.ml-section-title{font-size:13px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--ml-text); margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;}
+.ml-section-title a{font-size:12px; font-weight:500; text-transform:none; letter-spacing:0;}
+
+.ml-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px;}
+.ml-lab-card{display:flex; flex-direction:column; gap:12px;}
+.ml-lab-head{display:flex; align-items:flex-start; gap:12px;}
+.ml-lab-icon{width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.ml-lab-icon svg{width:20px; height:20px;}
+.ml-lab-name{font-weight:700; font-size:14.5px; color:var(--ml-text);}
+.ml-lab-tag{font-size:11px; color:var(--ml-faint); font-weight:600;}
+.ml-lab-meta{font-size:12px; color:var(--ml-dim); display:flex; align-items:center; gap:6px; margin-top:3px;}
+.ml-lab-meta svg{width:12px; height:12px; flex-shrink:0; color:var(--ml-faint);}
+
+.ml-stat-row{display:flex; align-items:center; justify-content:space-between; font-size:12.5px; padding:2px 0;}
+.ml-stat-label{display:flex; align-items:center; gap:7px; color:var(--ml-dim);}
+.ml-stat-dot{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
+.ml-stat-val{font-weight:600; color:var(--ml-text);}
+
+.ml-util-label{display:flex; justify-content:space-between; font-size:11.5px; color:var(--ml-dim); margin-bottom:5px;}
+.ml-util-bar{height:6px; border-radius:4px; background:var(--ml-border); overflow:hidden;}
+.ml-util-fill{height:100%; border-radius:4px; background:var(--ml-green);}
+
+.ml-card-actions{display:flex; gap:6px; margin-top:2px;}
+.ml-card-actions .ml-btn{flex:1; justify-content:center; padding:7px 8px; font-size:12px;}
+.ml-icon-btn{width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:7px; border:1px solid var(--ml-border); background:var(--ml-card); color:var(--ml-dim); cursor:pointer; flex-shrink:0;}
+.ml-icon-btn svg{width:14px; height:14px;}
+.ml-icon-btn:hover{border-color:var(--ml-faint); color:var(--ml-text);}
+.ml-icon-btn.danger:hover{border-color:var(--ml-red); color:var(--ml-red);}
+
+.ml-add-tile{border:1.5px dashed var(--ml-border); border-radius:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:30px 20px; text-align:center; min-height:220px;}
+.ml-add-tile:hover{border-color:var(--ml-green);}
+.ml-add-tile .plus-circle{width:44px; height:44px; border-radius:50%; border:1.5px solid var(--ml-green); color:var(--ml-green); display:flex; align-items:center; justify-content:center;}
+.ml-add-tile .plus-circle svg{width:20px; height:20px;}
+.ml-add-tile .title{color:var(--ml-green); font-weight:700; font-size:14.5px;}
+.ml-add-tile .desc{color:var(--ml-faint); font-size:12px;}
+
+.ml-overview-item{margin-bottom:12px;}
+.ml-overview-item:last-child{margin-bottom:0;}
+.ml-overview-top{display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:5px;}
+.ml-overview-top .val{font-weight:700; color:var(--ml-text);}
+.ml-overview-bar{height:6px; border-radius:4px; background:var(--ml-border); overflow:hidden;}
+.ml-overview-fill{height:100%; border-radius:4px;}
+
+.ml-quick-action{display:flex; align-items:center; gap:10px; padding:10px 0; font-size:13px; color:var(--ml-text); border-bottom:1px solid var(--ml-border);}
+.ml-quick-action:last-child{border-bottom:none;}
+.ml-quick-action svg{width:16px; height:16px; flex-shrink:0; color:var(--ml-dim);}
+
+.ml-feed-item{display:flex; align-items:flex-start; gap:10px; padding:9px 0; border-bottom:1px solid var(--ml-border);}
+.ml-feed-item:first-child{padding-top:0;}
+.ml-feed-item:last-child{border-bottom:none; padding-bottom:0;}
+.ml-feed-icon{width:26px; height:26px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center;}
+.ml-feed-icon svg{width:13px; height:13px;}
+.ml-feed-title{font-size:12.5px; font-weight:500; color:var(--ml-text); line-height:1.35;}
+.ml-feed-time{font-size:10.5px; color:var(--ml-faint); margin-top:1px;}
+
+.ml-empty{color:var(--ml-faint); font-size:13px; text-align:center; padding:24px 0;}
+
+@media (max-width:1200px){
+  .ml-row-main{grid-template-columns:1fr;}
+  .ml-filter-form{grid-template-columns:1fr 1fr;}
+}
+</style>
+
+<div class="ml">
+
+  <div class="page-header" style="margin-bottom:18px;">
+    <div>
+      <h1 style="font-size:20px; font-weight:600; margin:0;">Manage Labs</h1>
+      <div class="sub" style="color:var(--ml-dim); font-size:13px; margin-top:4px;">
+        {{ lab_cards|length }} of {{ total_labs }} laborator{{ total_labs|pluralize:"y,ies" }} shown
+      </div>
     </div>
-    <table class="table">
-      <thead>
-        <tr><th>PC ID</th><th>IP address</th><th>Status</th><th></th></tr>
-      </thead>
-      <tbody>
-        {% for pc in lab.pcs.all %}
-          <tr data-pc="{{ pc.pc_id }}">
-            <td>{{ pc.pc_id }}</td>
-            <td>{{ pc.ip_address|default:"—" }}</td>
-            <td><span class="status-pill pill-{{ pc.status }}" data-role="status-pill">{{ pc.get_status_display }}</span></td>
-            <td style="white-space:nowrap">
-              <a href="{% url 'pc_edit' pc.pk %}" class="action-btn icon-only" title="Edit PC"><svg><use href="#icon-edit"/></svg></a>
-              <form method="post" action="{% url 'pc_delete' pc.pk %}"
-                    onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Remove this PC?', text: 'This action cannot be undone. {{ pc.pc_id|escapejs }} will be removed from {{ lab.name|escapejs }}.', confirmButtonText: 'Yes, remove PC'}); return false;"
-                    style="display:inline">
-                {% csrf_token %}
-                <button type="submit" class="action-btn icon-only danger" title="Delete PC"><svg><use href="#icon-trash"/></svg></button>
-              </form>
-            </td>
-          </tr>
-        {% empty %}
-          <tr><td colspan="4"><p class="empty">No PCs added to this lab yet.</p></td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div style="display:flex; gap:8px;">
+      <form method="post" action="{% url 'pc_status_refresh' %}"
+            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Check all PC status now?', text: 'This will ping every PC across all labs right away — it may take a few seconds.', icon: 'question', confirmButtonText: 'Yes, check now', confirmButtonColor: '#3ed6c4'}); return false;">
+        {% csrf_token %}
+        <button type="submit" class="ml-btn">Check all PC status now</button>
+      </form>
+      <a href="{% url 'lab_create' %}" class="ml-btn primary">+ Add lab</a>
+    </div>
   </div>
-{% empty %}
-  <div class="card">
-    <p class="empty">No labs yet. Click "+ Add lab" to create your first one.</p>
-  </div>
-{% endfor %}
 
-<script src="{% static 'js/dashboard.js' %}"></script>
+  <div class="ml-card" style="margin-bottom:16px;">
+    <form method="get" class="ml-filter-form">
+      <div>
+        <label class="ml-label" for="lab">Lab</label>
+        <select name="lab" id="lab" class="ml-select">
+          <option value="">All Laboratories</option>
+          {% for lab in all_labs %}
+            <option value="{{ lab.pk }}" {% if selected_lab == lab.pk|stringformat:"s" %}selected{% endif %}>{{ lab.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="ml-label" for="status">Status</label>
+        <select name="status" id="status" class="ml-select">
+          <option value="">All Status</option>
+          {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="ml-label" for="q">Search</label>
+        <input type="text" name="q" id="q" class="ml-input" placeholder="Search lab name, room or in-charge..." value="{{ search_query }}">
+      </div>
+      <div><button type="submit" class="ml-btn primary">Filter</button></div>
+      {% if filtered %}
+        <div><a href="{% url 'lab_list' %}" class="ml-btn">Clear</a></div>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="ml-row-main">
+    <div>
+      <div class="ml-grid">
+        {% for c in lab_cards %}
+          <div class="ml-card ml-lab-card">
+            <div class="ml-lab-head">
+              <div class="ml-lab-icon
+                {% cycle 'ic-teal' 'ic-blue' 'ic-green' 'ic-purple' 'ic-orange' as labcolor %}">
+                <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 20h8M12 16v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </div>
+              <div style="min-width:0;">
+                <div class="ml-lab-tag">Lab {{ forloop.counter|stringformat:"02d" }}</div>
+                <div class="ml-lab-name">{{ c.lab.name }}</div>
+                {% if c.lab.location %}
+                  <div class="ml-lab-meta">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.3" stroke="currentColor" stroke-width="1.8"/></svg>
+                    {{ c.lab.location }}
+                  </div>
+                {% endif %}
+                <div class="ml-lab-meta">
+                  <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  In-charge: {% if c.incharge %}{{ c.incharge.get_full_name|default:c.incharge.username }}{% else %}Unassigned{% endif %}
+                </div>
+                <div class="ml-lab-meta">
+                  <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 20h8M12 16v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  Capacity: {{ c.total }} Computer{{ c.total|pluralize }}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="ml-stat-row"><span class="ml-stat-label"><span class="ml-stat-dot" style="background:#3ed6c4"></span>Online</span><span class="ml-stat-val">{{ c.online }}</span></div>
+              <div class="ml-stat-row"><span class="ml-stat-label"><span class="ml-stat-dot" style="background:#f2a93b"></span>In Use</span><span class="ml-stat-val">{{ c.in_use }}</span></div>
+              <div class="ml-stat-row"><span class="ml-stat-label"><span class="ml-stat-dot" style="background:#5b9dff"></span>Available</span><span class="ml-stat-val">{{ c.available }}</span></div>
+              <div class="ml-stat-row"><span class="ml-stat-label"><span class="ml-stat-dot" style="background:#facc15"></span>Under Maintenance</span><span class="ml-stat-val">{{ c.maintenance }}</span></div>
+              <div class="ml-stat-row"><span class="ml-stat-label"><span class="ml-stat-dot" style="background:#ff5d5d"></span>Offline</span><span class="ml-stat-val">{{ c.offline }}</span></div>
+            </div>
+
+            <div>
+              <div class="ml-util-label"><span>Utilization Rate</span><span style="color:var(--ml-text); font-weight:600;">{{ c.utilization_pct }}%</span></div>
+              <div class="ml-util-bar"><div class="ml-util-fill" style="width:{{ c.utilization_pct }}%;"></div></div>
+            </div>
+
+            <div class="ml-card-actions">
+              <a href="{% url 'pc_status' %}?lab={{ c.lab.pk }}" class="ml-btn">View PCs</a>
+              <a href="{% url 'lab_update' c.lab.pk %}" class="ml-btn">Edit Lab</a>
+              <a href="{% url 'pc_create' %}?lab={{ c.lab.pk }}" class="ml-btn">Add PC</a>
+              <form method="post" action="{% url 'lab_delete' c.lab.pk %}" style="display:inline"
+                    onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this lab?', text: 'This action cannot be undone. {{ c.lab.name|escapejs }}{% if c.total %} and its {{ c.total }} PC{{ c.total|pluralize }}{% endif %} will be removed.', confirmButtonText: 'Yes, delete lab'}); return false;">
+                {% csrf_token %}
+                <button type="submit" class="ml-icon-btn danger" title="Delete lab" style="align-self:stretch;">
+                  <svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+              </form>
+            </div>
+          </div>
+        {% empty %}
+          <div class="ml-card"><p class="ml-empty">No labs match this filter.</p></div>
+        {% endfor %}
+
+        <a href="{% url 'lab_create' %}" class="ml-card ml-add-tile">
+          <div class="plus-circle">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+          <div class="title">Add New Laboratory</div>
+          <div class="desc">Click to add a new laboratory</div>
+        </a>
+      </div>
+    </div>
+
+    <div>
+      <div class="ml-card" style="margin-bottom:16px;">
+        <div class="ml-section-title">Today's Lab Overview</div>
+        {% for o in lab_overview %}
+          <div class="ml-overview-item">
+            <div class="ml-overview-top"><span>{{ o.lab.name }}</span><span class="val">{{ o.pct }}%</span></div>
+            <div class="ml-overview-bar"><div class="ml-overview-fill" style="width:{{ o.pct }}%; background:{% cycle '#5b9dff' '#3ed6c4' '#84cc16' '#a78bfa' '#f2a93b' %};"></div></div>
+          </div>
+        {% empty %}
+          <p class="ml-empty">No labs yet.</p>
+        {% endfor %}
+        <div style="margin-top:8px;"><a href="{% url 'report_lab_utilization' %}">View Full Report &rarr;</a></div>
+      </div>
+
+      <div class="ml-card" style="margin-bottom:16px;">
+        <div class="ml-section-title">Quick Actions</div>
+        <a href="{% url 'lab_create' %}" class="ml-quick-action">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          Add Laboratory
+        </a>
+        <a href="{% url 'pc_create' %}" class="ml-quick-action">
+          <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 20h8M12 16v4M12 8v3M10.5 9.5h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          Add Computer
+        </a>
+        <a href="{% url 'pc_import' %}" class="ml-quick-action">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 15V3m0 12-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Import Computers
+        </a>
+        <form method="post" action="{% url 'pc_status_refresh' %}" style="margin:0;"
+              onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Check all PC status now?', text: 'This will ping every PC across all labs right away — it may take a few seconds.', icon: 'question', confirmButtonText: 'Yes, check now', confirmButtonColor: '#3ed6c4'}); return false;">
+          {% csrf_token %}
+          <button type="submit" class="ml-quick-action" style="background:none; border:none; width:100%; text-align:left; cursor:pointer; border-bottom:1px solid var(--ml-border); font-family:inherit;">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Check All PC Status
+          </button>
+        </form>
+        <a href="{% url 'pc_status_export' %}?format=pdf" class="ml-quick-action">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Export PC Status Report
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div>
 
 {% endblock %}

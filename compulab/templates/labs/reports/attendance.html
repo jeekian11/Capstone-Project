@@ -88,13 +88,31 @@
         </tbody>
       </table>
     {% endif %}
+    {% if row.walk_ins %}
+      <div class="section-title" style="margin-top:16px;">Walk-in / Override<span class="count">{{ row.walk_ins|length }}</span></div>
+      <p style="font-size:12px; color:var(--text-dim); margin-bottom:8px;">Registered accounts that used a PC during this session without being the requester, on the roster, or a counted group member — not included in Present/Absent above.</p>
+      <table class="table">
+        <thead><tr><th>Name</th><th>ID number</th><th>Type</th><th>PC used</th><th>Time</th></tr></thead>
+        <tbody>
+          {% for w in row.walk_ins %}
+            <tr>
+              <td>{{ w.name }}</td>
+              <td>{{ w.id_number }}</td>
+              <td>{{ w.checkin_type }}</td>
+              <td>{{ w.pc }}</td>
+              <td>{{ w.time|date:"H:i" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
   </div>
 {% empty %}
   <div class="card"><p class="empty">No sessions scheduled on this date.</p></div>
 {% endfor %}
 
 <p style="font-size:12px; color:#8b98a3;">
-  "Present" is based on students who unlocked a lab PC with an ID number during the session window. When a class roster is attached to the session, names come straight from the roster and "Absent" lists everyone on the roster who didn't check in. Without a roster, the name shown is the reservation's requester name and "Absent" is only an estimate (expected count minus present count).
+  "Present" is based on students who checked in during the session (requester, roster member, or counted group member). When a class roster is attached to the session, names come straight from the roster and "Absent" lists everyone on the roster who didn't check in. Without a roster, "Absent" is only an estimate (expected count minus present count). "Walk-in / Override" lists registered accounts that used a PC during the session's slot without being part of the reservation itself — a Class reservation lets any other registered account in if the lab still has an available computer, and an Admin/Lab In-Charge can also grant access directly via Override Check-in.
 </p>
 
 {% endblock %}

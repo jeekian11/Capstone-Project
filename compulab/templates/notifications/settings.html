@@ -11,19 +11,10 @@
 </div>
 
 <div class="card" style="max-width:420px">
-  <form method="post"
-        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Save these settings?', text: 'Your notification preferences will be updated.', icon: 'question', confirmButtonText: 'Yes, save', confirmButtonColor: '#3ed6c4'}); return false;">
-    {% csrf_token %}
-    <div class="form-group">
-      <label class="form-label">
-        {{ form.email_notifications_enabled }} Email notifications
-      </label>
-      <span class="helptext">Get an email copy whenever you receive a notification (in addition to seeing it here).</span>
-    </div>
-    <div class="form-actions">
-      <button type="submit" class="action-btn primary">Save settings</button>
-    </div>
-  </form>
+  <p class="helptext" style="margin-top:0;">
+    Notifications currently appear in-app only — check the bell icon in the navbar.
+    There are no additional delivery settings to configure right now.
+  </p>
 </div>
 
 {% endblock %}

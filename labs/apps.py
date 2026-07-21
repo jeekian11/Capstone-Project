@@ -18,4 +18,6 @@ class LabsConfig(AppConfig):
             return
 
         from labs.network import start_background_status_checker
+        from labs.maintenance import start_daily_activity_log_wipe
         start_background_status_checker()
+        start_daily_activity_log_wipe()

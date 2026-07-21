@@ -4,137 +4,453 @@
 
 {% block content %}
 
-<div class="page-header">
-  <div>
-    <h1>PC power status</h1>
-    <div class="sub">
-      {{ pcs|length }} units across {{ all_labs|length }} lab{{ all_labs|length|pluralize }}
-      &middot; auto-checks every {{ auto_check_interval_seconds }}s
-    </div>
-  </div>
-  <form method="post" action="{% url 'pc_status_refresh' %}"
-        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Check all PC status now?', text: 'This will ping every PC across all labs right away — it may take a few seconds.', icon: 'question', confirmButtonText: 'Yes, check now', confirmButtonColor: '#3ed6c4'}); return false;">
-    {% csrf_token %}
-    <button type="submit" class="action-btn primary">Check now</button>
-  </form>
-</div>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 
-<div class="metrics">
-  <div class="metric green">
-    <div class="metric-label">Online</div>
-    <div class="metric-val">{{ online_count }}</div>
-  </div>
-  <div class="metric">
-    <div class="metric-label">Offline</div>
-    <div class="metric-val">{{ offline_count }}</div>
-  </div>
-  <div class="metric amber">
-    <div class="metric-label">In use</div>
-    <div class="metric-val">{{ in_use_count }}</div>
-  </div>
-  <div class="metric red">
-    <div class="metric-label">Has issue</div>
-    <div class="metric-val">{{ issue_count }}</div>
-  </div>
-</div>
+<style>
+.ld{
+  --ld-bg:#0a0e12; --ld-card:#12171d; --ld-border:#232b34;
+  --ld-text:#e7ebee; --ld-dim:#8b98a3; --ld-faint:#4d5761;
+  --ld-purple:#a78bfa; --ld-purple-tint:rgba(167,139,250,0.14);
+  --ld-green:#3ed6c4; --ld-green-tint:rgba(62,214,196,0.14);
+  --ld-blue:#5b9dff; --ld-blue-tint:rgba(91,157,255,0.14);
+  --ld-orange:#f2a93b; --ld-orange-tint:rgba(242,169,59,0.14);
+  --ld-red:#ff5d5d; --ld-red-tint:rgba(255,93,93,0.14);
+  font-family:'Inter',sans-serif; background:var(--ld-bg); color:var(--ld-text);
+  margin:-20px; padding:20px; min-height:100%;
+}
+.ld h1,.ld h2,.ld h3{font-family:'Space Grotesk',sans-serif;}
+.ld a{color:var(--ld-blue); text-decoration:none;}
+.ld a:hover{text-decoration:underline;}
+.ld-card{background:var(--ld-card); border:1px solid var(--ld-border); border-radius:14px; padding:18px 20px; box-shadow:0 1px 2px rgba(0,0,0,.2);}
 
-<div class="card">
-  <form method="get" class="form-row" style="grid-template-columns: 1fr 1fr 1.4fr auto auto; align-items:end; gap:14px;">
-    <div class="form-group" style="margin-bottom:0">
-      <label class="form-label" for="lab">Lab</label>
-      <select name="lab" id="lab" class="form-control">
-        <option value="">All labs</option>
-        {% for lab in all_labs %}
-          <option value="{{ lab.pk }}" {% if selected_lab == lab.pk|stringformat:"s" %}selected{% endif %}>{{ lab.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="form-group" style="margin-bottom:0">
-      <label class="form-label" for="day">Day</label>
-      <input type="date" name="day" id="day" class="form-control" value="{{ selected_day }}">
-    </div>
-    <div class="form-group" style="margin-bottom:0">
-      <label class="form-label" for="q">Search</label>
-      <input type="text" name="q" id="q" class="form-control" placeholder="PC ID or user name" value="{{ search_query }}">
-    </div>
-    <div class="form-group" style="margin-bottom:0">
-      <button type="submit" class="action-btn primary">Filter</button>
-    </div>
-    {% if filtered %}
-      <div class="form-group" style="margin-bottom:0">
-        <a href="{% url 'pc_status' %}" class="action-btn">Clear</a>
+.ld-metrics{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:20px;}
+.ld-metric{display:flex; align-items:center; gap:12px;}
+.ld-metric-icon{width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.ld-metric-icon svg{width:20px; height:20px;}
+.ld-metric-label{font-size:12px; color:var(--ld-dim); font-weight:500;}
+.ld-metric-val{font-size:22px; font-weight:700; letter-spacing:-0.01em; margin-top:2px;}
+.ld-metric-sub{font-size:11.5px; color:var(--ld-faint); margin-top:2px;}
+.ld-metric-icon{box-shadow:0 2px 8px rgba(0,0,0,.25);}
+.ic-purple{background:var(--ld-purple); color:#fff;}
+.ic-green{background:var(--ld-green); color:#0a0e12;}
+.ic-blue{background:var(--ld-blue); color:#fff;}
+.ic-orange{background:var(--ld-orange); color:#0a0e12;}
+.ic-red{background:var(--ld-red); color:#fff;}
+.ic-amber{background:var(--ld-orange); color:#0a0e12;}
+
+.ld-header-status{display:flex; align-items:center; gap:18px; font-size:12.5px; color:var(--ld-dim);}
+.ld-header-status .lu-val{color:var(--ld-text); font-weight:600;}
+.ld-auto-refresh{display:flex; align-items:center; gap:6px; color:var(--ld-green); font-weight:600;}
+.ld-auto-refresh svg{width:13px; height:13px;}
+
+.ld-filter-form{display:grid; grid-template-columns:1fr 1fr 1fr 1.4fr auto auto; gap:14px; align-items:end;}
+.ld-label{font-size:12px; font-weight:500; color:var(--ld-dim); margin-bottom:6px; display:block;}
+.ld-input, .ld-select{width:100%; padding:9px 12px; border:1px solid var(--ld-border); border-radius:8px; font-size:13px; background:var(--ld-bg); color:var(--ld-text); font-family:inherit;}
+.ld-btn{display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:8px; border:1px solid var(--ld-border); background:var(--ld-card); color:var(--ld-text); font-size:13px; font-weight:500; cursor:pointer; white-space:nowrap;}
+.ld-btn.primary{background:var(--ld-blue); border-color:var(--ld-blue); color:#0a0e12; font-weight:600;}
+.ld-btn:hover{border-color:var(--ld-faint);}
+
+.ld-row-3{display:grid; grid-template-columns:1.1fr 1fr 1fr; gap:16px; margin-bottom:16px;}
+.ld-row-main{display:grid; grid-template-columns:1fr 300px; gap:16px; margin-bottom:16px;}
+.ld-section-title{font-size:13px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--ld-text); margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;}
+.ld-section-title a{font-size:12px; font-weight:500; text-transform:none; letter-spacing:0;}
+
+.ld-usage-row{margin-bottom:14px;}
+.ld-usage-row:last-child{margin-bottom:0;}
+.ld-usage-top{display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:6px;}
+.ld-usage-top .cnt{color:var(--ld-dim);}
+.ld-usage-bar{height:8px; border-radius:4px; background:var(--ld-bg); overflow:hidden;}
+.ld-usage-fill{height:100%; background:var(--ld-green); border-radius:4px;}
+
+.ld-donut-wrap{display:flex; align-items:center; gap:20px;}
+.ld-donut-legend{flex:1; display:flex; flex-direction:column; gap:10px;}
+.ld-donut-legend-item{display:flex; align-items:center; gap:8px; font-size:12px;}
+.ld-donut-dot{width:9px; height:9px; border-radius:50%; flex-shrink:0;}
+.ld-donut-legend-item .lbl{flex:1; color:var(--ld-dim);}
+.ld-donut-legend-item .val{font-weight:600; color:var(--ld-text);}
+
+.ld-feed-item{display:flex; align-items:flex-start; gap:10px; padding:9px 0; border-bottom:1px solid var(--ld-border);}
+.ld-feed-item:first-child{padding-top:0;}
+.ld-feed-item:last-child{border-bottom:none; padding-bottom:0;}
+.ld-feed-icon{width:26px; height:26px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center;}
+.ld-feed-icon svg{width:13px; height:13px;}
+.ld-feed-title{font-size:12.5px; font-weight:500; color:var(--ld-text); line-height:1.35;}
+.ld-feed-sub{font-size:11px; color:var(--ld-faint); margin-top:1px;}
+.ld-feed-time{font-size:10px; color:var(--ld-faint); white-space:nowrap; margin-left:auto; padding-top:2px;}
+
+.ld-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+.ld-table th{text-align:left; padding:8px 10px; color:var(--ld-dim); font-weight:600; border-bottom:1px solid var(--ld-border); font-size:10.5px; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap;}
+.ld-table td{padding:9px 10px; border-bottom:1px solid var(--ld-border); color:var(--ld-text); white-space:nowrap;}
+.ld-table tr:hover td{background:rgba(255,255,255,0.02);}
+.ld-dot{display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:6px;}
+.ld-pill{font-size:10.5px; font-weight:700; padding:4px 10px; border-radius:6px; white-space:nowrap; display:inline-block;}
+.ld-pill.online{background:var(--ld-green); color:#0a0e12;}
+.ld-pill.in_use{background:var(--ld-orange); color:#0a0e12;}
+.ld-pill.offline{background:var(--ld-red); color:#fff;}
+.ld-pill.maintenance{background:#facc15; color:#0a0e12;}
+.ld-pill.issue{background:var(--ld-purple); color:#fff;}
+
+.ld-quick-action{display:flex; align-items:center; gap:10px; padding:10px 0; font-size:13px; color:var(--ld-text); border-bottom:1px solid var(--ld-border);}
+.ld-quick-action:last-child{border-bottom:none;}
+.ld-quick-action svg{width:16px; height:16px; flex-shrink:0; color:var(--ld-dim);}
+.ld-info-row{display:flex; justify-content:space-between; font-size:12.5px; padding:8px 0; border-bottom:1px solid var(--ld-border);}
+.ld-info-row:last-child{border-bottom:none;}
+.ld-info-row span:first-child{color:var(--ld-dim);}
+.ld-info-row span:last-child{font-weight:600;}
+
+.ld-pagination{display:flex; align-items:center; justify-content:space-between; margin-top:14px; font-size:12px; color:var(--ld-dim);}
+.ld-page-btns{display:flex; gap:6px;}
+.ld-page-btn{width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; border:1px solid var(--ld-border); color:var(--ld-text); font-size:12px;}
+.ld-page-btn.active{background:var(--ld-blue); border-color:var(--ld-blue); color:#0a0e12; font-weight:700;}
+.ld-page-btn.disabled{opacity:.35; pointer-events:none;}
+
+.ld-empty{color:var(--ld-faint); font-size:13px; text-align:center; padding:24px 0;}
+
+@media (max-width:1200px){
+  .ld-row-3{grid-template-columns:1fr;}
+  .ld-row-main{grid-template-columns:1fr;}
+  .ld-filter-form{grid-template-columns:1fr 1fr;}
+}
+</style>
+
+<div class="ld">
+
+  <div class="page-header" style="margin-bottom:18px;">
+    <div>
+      <h1 style="font-size:20px; font-weight:600; margin:0;">PC Power Status</h1>
+      <div class="sub" style="color:var(--ld-dim); font-size:13px; margin-top:4px;">
+        Real-time monitoring of all computers in the laboratory &middot;
+        background check every {{ auto_check_interval_seconds }}s, live view refreshes every 10s
       </div>
-    {% endif %}
-  </form>
-  <p style="font-size:12px; color:#8b98a3; margin:10px 0 0;">
-    {% if day_mode %}
-      Day shows every PC that was actually checked in to (unlocked) on that date, from the login history.
-    {% else %}
-      Leave Day blank to see each PC's live status. Set it to look up which PCs were used on a specific date.
-    {% endif %}
-  </p>
-</div>
-
-{% if day_mode %}
-  {% for entry in labs_usage %}
-    <div class="card">
-      <div class="section-title">{{ entry.lab.name }}<span class="count">{{ entry.logs|length }} check-in{{ entry.logs|length|pluralize }}</span></div>
-      <table class="table">
-        <thead>
-          <tr><th>PC ID</th><th>Used by</th><th>ID number</th><th>Time</th></tr>
-        </thead>
-        <tbody>
-          {% for log in entry.logs %}
-            <tr>
-              <td>{{ log.pc.pc_id }}</td>
-              <td>{{ log.actor.get_full_name|default:log.actor.username|default:"—" }}</td>
-              <td>{{ log.target_username }}</td>
-              <td>{{ log.created_at|date:"M d, Y H:i" }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
     </div>
-  {% empty %}
-    <div class="card"><p class="empty">No PCs were used on {{ selected_day }}{% if selected_lab %} for this lab{% endif %}.</p></div>
-  {% endfor %}
-{% else %}
-  {% for lab in labs %}
-    {% if lab.filtered_pcs %}
-      <div class="card">
-        <div class="section-title">{{ lab.name }}<span class="count">{{ lab.filtered_pcs|length }} PC{{ lab.filtered_pcs|length|pluralize }}</span></div>
-        <table class="table">
-          <thead>
-            <tr><th>PC ID</th><th>IP address</th><th>Status</th><th>Used by</th><th>Last active</th><th></th></tr>
-          </thead>
+    <div style="display:flex; align-items:center; gap:18px;">
+      <a href="{% url 'override_checkin' %}" class="action-btn" style="background:var(--ld-card); border:1px solid var(--ld-border); color:var(--ld-text); padding:8px 14px; border-radius:8px; font-size:13px; text-decoration:none;">Override Check-in</a>
+      <div class="ld-header-status">
+        <span>Last Updated: <span class="lu-val" id="ldLastUpdated">—</span></span>
+        <span class="ld-auto-refresh">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Auto Refresh Every 10 seconds
+        </span>
+      </div>
+      <form method="post" action="{% url 'pc_status_refresh' %}"
+            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Check all PC status now?', text: 'This will ping every PC across all labs right away — it may take a few seconds.', icon: 'question', confirmButtonText: 'Yes, check now', confirmButtonColor: '#3ed6c4'}); return false;">
+        {% csrf_token %}
+        <button type="submit" class="ld-btn primary">Check now</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="ld-metrics">
+    <div class="ld-card ld-metric">
+      <div class="ld-metric-icon ic-green">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="4" width="19" height="12" rx="1.5" stroke="currentColor" stroke-width="1.8"/><path d="M9 20h6M12 16v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <div class="ld-metric-label">Online PCs</div>
+        <div class="ld-metric-val">{{ online_pcs_count }}</div>
+        <div class="ld-metric-sub">{{ online_pcs_pct }}% of total</div>
+      </div>
+    </div>
+    <div class="ld-card ld-metric">
+      <div class="ld-metric-icon ic-blue">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8.5 8.5a5 5 0 1 0 7 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <div class="ld-metric-label">Available</div>
+        <div class="ld-metric-val">{{ available_count }}</div>
+        <div class="ld-metric-sub">{{ available_pct }}% of total</div>
+      </div>
+    </div>
+    <div class="ld-card ld-metric">
+      <div class="ld-metric-icon ic-amber">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <div class="ld-metric-label">In Use</div>
+        <div class="ld-metric-val">{{ in_use_count }}</div>
+        <div class="ld-metric-sub">{{ in_use_pct }}% of total</div>
+      </div>
+    </div>
+    <div class="ld-card ld-metric">
+      <div class="ld-metric-icon ic-red">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8.5 8.5a5 5 0 1 0 7 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <div class="ld-metric-label">Offline</div>
+        <div class="ld-metric-val">{{ offline_count }}</div>
+        <div class="ld-metric-sub">{{ offline_pct }}% of total</div>
+      </div>
+    </div>
+    <div class="ld-card ld-metric">
+      <div class="ld-metric-icon" style="background:rgba(250,204,21,0.14); color:#facc15;">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 0 0 1.4 0l1.6-1.6a1 1 0 0 1 1.4 0l.2.2a1 1 0 0 1 0 1.4l-1.6 1.6a1 1 0 0 0 0 1.4l.5.5a1 1 0 0 0 1.4 0l1.6-1.6a1 1 0 0 1 1.4 0l.2.2a1 1 0 0 1 0 1.4l-3.6 3.6a3 3 0 0 1-4-4l3.5-3.1Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="m11 13-6.5 6.5a1.5 1.5 0 0 1-2.1-2.1L9 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="ld-metric-label">Under Maintenance</div>
+        <div class="ld-metric-val">{{ maintenance_count }}</div>
+        <div class="ld-metric-sub">{{ maintenance_pct }}% of total</div>
+      </div>
+    </div>
+    <div class="ld-card ld-metric">
+      <div class="ld-metric-icon ic-purple">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="ld-metric-label">Has Issue</div>
+        <div class="ld-metric-val">{{ issue_count }}</div>
+        <div class="ld-metric-sub">{{ issue_pct }}% of total</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ld-card" style="margin-bottom:16px;">
+    <form method="get" class="ld-filter-form">
+      <div>
+        <label class="ld-label" for="lab">Laboratory</label>
+        <select name="lab" id="lab" class="ld-select">
+          <option value="">All labs</option>
+          {% for lab in all_labs %}
+            <option value="{{ lab.pk }}" {% if selected_lab == lab.pk|stringformat:"s" %}selected{% endif %}>{{ lab.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="ld-label" for="status">Status</label>
+        <select name="status" id="status" class="ld-select">
+          <option value="">All Status</option>
+          {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="ld-label" for="day">Date</label>
+        <input type="date" name="day" id="day" class="ld-input" value="{{ selected_day }}">
+      </div>
+      <div>
+        <label class="ld-label" for="q">Search</label>
+        <input type="text" name="q" id="q" class="ld-input" placeholder="Search PC ID or student name..." value="{{ search_query }}">
+      </div>
+      <div><button type="submit" class="ld-btn primary">Filter</button></div>
+      {% if filtered %}
+        <div><a href="{% url 'pc_status' %}" class="ld-btn">Clear</a></div>
+      {% endif %}
+    </form>
+    <p style="font-size:11.5px; color:var(--ld-faint); margin:10px 0 0;">
+      {% if day_mode %}
+        Date shows every PC that was actually checked in to (unlocked) on that date, from the login history.
+      {% else %}
+        Leave Date blank to see each PC's live status. Set it to look up which PCs were used on a specific date.
+      {% endif %}
+    </p>
+  </div>
+
+  {% if day_mode %}
+
+    {% for entry in labs_usage %}
+      <div class="ld-card" style="margin-bottom:16px;">
+        <div class="ld-section-title">{{ entry.lab.name }}<span style="color:var(--ld-dim); font-weight:500; text-transform:none;">{{ entry.logs|length }} check-in{{ entry.logs|length|pluralize }}</span></div>
+        <table class="ld-table">
+          <thead><tr><th>PC ID</th><th>Used by</th><th>ID number</th><th>Time</th></tr></thead>
           <tbody>
-            {% for pc in lab.filtered_pcs %}
-              <tr data-pc="{{ pc.pc_id }}">
-                <td>{{ pc.pc_id }}</td>
-                <td>{{ pc.ip_address|default:"—" }}</td>
-                <td><span class="status-pill pill-{{ pc.status }}" data-role="status-pill">{{ pc.get_status_display }}</span></td>
-                <td data-role="current-user">{% if pc.current_user %}{{ pc.current_user.get_full_name|default:pc.current_user.username }}{% else %}—{% endif %}</td>
-                <td>{{ pc.last_active|timesince|default:"—" }}{% if pc.last_active %} ago{% endif %}</td>
-                <td><a href="{% url 'pc_update' pc.pk %}" class="action-btn small">Update</a></td>
+            {% for log in entry.logs %}
+              <tr>
+                <td>{{ log.pc.pc_id }}</td>
+                <td>{{ log.actor.get_full_name|default:log.actor.username|default:"—" }}</td>
+                <td>{{ log.target_username }}</td>
+                <td>{{ log.created_at|date:"M d, Y H:i" }}</td>
               </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
-    {% elif not filtered %}
-      <div class="card">
-        <div class="section-title">{{ lab.name }}<span class="count">0 PCs</span></div>
-        <p class="empty">No PCs registered.</p>
-      </div>
-    {% endif %}
-  {% empty %}
-    <div class="card"><p class="empty">No labs set up yet.</p></div>
-  {% endfor %}
+    {% empty %}
+      <div class="ld-card"><p class="ld-empty">No PCs were used on {{ selected_day }}{% if selected_lab %} for this lab{% endif %}.</p></div>
+    {% endfor %}
 
-  {% if filtered and total_filtered == 0 %}
-    <div class="card"><p class="empty">No PCs match this filter.</p></div>
+  {% else %}
+
+  <div class="ld-row-3">
+    <div class="ld-card">
+      <div class="ld-section-title">Live Lab Usage</div>
+      {% for entry in lab_usage %}
+        <div class="ld-usage-row">
+          <div class="ld-usage-top">
+            <span>{{ entry.lab.name }}</span>
+            <span class="cnt">{{ entry.in_use }} / {{ entry.total }}</span>
+          </div>
+          <div class="ld-usage-bar"><div class="ld-usage-fill" style="width:{{ entry.pct }}%;"></div></div>
+        </div>
+      {% empty %}
+        <p class="ld-empty">No labs set up yet.</p>
+      {% endfor %}
+      <div style="margin-top:12px;"><a href="{% url 'lab_list' %}">View all laboratories →</a></div>
+    </div>
+
+    <div class="ld-card">
+      <div class="ld-section-title">PC Status Distribution</div>
+      <div class="ld-donut-wrap">
+        <div style="width:110px; height:110px; flex-shrink:0;"><canvas id="statusDonut"></canvas></div>
+        <div class="ld-donut-legend">
+          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:#f2a93b"></span><span class="lbl">In Use</span><span class="val">{{ in_use_pct }}% ({{ in_use_count }})</span></div>
+          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:#5b9dff"></span><span class="lbl">Available</span><span class="val">{{ available_pct }}% ({{ available_count }})</span></div>
+          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:#ff5d5d"></span><span class="lbl">Offline</span><span class="val">{{ offline_pct }}% ({{ offline_count }})</span></div>
+          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:#facc15"></span><span class="lbl">Under Maintenance</span><span class="val">{{ maintenance_pct }}% ({{ maintenance_count }})</span></div>
+          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:#a78bfa"></span><span class="lbl">Has Issue</span><span class="val">{{ issue_pct }}% ({{ issue_count }})</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ld-card">
+      <div class="ld-section-title">Recent Activities<a href="{% url 'pc_activity_log' %}">View all</a></div>
+      {% for a in recent_activities %}
+        <div class="ld-feed-item">
+          <div class="ld-feed-icon ic-blue">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div style="flex:1; min-width:0;">
+            <div class="ld-feed-title">{{ a.pc.pc_id }} unlocked by {{ a.actor.get_full_name|default:a.actor.username|default:a.target_username }}</div>
+            <div class="ld-feed-sub">{{ a.pc.lab.name }}</div>
+          </div>
+          <div class="ld-feed-time">{{ a.created_at|timesince }} ago</div>
+        </div>
+      {% empty %}
+        <p class="ld-empty">No recent activity yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="ld-row-main">
+    <div class="ld-card">
+      <div class="ld-section-title">
+        PC List{% if selected_lab_obj %} — {{ selected_lab_obj.name }}{% endif %}
+        <span style="color:var(--ld-dim); font-weight:500; text-transform:none;">{{ total_filtered }} PC{{ total_filtered|pluralize }}</span>
+      </div>
+      {% if page_obj.object_list %}
+        <div style="overflow-x:auto;">
+        <table class="ld-table">
+          <thead>
+            <tr>
+              <th>PC ID</th><th>Computer Name</th><th>Lab</th><th>IP Address</th><th>Status</th>
+              <th>Student</th><th>Login Time</th><th>Duration</th><th>Last Active</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pc in page_obj.object_list %}
+              <tr data-pc="{{ pc.pc_id }}">
+                <td>{{ pc.pc_id }}</td>
+                <td>Computer {{ pc.pc_id|slice:"2:" }}</td>
+                <td>{{ pc.lab.name }}</td>
+                <td>{{ pc.ip_address|default:"—" }}</td>
+                <td><span class="ld-pill {{ pc.status }}" data-role="status-pill">{{ pc.get_status_display }}</span></td>
+                <td data-role="current-user">{% if pc.current_user %}{{ pc.current_user.get_full_name|default:pc.current_user.username }}{% else %}—{% endif %}</td>
+                <td>{% if pc.login_time %}{{ pc.login_time|time:"g:i A" }}{% else %}—{% endif %}</td>
+                <td>{% if pc.login_time %}{{ pc.login_time|timesince }}{% else %}—{% endif %}</td>
+                <td>{{ pc.last_active|timesince|default:"—" }}{% if pc.last_active %} ago{% endif %}</td>
+                <td style="white-space:nowrap;">
+                  <a href="{% url 'pc_activity_log' %}?pc={{ pc.pk }}" class="ld-btn" style="padding:5px 10px; font-size:11.5px;">View</a>
+                  <a href="{% url 'pc_update' pc.pk %}" class="ld-btn" style="padding:5px 10px; font-size:11.5px;">Update</a>
+                  {% if request.user.role == 'admin' %}
+                    <a href="{% url 'pc_edit' pc.pk %}" class="ld-btn" style="padding:5px 10px; font-size:11.5px;">Edit</a>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+        <div class="ld-pagination">
+          <span>Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ total_filtered }} PCs</span>
+          <div class="ld-page-btns">
+            {% if page_obj.has_previous %}
+              <a class="ld-page-btn" href="?{{ request.GET.urlencode }}&page=1">&laquo;</a>
+              <a class="ld-page-btn" href="?{{ request.GET.urlencode }}&page={{ page_obj.previous_page_number }}">&lsaquo;</a>
+            {% else %}
+              <span class="ld-page-btn disabled">&laquo;</span>
+              <span class="ld-page-btn disabled">&lsaquo;</span>
+            {% endif %}
+            {% for num in page_obj.paginator.page_range %}
+              {% if num == page_obj.number %}
+                <span class="ld-page-btn active">{{ num }}</span>
+              {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                <a class="ld-page-btn" href="?{{ request.GET.urlencode }}&page={{ num }}">{{ num }}</a>
+              {% endif %}
+            {% endfor %}
+            {% if page_obj.has_next %}
+              <a class="ld-page-btn" href="?{{ request.GET.urlencode }}&page={{ page_obj.next_page_number }}">&rsaquo;</a>
+              <a class="ld-page-btn" href="?{{ request.GET.urlencode }}&page={{ page_obj.paginator.num_pages }}">&raquo;</a>
+            {% else %}
+              <span class="ld-page-btn disabled">&rsaquo;</span>
+              <span class="ld-page-btn disabled">&raquo;</span>
+            {% endif %}
+          </div>
+        </div>
+      {% else %}
+        <p class="ld-empty">No PCs match this filter.</p>
+      {% endif %}
+    </div>
+
+    <div>
+      <div class="ld-card" style="margin-bottom:16px;">
+        <div class="ld-section-title">Quick Actions</div>
+        <a href="#" class="ld-quick-action" onclick="event.preventDefault(); document.querySelector('form[action=\'{% url 'pc_status_refresh' %}\']').requestSubmit();">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Check All PCs
+        </a>
+        <a href="{% url 'pc_activity_log' %}" class="ld-quick-action">
+          <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.8"/></svg>
+          View Activity Log
+        </a>
+        <a href="{% url 'pc_status_export' %}?lab={{ selected_lab }}&status={{ selected_status }}&q={{ search_query }}&format=pdf" class="ld-quick-action">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Export Report (PDF)
+        </a>
+        <a href="{% url 'pc_status_export' %}?lab={{ selected_lab }}&status={{ selected_status }}&q={{ search_query }}&format=excel" class="ld-quick-action">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Export Report (Excel)
+        </a>
+        <div style="margin-top:8px; font-size:11px; color:var(--ld-faint); line-height:1.5;">
+          Wake-on-LAN, remote shutdown and restart aren't wired up yet — they'd need an always-on agent on each PC. Ask if you'd like that built next.
+        </div>
+      </div>
+
+      {% if selected_lab_obj %}
+        <div class="ld-card">
+          <div class="ld-section-title">Lab Information</div>
+          <div class="ld-info-row"><span>Laboratory</span><span>{{ selected_lab_obj.name }}</span></div>
+          <div class="ld-info-row"><span>Total Computers</span><span>{{ selected_lab_total_pcs }}</span></div>
+          <div class="ld-info-row"><span>Location</span><span>{{ selected_lab_obj.location|default:"—" }}</span></div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
   {% endif %}
-{% endif %}
+
+</div>
+
+<script>
+(function () {
+  {% if not day_mode %}
+  Chart.defaults.font.family = 'Inter, sans-serif';
+  Chart.defaults.color = '#8b98a3';
+  new Chart(document.getElementById('statusDonut'), {
+    type: 'doughnut',
+    data: {
+      labels: ['In Use', 'Available', 'Offline', 'Under Maintenance', 'Has Issue'],
+      datasets: [{
+        data: [{{ in_use_count }}, {{ available_count }}, {{ offline_count }}, {{ maintenance_count }}, {{ issue_count }}],
+        backgroundColor: ['#f2a93b', '#5b9dff', '#ff5d5d', '#facc15', '#a78bfa'],
+        borderWidth: 0,
+      }]
+    },
+    options: { cutout: '68%', plugins: { legend: { display: false }, tooltip: { enabled: true } }, responsive: true, maintainAspectRatio: false }
+  });
+  {% endif %}
+})();
+</script>
 
 <script src="{% static 'js/dashboard.js' %}"></script>
 

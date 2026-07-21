@@ -100,6 +100,31 @@ server kung saang IP magpapadala ng unlock signal.
    tumatawag sa `unlock_pc()`) — dapat tumakbo yung `unlock_command` sa PC na
    yun.
 
+## Bagong feature: PC activity log (window title tracking)
+
+Habang naka-unlock ang isang PC, kada `activity_report_interval_seconds`
+(default 8s, itakda sa `agent_config.json`) kinukuha ng agent ang title bar
+text ng foreground/active window sa oras na iyon at pina-post niya ito sa
+server (`/labs/api/pc-agent-activity/`). Para sa browser, karaniwang ganito
+ang laman: `"Page Title - Browser Name"` — ito na ang pinaka-malapit na
+"anong website" na na-track ng system na ito.
+
+**Mahalagang saklaw:**
+- Window title text lang ang binabasa (isang standard Windows API call) —
+  WALANG keystrokes, screenshots, page HTML, o URL mula sa address bar.
+- Nire-record lang kapag naka-unlock/may naka-assign na estudyante sa PC
+  (server-side, tine-tsek ang `PC.current_user`/`current_session`).
+- Makikita ang mga log sa admin/in-charge dashboard: **PC activity log**
+  sa sidebar, o `/labs/pc-activity/`.
+- Itakda ang `activity_report_interval_seconds` sa `0` sa
+  `agent_config.json` para i-disable ang feature na ito nang tuluyan sa
+  isang partikular na PC.
+
+Bago i-deploy ito sa mga totoong lab PC, siguraduhing alam ng mga
+estudyante/in-charge na naka-on ang ganitong monitoring (hal. sa lab rules
+o disclaimer sa lock screen) — magandang practice ito kahit saang
+institution-owned na monitoring setup.
+
 ## Kung walang kiosk/lock software pa
 
 Kung wala pa talagang paraan ng pag-lock ng mga PC ngayon (walang kiosk

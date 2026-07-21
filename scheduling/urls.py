@@ -2,7 +2,12 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('', views.ScheduleView.as_view(), name='schedule'),
+    # "Schedule & requests" now lands straight on the calendar (View
+    # Schedule) instead of an intermediate hub page — Manage Requests is
+    # just a button on this page now (see view_schedule.html), not a
+    # separate stop. Both URL names still resolve so old links/bookmarks
+    # to either one keep working.
+    path('', views.ViewScheduleView.as_view(), name='schedule'),
     path('lab/', views.LabScheduleView.as_view(), name='lab_schedule'),
     path('instructor/', views.InstructorScheduleView.as_view(), name='inst_schedule'),
 
@@ -27,7 +32,10 @@ urlpatterns = [
     path('rosters/new/', views.RosterCreateView.as_view(), name='roster_create'),
     path('rosters/<int:pk>/', views.RosterDetailView.as_view(), name='roster_detail'),
     path('rosters/<int:pk>/edit/', views.RosterUpdateView.as_view(), name='roster_edit'),
+    path('rosters/<int:pk>/archive/', views.roster_archive, name='roster_archive'),
     path('rosters/<int:pk>/delete/', views.RosterDeleteView.as_view(), name='roster_delete'),
     path('rosters/<int:pk>/students/add/', views.roster_add_student, name='roster_add_student'),
+    path('rosters/<int:pk>/students/import/', views.roster_import_students, name='roster_import_students'),
+    path('rosters/<int:pk>/students/search/', views.roster_search_students, name='roster_search_students'),
     path('rosters/<int:pk>/students/<int:student_pk>/remove/', views.roster_remove_student, name='roster_remove_student'),
 ]

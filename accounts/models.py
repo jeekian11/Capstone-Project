@@ -1,8 +1,53 @@
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager as DjangoUserManager
 from django.conf import settings
 from django.db import models
+from accounts.constants import DEPARTMENT_CHOICES, department_name, YEAR_LEVEL_LABELS
+
+
+class UserManager(DjangoUserManager):
+    """Django's built-in UserManager.create_user()/create_superuser() always
+    pass an `email` kwarg through to the model — which no longer exists here
+    now that email is removed — so `manage.py createsuperuser` and any code
+    calling those methods directly needs this email-free version instead."""
+
+    def _create_user(self, username, password, **extra_fields):
+        extra_fields.pop('email', None)
+        if not username:
+            raise ValueError('The given username must be set')
+        user = self.model(username=username, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_user(self, username, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', False)
+        extra_fields.setdefault('is_superuser', False)
+        extra_fields.pop('email', None)
+        return self._create_user(username, password, **extra_fields)
+
+    def create_superuser(self, username, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.pop('email', None)
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Superuser must have is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Superuser must have is_superuser=True.')
+        return self._create_user(username, password, **extra_fields)
+
 
 class User(AbstractUser):
+    # CompuLab doesn't collect/use email (Gmail) addresses anywhere in the
+    # system — accounts are matched by username/ID number instead — so the
+    # inherited AbstractUser.email field is dropped entirely.
+    email = None
+    # AbstractUser defaults REQUIRED_FIELDS to ['email'] (used by
+    # `manage.py createsuperuser`) — with no email field that would break
+    # the command, so it's cleared here.
+    REQUIRED_FIELDS = []
+
+    objects = UserManager()
+
     ROLE_CHOICES = [
         ('admin', 'Admin'),
         ('incharge', 'Lab In-charge'),
@@ -19,8 +64,16 @@ class User(AbstractUser):
         help_text='Students only — e.g. "BSIS 4A". Shown when this student is picked as a requester.'
     )
     department = models.CharField(
-        max_length=100, blank=True, default='',
-        help_text='Instructors only — e.g. "College of Computer Studies". Shown when this instructor is picked as a requester.'
+        max_length=100, blank=True, default='', choices=DEPARTMENT_CHOICES,
+        help_text='Instructors and students — which department/college this account belongs to. '
+                   'Shown wherever this user\'s details are displayed, and determines the year levels '
+                   'available below for students.'
+    )
+    year_level = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text='Students only — year level within the selected Department. '
+                   'The available options depend on which Department is picked, since not every '
+                   'department/program has the same number of year levels.'
     )
     assigned_lab = models.ForeignKey(
         'labs.Lab',
@@ -29,11 +82,23 @@ class User(AbstractUser):
         on_delete=models.SET_NULL,
         related_name='assigned_users'
     )
-    email_notifications_enabled = models.BooleanField(default=True)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
 
     def __str__(self):
         return f'{self.get_full_name()} ({self.role})'
+
+    @property
+    def department_display(self):
+        """Human-readable department name — falls back to the raw stored
+        value for any legacy/free-text department that predates the
+        Department dropdown, so old records don't just show blank."""
+        return department_name(self.department) or self.department
+
+    @property
+    def year_level_display(self):
+        if not self.year_level:
+            return ''
+        return YEAR_LEVEL_LABELS.get(self.year_level, f'Year {self.year_level}')
 
 
 class ActivityLog(models.Model):
@@ -68,3 +133,14 @@ class ActivityLog(models.Model):
 
     def __str__(self):
         return f'{self.get_action_display()} — {self.target_username}'
+
+    @property
+    def actor_display(self):
+        """Safe display name for `actor` — templates should use this instead
+        of chaining `log.actor.get_full_name|default:log.actor.username`,
+        since actor is null=True/SET_NULL (the account may have since been
+        deleted) and that chained lookup blows up with
+        VariableDoesNotExist when actor is None."""
+        if not self.actor:
+            return '—'
+        return self.actor.get_full_name() or self.actor.username

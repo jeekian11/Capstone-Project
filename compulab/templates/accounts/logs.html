@@ -8,7 +8,10 @@
     <h1>System log history</h1>
     <div class="sub">{{ paginator.count }} record{{ paginator.count|pluralize }}</div>
   </div>
-  <a href="{% url 'log_export_pdf' %}?{{ request.GET.urlencode }}" class="action-btn primary">Export as PDF</a>
+  <div style="display:flex; gap:10px;">
+    <a href="{% url 'log_export_pdf' %}?{{ request.GET.urlencode }}&format=pdf" class="action-btn">Export as PDF</a>
+    <a href="{% url 'log_export_pdf' %}?{{ request.GET.urlencode }}&format=excel" class="action-btn primary">Export as Excel</a>
+  </div>
 </div>
 
 <div class="card">
@@ -54,7 +57,7 @@
       {% for log in logs %}
         <tr>
           <td>{{ log.created_at|date:"M d, Y H:i" }}</td>
-          <td>{{ log.actor.get_full_name|default:log.actor.username|default:"—" }}</td>
+          <td>{{ log.actor_display }}</td>
           <td><span class="status-pill pill-{{ log.action }}">{{ log.get_action_display }}</span></td>
           <td>{{ log.target_username }}</td>
           <td style="color:#666">{{ log.details }}</td>

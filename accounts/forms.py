@@ -2,8 +2,21 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from accounts.constants import DEPARTMENT_CHOICES, year_level_choices_for
 
 User = get_user_model()
+
+
+def _validate_department_year_level(cleaned):
+    """Shared rule: if a year level is set, it must be one of the year
+    levels that actually belong to the selected department (departments
+    don't all have the same number of year levels)."""
+    department = cleaned.get('department')
+    year_level = cleaned.get('year_level')
+    if year_level and department:
+        valid_values = {v for v, _ in year_level_choices_for(department)}
+        if year_level not in valid_values:
+            raise ValidationError({'year_level': 'That year level isn\'t offered by the selected department.'})
 
 
 class ProfileUpdateForm(forms.ModelForm):
@@ -13,7 +26,7 @@ class ProfileUpdateForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'email', 'avatar']
+        fields = ['first_name', 'last_name', 'avatar']
 
 
 class AdminUserCreateForm(forms.ModelForm):
@@ -31,8 +44,8 @@ class AdminUserCreateForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'username', 'id_number', 'email', 'role',
-                  'course_year_section', 'department', 'assigned_lab']
+        fields = ['first_name', 'last_name', 'username', 'id_number', 'role',
+                  'course_year_section', 'department', 'year_level', 'assigned_lab']
 
     def clean_username(self):
         username = self.cleaned_data['username']
@@ -51,6 +64,7 @@ class AdminUserCreateForm(forms.ModelForm):
                 validate_password(p1)
             except ValidationError as e:
                 self.add_error('password1', e)
+        _validate_department_year_level(cleaned)
         return cleaned
 
     def save(self, commit=True):
@@ -59,6 +73,27 @@ class AdminUserCreateForm(forms.ModelForm):
         if commit:
             user.save()
         return user
+
+
+class StudentImportForm(forms.Form):
+    """Step one of 'Import Students (Excel/CSV)': pick the department the
+    whole file belongs to, then upload the roster file. Every imported
+    student is filed under this one department — matching the requirement
+    that import is done by department rather than mixed together — and any
+    Year Level column in the file is validated against that department's
+    own year levels."""
+    department = forms.ChoiceField(choices=DEPARTMENT_CHOICES, label='Department')
+    file = forms.FileField(
+        label='Excel or CSV file',
+        help_text='Columns: ID Number, First Name, Last Name, Year Level, Section (optional), Username (optional).'
+    )
+
+    def clean_file(self):
+        f = self.cleaned_data['file']
+        name = (f.name or '').lower()
+        if not (name.endswith('.csv') or name.endswith('.xlsx')):
+            raise ValidationError('Please upload a .csv or .xlsx file.')
+        return f
 
 
 class AdminSetPasswordForm(forms.Form):

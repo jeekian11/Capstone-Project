@@ -2,8 +2,6 @@ from django.views.generic import ListView, FormView
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
-from django.core.mail import send_mail
-from django.conf import settings
 from django.urls import reverse_lazy
 from accounts.mixins import RoleRequiredMixin
 from notifications.models import Notification
@@ -18,7 +16,7 @@ class NotificationsView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         return Notification.objects.filter(
             user=self.request.user
-        ).order_by('-created_at')
+        ).order_by('-pinned', '-created_at')
 
 
 # instructor-specific notifications
@@ -30,7 +28,7 @@ class InstructorAlertsView(RoleRequiredMixin, ListView):
     def get_queryset(self):
         return Notification.objects.filter(
             user=self.request.user
-        ).order_by('-created_at')[:20]
+        ).order_by('-pinned', '-created_at')[:20]
 
 
 # mark one notification as read
@@ -49,6 +47,21 @@ def mark_all_read(request):
     return redirect('notifications')
 
 
+# pin/unpin a notification so it stays at the top of the list
+def toggle_pin(request, pk):
+    notif = get_object_or_404(Notification, pk=pk, user=request.user)
+    notif.pinned = not notif.pinned
+    notif.save()
+    return redirect(request.META.get('HTTP_REFERER', 'notifications'))
+
+
+# delete a single notification
+def delete_notification(request, pk):
+    notif = get_object_or_404(Notification, pk=pk, user=request.user)
+    notif.delete()
+    return redirect(request.META.get('HTTP_REFERER', 'notifications'))
+
+
 # admin/incharge: compose and broadcast a notification to chosen recipients
 class NotificationComposeView(RoleRequiredMixin, FormView):
     allowed_roles = ['admin', 'incharge']
@@ -63,6 +76,11 @@ class NotificationComposeView(RoleRequiredMixin, FormView):
 
         count = 0
         for recipient in recipients:
+            # Don't notify the sender about their own broadcast — this used
+            # to leave admins with a stuck "unread" badge for a notification
+            # that never showed up anywhere they could read/dismiss it.
+            if recipient.pk == self.request.user.pk:
+                continue
             Notification.objects.create(
                 user=recipient,
                 title=title,
@@ -70,16 +88,6 @@ class NotificationComposeView(RoleRequiredMixin, FormView):
                 notification_type=n_type,
             )
             count += 1
-            if recipient.email_notifications_enabled and recipient.email:
-                try:
-                    send_mail(
-                        title, message,
-                        settings.DEFAULT_FROM_EMAIL,
-                        [recipient.email],
-                        fail_silently=True,
-                    )
-                except Exception:
-                    pass  # a broken mail server should never block the notification itself
 
         messages.success(self.request, f'Notification Sent to {count} recipient{"s" if count != 1 else ""}.')
         return super().form_valid(form)

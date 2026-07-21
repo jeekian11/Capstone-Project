@@ -5,9 +5,10 @@
 // that data and updates the DOM to match, every 10 seconds.
 
 const STATUS_LABELS = {
-  online: 'Online',
+  online: 'Available',
   offline: 'Offline',
   in_use: 'In Use',
+  maintenance: 'Under Maintenance',
   issue: 'Has Issue',
 };
 
@@ -35,7 +36,7 @@ async function refreshPcStatuses() {
 
     const pill = row.querySelector('[data-role="status-pill"]');
     if (pill) {
-      pill.className = `status-pill pill-${pc.status}`;
+      pill.className = `ld-pill ${pc.status}`;
       pill.textContent = STATUS_LABELS[pc.status] || pc.status;
     }
 
@@ -44,10 +45,19 @@ async function refreshPcStatuses() {
       userCell.textContent = formatUser(pc) || '\u2014';
     }
   });
+
+  updateLastUpdatedStamp();
+}
+
+function updateLastUpdatedStamp() {
+  const el = document.getElementById('ldLastUpdated');
+  if (!el) return;
+  el.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
 // Only start polling on pages that actually have status pills to update
 // (i.e. the PC Status page in its normal, non "day lookup" view).
 if (document.querySelector('[data-role="status-pill"]')) {
+  updateLastUpdatedStamp();
   setInterval(refreshPcStatuses, 10000);
 }

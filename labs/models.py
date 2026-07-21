@@ -19,9 +19,10 @@ class Lab(models.Model):
 
 class PC(models.Model):
     STATUS = [
-        ('online', 'Online'),
+        ('online', 'Available'),
         ('offline', 'Offline'),
         ('in_use', 'In Use'),
+        ('maintenance', 'Under Maintenance'),
         ('issue', 'Has Issue'),
     ]
     lab = models.ForeignKey(Lab, on_delete=models.CASCADE, related_name='pcs')
@@ -30,7 +31,7 @@ class PC(models.Model):
         null=True, blank=True,
         help_text='Used to actually check whether this PC is reachable on the network.'
     )
-    status = models.CharField(max_length=10, choices=STATUS, default='offline')
+    status = models.CharField(max_length=11, choices=STATUS, default='offline')
     last_active = models.DateTimeField(null=True, blank=True)
     current_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -49,6 +50,48 @@ class PC(models.Model):
 
     def __str__(self):
         return self.pc_id
+
+
+class PCActivityLog(models.Model):
+    """A single 'what was on screen' sample reported by the lab_pc_agent
+    while a PC is unlocked — the active window's title bar text, captured
+    every few seconds (see agent_config.json 'activity_report_interval_seconds').
+
+    For browsers this is normally 'Page Title - Browser Name', which is
+    the closest thing to 'which website' this system tracks — the agent
+    only reads the window title (a standard-library, no-extra-permissions
+    call), never the address bar contents, page HTML, or keystrokes.
+    """
+    pc = models.ForeignKey(PC, on_delete=models.CASCADE, related_name='activity_logs')
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='pc_activity_logs',
+        help_text="Whoever pc.current_user was at the moment this sample was taken.",
+    )
+    session = models.ForeignKey(
+        'scheduling.Session',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='+',
+        help_text="Whichever reservation pc.current_session was at the moment this sample was taken.",
+    )
+    window_title = models.CharField(
+        max_length=500, blank=True,
+        help_text="The active/foreground window's title bar text at the moment of capture.",
+    )
+    captured_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-captured_at']
+        indexes = [
+            models.Index(fields=['pc', '-captured_at']),
+            models.Index(fields=['student', '-captured_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.pc.pc_id} — {self.window_title[:40]}'
 
 
 class InventoryItem(models.Model):
@@ -70,6 +113,8 @@ class InventoryItem(models.Model):
     status = models.CharField(max_length=20, choices=STATUS, default='operational')
     lab = models.ForeignKey(Lab, on_delete=models.CASCADE)
     last_checked = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
 
     def __str__(self):
         return self.name
@@ -120,3 +165,49 @@ class EquipmentIssue(models.Model):
 
     def __str__(self):
         return f'{self.equipment.name} — {self.get_status_display()}'
+
+
+class ReportLog(models.Model):
+    """One row per PDF/Excel report a user has generated from the Reporting
+    & Analytics page. Purely a history/audit trail — the export itself is
+    still built on the fly from live data, this just remembers that it
+    happened (and with which filters) so 'Recent Generated Reports' has
+    something real to show, and the same file can be re-downloaded with
+    the original filters intact.
+    """
+    REPORT_TYPES = [
+        ('lab_utilization', 'Lab Utilization Report'),
+        ('equipment_status', 'Equipment Status Report'),
+        ('instructor_usage', 'Instructor Usage Report'),
+        ('attendance', 'Attendance Report'),
+        ('maintenance', 'Maintenance Report'),
+    ]
+    FORMAT_CHOICES = [('pdf', 'PDF'), ('excel', 'Excel')]
+
+    report_type = models.CharField(max_length=30, choices=REPORT_TYPES)
+    format = models.CharField(max_length=10, choices=FORMAT_CHOICES, default='pdf')
+    generated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name='generated_reports'
+    )
+    # Which lab this report was scoped to at the time it was generated.
+    # Null means "all labs" (an admin generating an unfiltered report).
+    lab = models.ForeignKey(Lab, null=True, blank=True, on_delete=models.SET_NULL)
+    # The raw querystring used (date_from/date_to/lab/instructor/etc.) so the
+    # download link can reproduce the exact same filtered report.
+    params = models.CharField(max_length=255, blank=True, default='')
+    generated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-generated_at']
+
+    def __str__(self):
+        return f'{self.get_report_type_display()} ({self.format}) — {self.generated_at:%Y-%m-%d %H:%M}'
+
+    @property
+    def export_url_name(self):
+        return f'report_{self.report_type}_export'
+
+    @property
+    def filename(self):
+        ext = 'xlsx' if self.format == 'excel' else 'pdf'
+        return f'{self.report_type}_report.{ext}'

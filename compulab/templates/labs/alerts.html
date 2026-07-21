@@ -2,6 +2,7 @@
 {% block title %}Notifications & Alerts{% endblock %}
 
 {% block content %}
+{% include "notifications/_item_assets.html" %}
 
 <div class="page-header">
   <div>
@@ -15,14 +16,8 @@
 </div>
 
 <div class="card">
-  {% for alert in alerts %}
-    <div class="alert-item" style="padding:12px 0; border-bottom:1px solid #f0f0f0;">
-      <div style="flex:1">
-        <div class="alert-title" style="font-weight:500">{{ alert.title }}</div>
-        <div class="alert-sub" style="color:#888; font-size:12.5px">{{ alert.message }}</div>
-      </div>
-      <div class="alert-time" style="color:#aaa; font-size:11px">{{ alert.created_at|timesince }} ago</div>
-    </div>
+  {% for notif in alerts %}
+    {% include "notifications/_item.html" with notif=notif %}
   {% empty %}
     <p class="empty">No alerts right now.</p>
   {% endfor %}

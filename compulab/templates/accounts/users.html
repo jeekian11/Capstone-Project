@@ -1,75 +1,434 @@
 {% extends "base.html" %}
-{% block title %}User Management{% endblock %}
+{% load static %}
+{% block title %}User & Role Management{% endblock %}
 
 {% block content %}
 
-<div class="page-header">
-  <div>
-    <h1>User &amp; role management</h1>
-    <div class="sub">{{ users|length }} accounts</div>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+<style>
+.um{
+  --um-bg:#0a0e12; --um-card:#12171d; --um-border:#232b34;
+  --um-text:#e7ebee; --um-dim:#8b98a3; --um-faint:#4d5761;
+  --um-purple:#a78bfa; --um-green:#3ed6c4; --um-blue:#5b9dff;
+  --um-orange:#f2a93b; --um-red:#ff5d5d; --um-gold:#facc15;
+  font-family:'Inter',sans-serif; background:var(--um-bg); color:var(--um-text);
+  margin:-20px; padding:20px; min-height:100%;
+}
+.um h1,.um h2,.um h3{font-family:'Space Grotesk',sans-serif;}
+.um a{color:var(--um-blue); text-decoration:none;}
+.um a:hover{text-decoration:underline;}
+.um-card{background:var(--um-card); border:1px solid var(--um-border); border-radius:14px; padding:18px 20px; box-shadow:0 1px 2px rgba(0,0,0,.2);}
+
+.um-metrics{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; margin-bottom:20px;}
+.um-metric{display:flex; align-items:center; gap:12px;}
+.um-metric-icon{width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 8px rgba(0,0,0,.25);}
+.um-metric-icon svg{width:20px; height:20px;}
+.um-metric-label{font-size:12px; color:var(--um-dim); font-weight:500;}
+.um-metric-val{font-size:22px; font-weight:700; letter-spacing:-0.01em; margin-top:2px;}
+.um-metric-sub{font-size:11.5px; color:var(--um-faint); margin-top:2px;}
+.ic-blue{background:var(--um-blue); color:#fff;}
+.ic-green{background:var(--um-green); color:#0a0e12;}
+.ic-purple{background:var(--um-purple); color:#fff;}
+.ic-orange{background:var(--um-orange); color:#0a0e12;}
+.ic-gold{background:var(--um-gold); color:#0a0e12;}
+
+.um-filter-form{display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1.4fr auto auto; gap:14px; align-items:end;}
+.um-label{font-size:12px; font-weight:500; color:var(--um-dim); margin-bottom:6px; display:block;}
+.um-input, .um-select{width:100%; padding:9px 12px; border:1px solid var(--um-border); border-radius:8px; font-size:13px; background:var(--um-bg); color:var(--um-text); font-family:inherit;}
+.um-btn{display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:8px; border:1px solid var(--um-border); background:var(--um-card); color:var(--um-text); font-size:13px; font-weight:500; cursor:pointer; white-space:nowrap;}
+.um-btn.primary{background:var(--um-blue); border-color:var(--um-blue); color:#fff; font-weight:600;}
+.um-btn:hover{border-color:var(--um-faint);}
+.um-btn svg{width:14px; height:14px;}
+
+.um-tabs{display:flex; gap:22px; border-bottom:1px solid var(--um-border); margin-bottom:16px; overflow-x:auto;}
+.um-tab{padding:10px 2px 12px; font-size:13.5px; font-weight:500; color:var(--um-dim); white-space:nowrap; border-bottom:2px solid transparent; margin-bottom:-1px;}
+.um-tab:hover{color:var(--um-text); text-decoration:none;}
+.um-tab.active{color:var(--um-blue); border-bottom-color:var(--um-blue); font-weight:600;}
+.um-tab .count{color:var(--um-faint); font-weight:500;}
+.um-tab.active .count{color:var(--um-blue);}
+
+.um-row-main{display:grid; grid-template-columns:1fr 300px; gap:16px; margin-bottom:16px; align-items:start;}
+.um-section-title{font-size:13px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--um-text); margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;}
+.um-section-title a{font-size:12px; font-weight:500; text-transform:none; letter-spacing:0;}
+
+.um-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+.um-table th{text-align:left; padding:8px 10px; color:var(--um-dim); font-weight:600; border-bottom:1px solid var(--um-border); font-size:10.5px; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap;}
+.um-table td{padding:9px 10px; border-bottom:1px solid var(--um-border); color:var(--um-text); white-space:nowrap;}
+.um-table tr:hover td{background:rgba(255,255,255,0.02);}
+.um-name-cell{display:flex; align-items:center; gap:10px;}
+.um-avatar{width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0;}
+.um-name-main{font-weight:600; color:var(--um-text); white-space:nowrap;}
+.um-name-sub{font-size:11px; color:var(--um-faint); margin-top:1px;}
+.um-pill{font-size:10.5px; font-weight:700; padding:4px 10px; border-radius:6px; white-space:nowrap; display:inline-block;}
+.um-pill.admin{background:var(--um-blue); color:#fff;}
+.um-pill.incharge{background:var(--um-purple); color:#fff;}
+.um-pill.instructor{background:var(--um-orange); color:#0a0e12;}
+.um-pill.student{background:var(--um-gold); color:#0a0e12;}
+.um-status{display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:500;}
+.um-status-dot{width:7px; height:7px; border-radius:50%; flex-shrink:0;}
+.um-status.active .um-status-dot{background:var(--um-green);}
+.um-status.active{color:var(--um-green);}
+.um-status.inactive .um-status-dot{background:var(--um-orange);}
+.um-status.inactive{color:var(--um-orange);}
+.um-actions{display:flex; gap:6px;}
+.um-icon-btn{width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:7px; border:1px solid var(--um-border); background:var(--um-card); color:var(--um-dim); cursor:pointer;}
+.um-icon-btn svg{width:13px; height:13px;}
+.um-icon-btn:hover{border-color:var(--um-faint); color:var(--um-text);}
+.um-icon-btn.danger:hover{border-color:var(--um-red); color:var(--um-red);}
+.um-checkbox{width:15px; height:15px; accent-color:var(--um-blue); cursor:pointer;}
+
+.um-donut-wrap{display:flex; align-items:center; gap:20px;}
+.um-donut-legend{flex:1; display:flex; flex-direction:column; gap:10px;}
+.um-donut-legend-item{display:flex; align-items:center; gap:8px; font-size:12px;}
+.um-donut-dot{width:9px; height:9px; border-radius:50%; flex-shrink:0;}
+.um-donut-legend-item .lbl{flex:1; color:var(--um-dim);}
+.um-donut-legend-item .val{font-weight:600; color:var(--um-text);}
+
+.um-quick-action{display:flex; align-items:center; gap:10px; padding:10px 0; font-size:13px; color:var(--um-text); border-bottom:1px solid var(--um-border);}
+.um-quick-action:last-child{border-bottom:none;}
+.um-quick-action svg{width:16px; height:16px; flex-shrink:0; color:var(--um-dim);}
+
+.um-feed-item{display:flex; align-items:flex-start; gap:10px; padding:9px 0; border-bottom:1px solid var(--um-border);}
+.um-feed-item:first-child{padding-top:0;}
+.um-feed-item:last-child{border-bottom:none; padding-bottom:0;}
+.um-feed-icon{width:26px; height:26px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center;}
+.um-feed-icon svg{width:13px; height:13px;}
+.um-feed-title{font-size:12.5px; font-weight:500; color:var(--um-text); line-height:1.35;}
+.um-feed-time{font-size:10.5px; color:var(--um-faint); margin-top:1px;}
+
+.um-pagination{display:flex; align-items:center; justify-content:space-between; margin-top:14px; font-size:12px; color:var(--um-dim); flex-wrap:wrap; gap:10px;}
+.um-page-btns{display:flex; gap:6px; align-items:center;}
+.um-page-btn{min-width:28px; height:28px; padding:0 4px; display:flex; align-items:center; justify-content:center; border-radius:6px; border:1px solid var(--um-border); color:var(--um-text); font-size:12px;}
+.um-page-btn.active{background:var(--um-blue); border-color:var(--um-blue); color:#fff; font-weight:700;}
+.um-page-btn.disabled{opacity:.35; pointer-events:none;}
+.um-per-page{padding:5px 10px; border:1px solid var(--um-border); border-radius:6px; background:var(--um-bg); color:var(--um-text); font-size:12px; font-family:inherit;}
+
+.um-empty{color:var(--um-faint); font-size:13px; text-align:center; padding:24px 0;}
+
+@media (max-width:1200px){
+  .um-row-main{grid-template-columns:1fr;}
+  .um-filter-form{grid-template-columns:1fr 1fr;}
+}
+</style>
+
+<div class="um">
+
+  <div class="page-header" style="margin-bottom:18px;">
+    <div>
+      <h1 style="font-size:20px; font-weight:600; margin:0;">User &amp; Role Management</h1>
+      <div class="sub" style="color:var(--um-dim); font-size:13px; margin-top:4px;">
+        Manage accounts, roles, and lab assignments across the system
+      </div>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <a href="{% url 'log_history' %}" class="um-btn">View log history</a>
+      <a href="{% url 'user_import' %}" class="um-btn">&#8593; Import Students</a>
+      <a href="{% url 'user_create' %}" class="um-btn primary">+ Add User</a>
+    </div>
   </div>
-  <a href="{% url 'user_create' %}" class="action-btn primary">+ Add user</a>
-  <a href="{% url 'log_history' %}" class="action-btn" style="margin-left:8px">View log history</a>
+
+  <div class="um-metrics">
+    <div class="um-card um-metric">
+      <div class="um-metric-icon ic-blue">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="um-metric-label">Total Users</div>
+        <div class="um-metric-val">{{ total_count }}</div>
+        <div class="um-metric-sub">All registered accounts</div>
+      </div>
+    </div>
+    <div class="um-card um-metric">
+      <div class="um-metric-icon ic-green">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5l-8-3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="um-metric-label">Admin</div>
+        <div class="um-metric-val">{{ admin_count }}</div>
+        <div class="um-metric-sub">System administrators</div>
+      </div>
+    </div>
+    <div class="um-card um-metric">
+      <div class="um-metric-icon ic-purple">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M20 21a8 8 0 0 0-16 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="8" r="5" stroke="currentColor" stroke-width="1.8"/></svg>
+      </div>
+      <div>
+        <div class="um-metric-label">Lab In-charge</div>
+        <div class="um-metric-val">{{ incharge_count }}</div>
+        <div class="um-metric-sub">Laboratory in-charges</div>
+      </div>
+    </div>
+    <div class="um-card um-metric">
+      <div class="um-metric-icon ic-orange">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="um-metric-label">Instructor</div>
+        <div class="um-metric-val">{{ instructor_count }}</div>
+        <div class="um-metric-sub">Registered instructors</div>
+      </div>
+    </div>
+    <div class="um-card um-metric">
+      <div class="um-metric-icon ic-gold">
+        <svg viewBox="0 0 24 24" fill="none"><path d="m22 10-10-5L2 10l10 5 10-5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="um-metric-label">Student</div>
+        <div class="um-metric-val">{{ student_count }}</div>
+        <div class="um-metric-sub">Student accounts</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="um-card" style="margin-bottom:16px;">
+    <form method="get" class="um-filter-form">
+      <div>
+        <label class="um-label" for="role">Role</label>
+        <select name="role" id="role" class="um-select">
+          <option value="">All Roles</option>
+          {% for value, label, count in role_tabs %}
+            <option value="{{ value }}" {% if selected_role == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="um-label" for="lab">Laboratory</label>
+        <select name="lab" id="lab" class="um-select">
+          <option value="">All Laboratories</option>
+          {% for lab in all_labs %}
+            <option value="{{ lab.pk }}" {% if selected_lab == lab.pk|stringformat:"s" %}selected{% endif %}>{{ lab.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="um-label" for="status">Status</label>
+        <select name="status" id="status" class="um-select">
+          <option value="">All Status</option>
+          <option value="active" {% if selected_status == "active" %}selected{% endif %}>Active</option>
+          <option value="inactive" {% if selected_status == "inactive" %}selected{% endif %}>Disabled</option>
+        </select>
+      </div>
+      <div>
+        <label class="um-label" for="department">Department</label>
+        <select name="department" id="department" class="um-select">
+          <option value="">All Departments</option>
+          {% for value, label in department_choices %}
+            <option value="{{ value }}" {% if selected_department == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="um-label" for="q">Search</label>
+        <input type="text" name="q" id="q" class="um-input" placeholder="Search name, username, or ID..." value="{{ search_query }}">
+      </div>
+      <div>
+        <a href="{% url 'user_export' %}?role={{ selected_role }}&lab={{ selected_lab }}&status={{ selected_status }}&department={{ selected_department }}&q={{ search_query }}&format=pdf" class="um-btn">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Export
+        </a>
+      </div>
+      <div><button type="submit" class="um-btn primary">Filter</button></div>
+      {% if filtered %}
+        <div style="grid-column:1/-1;"><a href="{% url 'users' %}">Clear filters</a></div>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="um-tabs">
+    <a href="?" class="um-tab {% if not selected_role %}active{% endif %}">All Users <span class="count">({{ total_count }})</span></a>
+    {% for value, label, count in role_tabs %}
+      <a href="?role={{ value }}" class="um-tab {% if selected_role == value %}active{% endif %}">{{ label }} <span class="count">({{ count }})</span></a>
+    {% endfor %}
+  </div>
+
+  <div class="um-row-main">
+    <div class="um-card">
+      <div class="um-section-title">
+        All Users
+        <span style="color:var(--um-dim); font-weight:500; text-transform:none;">{{ total_filtered }} user{{ total_filtered|pluralize }}</span>
+      </div>
+      {% if page_obj.object_list %}
+      <div style="overflow-x:auto;">
+        <table class="um-table">
+          <thead>
+            <tr>
+              <th><input type="checkbox" class="um-checkbox" onclick="document.querySelectorAll('.um-row-check').forEach(c=>c.checked=this.checked)"></th>
+              <th>#</th>
+              <th>Name</th>
+              <th>Username</th>
+              <th>ID Number</th>
+              <th>Department</th>
+              <th>Role</th>
+              <th>Assigned Lab</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in page_obj.object_list %}
+              <tr>
+                <td><input type="checkbox" class="um-checkbox um-row-check"></td>
+                <td>{{ forloop.counter0|add:page_obj.start_index }}</td>
+                <td>
+                  <div class="um-name-cell">
+                    <div class="um-avatar ic-{% if u.role == 'admin' %}blue{% elif u.role == 'incharge' %}purple{% elif u.role == 'instructor' %}orange{% else %}gold{% endif %}">
+                      {{ u.first_name|first|default:u.username|first|upper }}
+                    </div>
+                    <div>
+                      <div class="um-name-main">{{ u.get_full_name|default:u.username }}</div>
+                      <div class="um-name-sub">{{ u.get_role_display }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>{{ u.username }}</td>
+                <td>{{ u.id_number|default:"—" }}</td>
+                <td>{{ u.department_display|default:"—" }}</td>
+                <td><span class="um-pill {{ u.role }}">{{ u.get_role_display }}</span></td>
+                <td>{{ u.assigned_lab.name|default:"—" }}</td>
+                <td>
+                  {% if u.is_active %}
+                    <span class="um-status active"><span class="um-status-dot"></span>Active</span>
+                  {% else %}
+                    <span class="um-status inactive"><span class="um-status-dot"></span>Disabled</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="um-actions">
+                    <a href="{% url 'user_update' u.pk %}" class="um-icon-btn" title="Edit user">
+                      <svg viewBox="0 0 24 24" fill="none"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </a>
+                    <a href="{% url 'user_reset_password' u.pk %}" class="um-icon-btn" title="Reset password">
+                      <svg viewBox="0 0 24 24" fill="none"><circle cx="8" cy="15" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M10.5 12.5 20 3M17 6l2.5 2.5M14 9l2 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </a>
+                    {% if u.is_active %}
+                      <form method="post" action="{% url 'user_deactivate' u.pk %}" style="display:inline"
+                            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Deactivate this account?', text: '{{ u.get_full_name|default:u.username|escapejs }} won\'t be able to log in or hold a reservation until reactivated.', confirmButtonText: 'Yes, deactivate'}); return false;">
+                        {% csrf_token %}
+                        <button type="submit" class="um-icon-btn" title="Deactivate">
+                          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M6 6l12 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                        </button>
+                      </form>
+                    {% else %}
+                      <form method="post" action="{% url 'user_activate' u.pk %}" style="display:inline"
+                            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Activate this account?', text: '{{ u.get_full_name|default:u.username|escapejs }} will be able to log in again.', icon: 'question', confirmButtonText: 'Yes, activate', confirmButtonColor: '#3ed6c4'}); return false;">
+                        {% csrf_token %}
+                        <button type="submit" class="um-icon-btn" title="Activate">
+                          <svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+                      </form>
+                    {% endif %}
+                    <form method="post" action="{% url 'user_delete' u.pk %}" style="display:inline"
+                          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this user?', text: 'This action cannot be undone. {{ u.get_full_name|default:u.username|escapejs }} and all of their account data will be permanently removed.', confirmButtonText: 'Yes, delete user'}); return false;">
+                      {% csrf_token %}
+                      <button type="submit" class="um-icon-btn danger" title="Delete user">
+                        <svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="um-pagination">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span>Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ total_filtered }} users</span>
+          <form method="get" style="display:inline;">
+            {% for key, value in request.GET.items %}{% if key != 'per_page' and key != 'page' %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endif %}{% endfor %}
+            <select name="per_page" class="um-per-page" onchange="this.form.submit()">
+              <option value="10" {% if selected_per_page == 10 %}selected{% endif %}>10 per page</option>
+              <option value="25" {% if selected_per_page == 25 %}selected{% endif %}>25 per page</option>
+              <option value="50" {% if selected_per_page == 50 %}selected{% endif %}>50 per page</option>
+            </select>
+          </form>
+        </div>
+        <div class="um-page-btns">
+          {% if page_obj.has_previous %}
+            <a class="um-page-btn" href="?{{ request.GET.urlencode }}&page=1">&laquo;</a>
+            <a class="um-page-btn" href="?{{ request.GET.urlencode }}&page={{ page_obj.previous_page_number }}">&lsaquo;</a>
+          {% else %}
+            <span class="um-page-btn disabled">&laquo;</span>
+            <span class="um-page-btn disabled">&lsaquo;</span>
+          {% endif %}
+          {% for num in page_obj.paginator.page_range %}
+            {% if num == page_obj.number %}
+              <span class="um-page-btn active">{{ num }}</span>
+            {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+              <a class="um-page-btn" href="?{{ request.GET.urlencode }}&page={{ num }}">{{ num }}</a>
+            {% endif %}
+          {% endfor %}
+          {% if page_obj.has_next %}
+            <a class="um-page-btn" href="?{{ request.GET.urlencode }}&page={{ page_obj.next_page_number }}">&rsaquo;</a>
+            <a class="um-page-btn" href="?{{ request.GET.urlencode }}&page={{ page_obj.paginator.num_pages }}">&raquo;</a>
+          {% else %}
+            <span class="um-page-btn disabled">&rsaquo;</span>
+            <span class="um-page-btn disabled">&raquo;</span>
+          {% endif %}
+        </div>
+      </div>
+      {% else %}
+        <p class="um-empty">No users match this filter.</p>
+      {% endif %}
+    </div>
+
+    <div>
+      <div class="um-card" style="margin-bottom:16px;">
+        <div class="um-section-title">Role Distribution</div>
+        <div class="um-donut-wrap">
+          <div style="width:110px; height:110px; flex-shrink:0;"><canvas id="roleDonut"></canvas></div>
+          <div class="um-donut-legend">
+            {% for entry in role_distribution %}
+              <div class="um-donut-legend-item">
+                <span class="um-donut-dot" style="background:{% if entry.key == 'admin' %}#5b9dff{% elif entry.key == 'incharge' %}#a78bfa{% elif entry.key == 'instructor' %}#f2a93b{% else %}#facc15{% endif %}"></span>
+                <span class="lbl">{{ entry.label }}</span>
+                <span class="val">{{ entry.count }} ({{ entry.pct }}%)</span>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="um-card" style="margin-bottom:16px;">
+        <div class="um-section-title">Quick Actions</div>
+        <a href="{% url 'user_create' %}" class="um-quick-action">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M19 8v6M22 11h-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          Add New User
+        </a>
+        <a href="{% url 'log_history' %}" class="um-quick-action">
+          <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.8"/></svg>
+          View Log History
+        </a>
+        <a href="{% url 'user_export' %}?role={{ selected_role }}&lab={{ selected_lab }}&status={{ selected_status }}&department={{ selected_department }}&q={{ search_query }}&format=excel" class="um-quick-action">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Download Report (Excel)
+        </a>
+      </div>
+    </div>
+  </div>
+
 </div>
 
-<div class="card">
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Username</th>
-        <th>ID Number</th>
-        <th>Email</th>
-        <th>Role</th>
-        <th>Assigned lab</th>
-        <th>Status</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for u in users %}
-        <tr>
-          <td>{{ u.get_full_name|default:u.username }}</td>
-          <td>{{ u.username }}</td>
-          <td>{{ u.id_number|default:"—" }}</td>
-          <td>{{ u.email|default:"—" }}</td>
-          <td><span class="status-pill pill-{{ u.role }}">{{ u.get_role_display }}</span></td>
-          <td>{{ u.assigned_lab.name|default:"—" }}</td>
-          <td>
-            {% if u.is_active %}
-              <span class="status-pill pill-online">Active</span>
-            {% else %}
-              <span class="status-pill pill-offline">Disabled</span>
-            {% endif %}
-          </td>
-          <td style="white-space:nowrap; display:flex; gap:6px;">
-            <a href="{% url 'user_update' u.pk %}" class="action-btn icon-only" title="Edit user"><svg><use href="#icon-edit"/></svg></a>
-            {% if u.is_active %}
-              <form method="post" action="{% url 'user_deactivate' u.pk %}" style="display:inline"
-                    onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Deactivate this account?', text: '{{ u.get_full_name|default:u.username|escapejs }} won\'t be able to log in or hold a reservation until reactivated.', confirmButtonText: 'Yes, deactivate'}); return false;">
-                {% csrf_token %}
-                <button type="submit" class="action-btn small">Deactivate</button>
-              </form>
-            {% else %}
-              <form method="post" action="{% url 'user_activate' u.pk %}" style="display:inline"
-                    onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Activate this account?', text: '{{ u.get_full_name|default:u.username|escapejs }} will be able to log in again.', icon: 'question', confirmButtonText: 'Yes, activate', confirmButtonColor: '#3ed6c4'}); return false;">
-                {% csrf_token %}
-                <button type="submit" class="action-btn small primary">Activate</button>
-              </form>
-            {% endif %}
-            <a href="{% url 'user_reset_password' u.pk %}" class="action-btn small">Reset password</a>
-            <form method="post" action="{% url 'user_delete' u.pk %}" style="display:inline"
-                  onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this user?', text: 'This action cannot be undone. {{ u.get_full_name|default:u.username|escapejs }} and all of their account data will be permanently removed.', confirmButtonText: 'Yes, delete user'}); return false;">
-              {% csrf_token %}
-              <button type="submit" class="action-btn icon-only danger" title="Delete user"><svg><use href="#icon-trash"/></svg></button>
-            </form>
-          </td>
-        </tr>
-      {% empty %}
-        <tr><td colspan="7"><p class="empty">No users yet.</p></td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+<script>
+(function () {
+  Chart.defaults.font.family = 'Inter, sans-serif';
+  Chart.defaults.color = '#8b98a3';
+  new Chart(document.getElementById('roleDonut'), {
+    type: 'doughnut',
+    data: {
+      labels: [{% for entry in role_distribution %}'{{ entry.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+      datasets: [{
+        data: [{% for entry in role_distribution %}{{ entry.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+        backgroundColor: ['#5b9dff', '#a78bfa', '#f2a93b', '#facc15'],
+        borderWidth: 0,
+      }]
+    },
+    options: { cutout: '68%', plugins: { legend: { display: false }, tooltip: { enabled: true } }, responsive: true, maintainAspectRatio: false }
+  });
+})();
+</script>
 
 {% endblock %}

@@ -1,0 +1,421 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}PC Activity Log{% endblock %}
+
+{% block content %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+<style>
+  .pal-stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 16px; }
+  .pal-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; display: flex; align-items: center; gap: 12px; }
+  .pal-stat-icon { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .pal-stat-icon svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .pal-stat-val { font-family: var(--font-display); font-size: 19px; font-weight: 700; color: var(--text); line-height: 1.15; }
+  .pal-stat-label { font-size: 11px; color: var(--text-dim); line-height: 1.3; margin-top: 1px; }
+
+  .pal-filters-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; align-items: end; }
+  .pal-filters-actions { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
+
+  .pal-layout { display: flex; gap: 14px; align-items: flex-start; }
+  .pal-main { flex: 1 1 66%; min-width: 0; }
+  .pal-side { flex: 1 1 34%; min-width: 300px; position: sticky; top: 0; }
+
+  .pal-timeline-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+  .pal-timeline-actions { display: flex; gap: 8px; }
+  .pal-pagination { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; flex-wrap: wrap; gap: 10px; }
+  .pal-page-links { display: flex; gap: 4px; align-items: center; }
+  .pal-page-link { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 28px; padding: 0 6px; border-radius: 6px; border: 1px solid var(--border); font-size: 12px; color: var(--text-dim); text-decoration: none; }
+  .pal-page-link.active { background: var(--topbar-accent); border-color: var(--topbar-accent); color: var(--topbar-ink-1); font-weight: 600; }
+  .pal-page-link.disabled { opacity: .4; pointer-events: none; }
+
+  .pal-activity-pill { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+  .pal-activity-pill.active { background: var(--green-dim); color: var(--green); }
+  .pal-activity-pill.completed { background: var(--amber-dim); color: var(--amber); }
+
+  .pal-detail-row { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border-soft); font-size: 12.5px; }
+  .pal-detail-row:last-child { border-bottom: none; }
+  .pal-detail-label { color: var(--text-dim); }
+  .pal-detail-val { color: var(--text); font-weight: 500; text-align: right; }
+
+  .pal-mini-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+  .pal-mini-table th { text-align: left; padding: 5px 6px; color: var(--text-dim); font-weight: 500; font-size: 10px; text-transform: uppercase; letter-spacing: .03em; border-bottom: 1px solid var(--border); }
+  .pal-mini-table td { padding: 6px; border-bottom: 1px solid var(--border-soft); color: var(--text); }
+  .pal-mini-scroll { max-height: 220px; overflow-y: auto; }
+
+  .pal-bottom-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-top: 14px; }
+
+  .pal-donut-wrap { display: flex; align-items: center; gap: 18px; }
+  .pal-donut-legend { flex: 1; display: flex; flex-direction: column; gap: 9px; }
+  .pal-donut-legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .pal-donut-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .pal-donut-legend-item .lbl { flex: 1; color: var(--text-dim); }
+  .pal-donut-legend-item .val { font-weight: 600; color: var(--text); }
+
+  .pal-bar-row { margin-bottom: 12px; }
+  .pal-bar-row:last-child { margin-bottom: 0; }
+  .pal-bar-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
+  .pal-bar-label .name { color: var(--text); font-weight: 500; }
+  .pal-bar-label .dur { color: var(--text-dim); }
+  .pal-bar-track { height: 7px; border-radius: 4px; background: var(--surface-raised); overflow: hidden; }
+  .pal-bar-fill { height: 100%; border-radius: 4px; background: var(--topbar-accent); }
+
+  .pal-quick-actions { display: flex; flex-direction: column; gap: 8px; }
+  .pal-quick-actions .action-btn { justify-content: flex-start; width: 100%; }
+
+  @media (max-width: 1200px) {
+    .pal-stats { grid-template-columns: repeat(3, 1fr); }
+    .pal-filters-grid { grid-template-columns: repeat(3, 1fr); }
+    .pal-layout { flex-direction: column; }
+    .pal-side { position: static; width: 100%; }
+    .pal-bottom-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="page-header">
+  <div>
+    <h1>PC Activity Log</h1>
+    <div class="sub">Monitor all activities performed on PCs in the laboratory.</div>
+  </div>
+</div>
+
+<div class="pal-stats">
+  <div class="pal-stat">
+    <div class="pal-stat-icon" style="background: var(--green-dim); color: var(--green);">
+      <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 20h8M12 16v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </div>
+    <div>
+      <div class="pal-stat-val">{{ stats.total_sessions_today }}</div>
+      <div class="pal-stat-label">Sessions Today</div>
+    </div>
+  </div>
+  <div class="pal-stat">
+    <div class="pal-stat-icon" style="background: var(--blue-dim); color: var(--blue);">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </div>
+    <div>
+      <div class="pal-stat-val">{{ stats.active_students_now }}</div>
+      <div class="pal-stat-label">Active Students Now</div>
+    </div>
+  </div>
+  <div class="pal-stat">
+    <div class="pal-stat-icon" style="background: rgba(167,139,250,0.14); color: #a78bfa;">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+    </div>
+    <div>
+      <div class="pal-stat-val">{{ stats.total_logs_today }}</div>
+      <div class="pal-stat-label">Total Logs Today</div>
+    </div>
+  </div>
+  <div class="pal-stat">
+    <div class="pal-stat-icon" style="background: var(--amber-dim); color: var(--amber);">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div>
+      <div class="pal-stat-val">{{ stats.avg_session_duration }}</div>
+      <div class="pal-stat-label">Avg Session Duration</div>
+    </div>
+  </div>
+  <div class="pal-stat">
+    <div class="pal-stat-icon" style="background: var(--green-dim); color: var(--green);">
+      <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 20h8M12 16v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </div>
+    <div>
+      <div class="pal-stat-val">{{ stats.active_pcs_now }}</div>
+      <div class="pal-stat-label">Active PCs Now</div>
+    </div>
+  </div>
+  <div class="pal-stat">
+    <div class="pal-stat-icon" style="background: var(--red-dim); color: var(--red-soft);">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M3 12h4l2 8 4-16 2 8h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div>
+      <div class="pal-stat-val">{{ stats.pc_utilization_pct }}%</div>
+      <div class="pal-stat-label">PC Utilization Today</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" class="pal-filters-grid">
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label" for="lab">Laboratory</label>
+      <select name="lab" id="lab" class="form-control">
+        <option value="">All Laboratories</option>
+        {% for lab in all_labs %}
+          <option value="{{ lab.pk }}" {% if selected_lab == lab.pk|stringformat:"s" %}selected{% endif %}>{{ lab.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label" for="pc">PC</label>
+      <select name="pc" id="pc" class="form-control">
+        <option value="">All PCs</option>
+        {% for pc in all_pcs %}
+          <option value="{{ pc.pk }}" {% if selected_pc == pc.pk|stringformat:"s" %}selected{% endif %}>{{ pc.lab.name }} — {{ pc.pc_id }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label" for="student">Student</label>
+      <select name="student" id="student" class="form-control">
+        <option value="">All Students</option>
+        {% for s in all_students %}
+          <option value="{{ s.pk }}" {% if selected_student == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.get_full_name|default:s.username }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label" for="day">Date</label>
+      <input type="date" name="day" id="day" class="form-control" value="{{ selected_day }}">
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label" for="time_range">Time Range</label>
+      <select name="time_range" id="time_range" class="form-control">
+        <option value="" {% if not selected_time_range %}selected{% endif %}>All Day</option>
+        <option value="morning" {% if selected_time_range == 'morning' %}selected{% endif %}>Morning (6AM–12PM)</option>
+        <option value="afternoon" {% if selected_time_range == 'afternoon' %}selected{% endif %}>Afternoon (12PM–6PM)</option>
+        <option value="evening" {% if selected_time_range == 'evening' %}selected{% endif %}>Evening (6PM–12AM)</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label" for="q">Search</label>
+      <input type="text" name="q" id="q" class="form-control" placeholder="PC ID, student name, application…" value="{{ search_query }}">
+    </div>
+    <div class="pal-filters-actions" style="grid-column: 1 / -1;">
+      {% if filtered %}<a href="{% url 'pc_activity_log' %}" class="action-btn">Reset</a>{% endif %}
+      <button type="submit" class="action-btn primary">Filter</button>
+    </div>
+  </form>
+</div>
+
+<div class="pal-layout">
+  <div class="pal-main">
+    <div class="card">
+      <div class="pal-timeline-head">
+        <div class="section-title" style="margin-bottom:0;">Activity Timeline</div>
+        <div class="pal-timeline-actions">
+          <a href="{% url 'export_pc_activity_log' %}?{{ request.GET.urlencode }}&format=pdf" class="action-btn small">Export as PDF</a>
+          <a href="{% url 'export_pc_activity_log' %}?{{ request.GET.urlencode }}&format=excel" class="action-btn small primary">Export as Excel</a>
+          <form method="post" action="{% url 'delete_pc_activity_log' %}"
+                onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {
+                  title: {% if filtered %}'Delete filtered logs?'{% else %}'Delete ALL activity logs?'{% endif %},
+                  text: {% if filtered %}'This deletes every sample matching the current filters. This cannot be undone.'{% else %}'This deletes every PC activity log in the system — not just what\'s filtered. This cannot be undone. Export a backup first if you need one.'{% endif %},
+                  confirmButtonText: 'Yes, delete'
+                });">
+            {% csrf_token %}
+            <input type="hidden" name="lab" value="{{ selected_lab }}">
+            <input type="hidden" name="pc" value="{{ selected_pc }}">
+            <input type="hidden" name="student" value="{{ selected_student }}">
+            <input type="hidden" name="day" value="{{ selected_day }}">
+            <input type="hidden" name="time_range" value="{{ selected_time_range }}">
+            <input type="hidden" name="q" value="{{ search_query }}">
+            <input type="hidden" name="return_qs" value="{{ request.GET.urlencode }}">
+            <button type="submit" class="action-btn small" style="border-color:#ff5d5d; color:#ff5d5d;">
+              {% if filtered %}Delete filtered{% else %}Delete old logs{% endif %}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div style="overflow-x:auto;">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Time</th><th>Student</th><th>PC</th><th>Activity</th>
+              <th>Application / Window</th><th>Duration</th><th>Status</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in timeline %}
+              <tr>
+                <td style="white-space:nowrap;">{{ row.time|date:"g:i A" }}</td>
+                <td>{% if row.student %}{{ row.student.get_full_name|default:row.student.username }}{% else %}—{% endif %}</td>
+                <td>{{ row.pc.pc_id }}</td>
+                <td>{{ row.activity }}</td>
+                <td>{{ row.application|default:"—" }}</td>
+                <td>{{ row.duration_display }}</td>
+                <td><span class="pal-activity-pill {{ row.status }}">{% if row.status == 'active' %}Active{% else %}Completed{% endif %}</span></td>
+                <td style="white-space:nowrap;">
+                  <a class="action-btn icon-only small"
+                     href="?lab={{ selected_lab }}&pc={{ selected_pc }}&student={{ selected_student }}&day={{ selected_day }}&time_range={{ selected_time_range }}&q={{ search_query|urlencode }}&page={{ page }}&session={{ row.session_key }}#session-details"
+                     title="View session">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/></svg>
+                  </a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="8" class="empty">No activity samples{% if filtered %} match this filter{% endif %} yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pal-pagination">
+        <div style="font-size:12px; color:var(--text-dim);">
+          {% if total_entries %}Showing {{ page_start }} to {{ page_end }} of {{ total_entries }} entries{% else %}No entries{% endif %}
+        </div>
+        <div class="pal-page-links">
+          <a class="pal-page-link {% if page <= 1 %}disabled{% endif %}"
+             href="?lab={{ selected_lab }}&pc={{ selected_pc }}&student={{ selected_student }}&day={{ selected_day }}&time_range={{ selected_time_range }}&q={{ search_query|urlencode }}&page={{ page|add:"-1" }}">‹</a>
+          {% for p in page_range %}
+            {% if p == 1 or p == total_pages or p >= page|add:"-2" and p <= page|add:"2" %}
+              <a class="pal-page-link {% if p == page %}active{% endif %}"
+                 href="?lab={{ selected_lab }}&pc={{ selected_pc }}&student={{ selected_student }}&day={{ selected_day }}&time_range={{ selected_time_range }}&q={{ search_query|urlencode }}&page={{ p }}">{{ p }}</a>
+            {% elif p == 2 or p == total_pages|add:"-1" %}
+              <span style="color:var(--text-faint); font-size:12px;">…</span>
+            {% endif %}
+          {% endfor %}
+          <a class="pal-page-link {% if page >= total_pages %}disabled{% endif %}"
+             href="?lab={{ selected_lab }}&pc={{ selected_pc }}&student={{ selected_student }}&day={{ selected_day }}&time_range={{ selected_time_range }}&q={{ search_query|urlencode }}&page={{ page|add:"1" }}">›</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="pal-bottom-grid">
+      <div class="card">
+        <div class="section-title">Most Used Applications <span style="color:var(--text-faint); font-weight:400;">(Today)</span></div>
+        {% if most_used_apps %}
+          <div class="pal-donut-wrap">
+            <div style="width:110px; height:110px; flex-shrink:0;"><canvas id="mostUsedAppsDonut"></canvas></div>
+            <div class="pal-donut-legend">
+              {% for app in most_used_apps %}
+                <div class="pal-donut-legend-item">
+                  <span class="pal-donut-dot" style="background:{{ app.color }}"></span>
+                  <span class="lbl">{{ app.name }}</span>
+                  <span class="val">{{ app.pct }}%</span>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% else %}
+          <p class="empty">No application activity recorded today yet.</p>
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <div class="section-title">Most Active PCs <span style="color:var(--text-faint); font-weight:400;">(Today)</span></div>
+        {% if most_active_pcs %}
+          {% for item in most_active_pcs %}
+            <div class="pal-bar-row">
+              <div class="pal-bar-label">
+                <span class="name">{{ item.pc.pc_id }} <span style="color:var(--text-faint); font-weight:400;">({{ item.pc.lab.name }})</span></span>
+                <span class="dur">{{ item.duration }}</span>
+              </div>
+              <div class="pal-bar-track"><div class="pal-bar-fill" style="width:{{ item.pct }}%;"></div></div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="empty">No PC activity recorded today yet.</p>
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <div class="section-title">Quick Actions</div>
+        <div class="pal-quick-actions">
+          <a href="{% url 'export_pc_activity_log' %}?{{ request.GET.urlencode }}&format=pdf" class="action-btn small">Export as PDF</a>
+          <a href="{% url 'export_pc_activity_log' %}?{{ request.GET.urlencode }}&format=excel" class="action-btn small">Export as Excel</a>
+          <button type="button" class="action-btn small" style="border-color:#ff5d5d; color:#ff5d5d;"
+                  onclick="document.querySelector('.pal-timeline-actions form button').click();">Delete Old Logs</button>
+          <a href="{% url 'pc_activity_log' %}" class="action-btn small">Clear All Filters</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pal-side" id="session-details">
+    <div class="card">
+      <div class="section-title">Session Details</div>
+      {% if selected_session %}
+        <div class="pal-detail-row">
+          <span class="pal-detail-label">Student</span>
+          <span class="pal-detail-val">{% if selected_session.student %}{{ selected_session.student.get_full_name|default:selected_session.student.username }}{% else %}—{% endif %}</span>
+        </div>
+        <div class="pal-detail-row">
+          <span class="pal-detail-label">Student ID</span>
+          <span class="pal-detail-val">{{ selected_session.student.id_number|default:"—" }}</span>
+        </div>
+        <div class="pal-detail-row">
+          <span class="pal-detail-label">Laboratory</span>
+          <span class="pal-detail-val">{{ selected_session.pc.lab.name }}</span>
+        </div>
+        <div class="pal-detail-row">
+          <span class="pal-detail-label">PC</span>
+          <span class="pal-detail-val">{{ selected_session.pc.pc_id }}</span>
+        </div>
+        <div class="pal-detail-row">
+          <span class="pal-detail-label">Login Time</span>
+          <span class="pal-detail-val">{{ selected_session.login_time|date:"M d, Y g:i:s A" }}</span>
+        </div>
+        <div class="pal-detail-row">
+          <span class="pal-detail-label">Logout Time</span>
+          <span class="pal-detail-val">{% if selected_session.logout_time %}{{ selected_session.logout_time|date:"M d, Y g:i:s A" }}{% else %}Still active{% endif %}</span>
+        </div>
+        <div class="pal-detail-row">
+          <span class="pal-detail-label">Duration</span>
+          <span class="pal-detail-val">{{ selected_session_duration_long }}</span>
+        </div>
+        <div class="pal-detail-row">
+          <span class="pal-detail-label">Status</span>
+          <span class="pal-detail-val"><span class="pal-activity-pill {{ selected_session.status }}">{% if selected_session.status == 'active' %}Active{% else %}Completed{% endif %}</span></span>
+        </div>
+        <div class="pal-detail-row">
+          <span class="pal-detail-label">Session Type</span>
+          <span class="pal-detail-val">{% if selected_session.scheduling_session %}Regular Session{% else %}Walk-in / Unscheduled{% endif %}</span>
+        </div>
+        <div class="pal-detail-row">
+          <span class="pal-detail-label">Record Source</span>
+          <span class="pal-detail-val">PC Agent</span>
+        </div>
+
+        <div class="section-title" style="margin-top:14px;">Window / Application Activity</div>
+        <div class="pal-mini-scroll">
+          <table class="pal-mini-table">
+            <thead><tr><th>Time</th><th>Application / Window Title</th></tr></thead>
+            <tbody>
+              {% for b in selected_session.blocks %}
+                <tr><td style="white-space:nowrap;">{{ b.start|date:"g:i A" }}</td><td>{{ b.title|default:"—" }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;">
+          <a href="{% url 'export_pc_activity_log' %}?pc={{ selected_session.pc.pk }}&day={{ selected_session.login_time|date:'Y-m-d' }}&format=pdf" class="action-btn small primary">View Full Session Report</a>
+          <a href="{% url 'export_pc_activity_log' %}?pc={{ selected_session.pc.pk }}&day={{ selected_session.login_time|date:'Y-m-d' }}&format=excel" class="action-btn small">Export Session</a>
+          <button type="button" class="action-btn small" onclick="window.print();">Print</button>
+        </div>
+      {% else %}
+        <p class="empty">No session selected yet — click the eye icon on any row in the Activity Timeline.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'js/dashboard.js' %}"></script>
+<script>
+(function() {
+  if (typeof Chart === 'undefined') return;
+  var canvas = document.getElementById('mostUsedAppsDonut');
+  if (!canvas) return;
+  Chart.defaults.font.family = 'Inter, sans-serif';
+  Chart.defaults.color = '#8b98a3';
+  new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: [{% for app in most_used_apps %}'{{ app.name|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+      datasets: [{
+        data: [{% for app in most_used_apps %}{{ app.pct }}{% if not forloop.last %},{% endif %}{% endfor %}],
+        backgroundColor: [{% for app in most_used_apps %}'{{ app.color }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      cutout: '68%',
+      plugins: { legend: { display: false }, tooltip: { enabled: true } },
+      responsive: true, maintainAspectRatio: false,
+    }
+  });
+})();
+</script>
+
+{% endblock %}

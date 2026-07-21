@@ -4,6 +4,20 @@ from labs.models import MaintenanceLog, Lab, InventoryItem, PC
 import ipaddress
 
 
+class PCImportForm(forms.Form):
+    file = forms.FileField(
+        label='CSV or Excel file',
+        help_text='Columns: Lab, PC ID, IP Address (optional), Status (optional).'
+    )
+
+    def clean_file(self):
+        f = self.cleaned_data['file']
+        name = f.name.lower()
+        if not (name.endswith('.csv') or name.endswith('.xlsx')):
+            raise forms.ValidationError('Please upload a .csv or .xlsx file.')
+        return f
+
+
 class LabForm(forms.ModelForm):
     class Meta:
         model = Lab

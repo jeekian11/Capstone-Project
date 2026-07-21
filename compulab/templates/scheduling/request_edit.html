@@ -37,7 +37,7 @@
       <span class="helptext">Pick a registered account to auto-fill the fields below — Full Name, ID, and Course &amp; Year/Section (student) or Department (instructor).</span>
       <div id="requester-extra-info" class="helptext"
            style="{% if req.instructor.course_year_section or req.instructor.department %}display:block;{% else %}display:none;{% endif %} font-weight:600; margin-top:4px;">
-        {% if req.instructor.course_year_section %}Course & Year/Section: {{ req.instructor.course_year_section }}{% elif req.instructor.department %}Department: {{ req.instructor.department }}{% endif %}
+        {% if req.instructor.course_year_section %}Course & Year/Section: {{ req.instructor.course_year_section }}{% elif req.instructor.department %}Department: {{ req.instructor.department_display }}{% endif %}
       </div>
     </div>
 

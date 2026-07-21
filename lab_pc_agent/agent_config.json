@@ -6,10 +6,13 @@
 
   "port": 5555,
   "_port_comment": "Must match PC_AGENT_PORT in the server's settings.py",
-
-  "server_url": "http://127.0.0.1:8000",
+  
+  "server_url": "http://192.168.1.96:8000",
   "_server_url_comment": "Base URL of the CompuLab Django server, used by the on-screen login form. For real lab PCs, this is the server's LAN address, e.g. http://192.168.1.10:8000",
 
   "lock_title": "PC LOCKED",
-  "lock_subtitle": "Ilagay ang iyong Student ID at Reservation Code para magamit ang PC na ito."
+  "lock_subtitle": "Ilagay ang iyong Student ID at Reservation Code para magamit ang PC na ito.",
+
+  "activity_report_interval_seconds": 8,
+  "_activity_report_interval_seconds_comment": "How often (seconds) the agent samples the active/foreground window's title bar text and reports it to the server, while the PC is unlocked. Set to 0 to disable this reporting entirely."
 }

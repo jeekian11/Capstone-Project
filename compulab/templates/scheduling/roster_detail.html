@@ -3,85 +3,314 @@
 
 {% block content %}
 
-<div class="page-header">
-  <div>
-    <h1>{{ roster.name }}</h1>
-    <div class="sub">{{ roster.subject|default:"No subject set" }} &middot; {{ roster.lab.name|default:"No lab set" }} &middot; {{ roster.instructor.get_full_name|default:"No instructor set" }}</div>
-  </div>
-  <div style="display:flex; gap:10px;">
-    <a href="{% url 'roster_edit' roster.pk %}" class="action-btn icon-only" title="Edit details"><svg><use href="#icon-edit"/></svg></a>
-    <form method="post" action="{% url 'roster_delete' roster.pk %}"
-          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this roster?', text: 'This action cannot be undone. {{ roster.name|escapejs }}{% with n=roster.students.count %}{% if n %} and its {{ n }} student{{ n|pluralize }}{% endif %}{% endwith %} will be removed.', confirmButtonText: 'Yes, delete roster'}); return false;"
-          style="display:inline">
-      {% csrf_token %}
-      <button type="submit" class="action-btn icon-only danger" title="Delete roster"><svg><use href="#icon-trash"/></svg></button>
-    </form>
-  </div>
-</div>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-<div class="two-col">
-  <div class="card">
-    <div class="section-title">Students<span class="count">{{ students|length }}</span></div>
-    <table class="table">
-      <thead><tr><th>ID number</th><th>Full name</th><th></th></tr></thead>
+<style>
+.cr{
+  --cr-bg:#0a0e12; --cr-card:#12171d; --cr-border:#232b34;
+  --cr-text:#e7ebee; --cr-dim:#8b98a3; --cr-faint:#4d5761;
+  --cr-purple:#a78bfa; --cr-purple-tint:rgba(167,139,250,0.14);
+  --cr-green:#3ed6c4; --cr-green-tint:rgba(62,214,196,0.14);
+  --cr-blue:#5b9dff; --cr-blue-tint:rgba(91,157,255,0.14);
+  --cr-orange:#f2a93b; --cr-orange-tint:rgba(242,169,59,0.14);
+  --cr-red:#ff5d5d; --cr-red-tint:rgba(255,93,93,0.14);
+  font-family:'Inter',sans-serif; background:var(--cr-bg); color:var(--cr-text);
+  margin:-20px; padding:20px; min-height:100%;
+}
+.cr h1,.cr h2,.cr h3{font-family:'Space Grotesk',sans-serif;}
+.cr a{color:var(--cr-blue); text-decoration:none;}
+.cr a:hover{text-decoration:underline;}
+.cr-back{display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--cr-dim); margin-bottom:12px;}
+.cr-back:hover{color:var(--cr-text); text-decoration:none;}
+.cr-card{background:var(--cr-card); border:1px solid var(--cr-border); border-radius:14px; padding:18px 20px; box-shadow:0 1px 2px rgba(0,0,0,.2);}
+
+.cr-btn{display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:8px; border:1px solid var(--cr-border); background:var(--cr-card); color:var(--cr-text); font-size:13px; font-weight:500; cursor:pointer; white-space:nowrap;}
+.cr-btn.primary{background:var(--cr-green); border-color:var(--cr-green); color:#0a0e12; font-weight:600;}
+.cr-btn.danger{background:var(--cr-red-tint); border-color:var(--cr-red); color:var(--cr-red); font-weight:600;}
+.cr-btn.danger:hover{background:var(--cr-red); color:#fff;}
+.cr-btn:hover{border-color:var(--cr-faint);}
+.cr-icon-btn{width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:7px; border:1px solid var(--cr-border); background:var(--cr-card); color:var(--cr-dim); cursor:pointer; flex-shrink:0;}
+.cr-icon-btn svg{width:14px; height:14px;}
+.cr-icon-btn:hover{border-color:var(--cr-faint); color:var(--cr-text);}
+.cr-icon-btn.danger:hover{border-color:var(--cr-red); color:var(--cr-red);}
+
+.cr-badge{display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600;}
+.cr-badge.active{background:var(--cr-green-tint); color:var(--cr-green);}
+.cr-badge.inactive{background:var(--cr-red-tint); color:var(--cr-red);}
+.cr-badge.completed{background:var(--cr-green-tint); color:var(--cr-green);}
+.cr-badge.scheduled{background:var(--cr-blue-tint); color:var(--cr-blue);}
+.cr-badge.ongoing{background:var(--cr-orange-tint); color:var(--cr-orange);}
+
+.cr-info-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:16px;}
+.cr-info{display:flex; align-items:center; gap:12px;}
+.cr-info-icon{width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.cr-info-icon svg{width:18px; height:18px;}
+.cr-info-label{font-size:11px; color:var(--cr-dim); font-weight:600; text-transform:uppercase; letter-spacing:.03em;}
+.cr-info-val{font-size:14.5px; font-weight:600; color:var(--cr-text); margin-top:2px;}
+.ic-purple{background:var(--cr-purple-tint); color:var(--cr-purple);}
+.ic-green{background:var(--cr-green-tint); color:var(--cr-green);}
+.ic-blue{background:var(--cr-blue-tint); color:var(--cr-blue);}
+.ic-orange{background:var(--cr-orange-tint); color:var(--cr-orange);}
+
+.cr-two-col{display:grid; grid-template-columns:1.3fr 1fr; gap:16px; margin-bottom:16px; align-items:start;}
+.cr-section-title{font-size:13px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--cr-text); margin-bottom:14px; display:flex; align-items:center; gap:8px;}
+.cr-section-title .count{font-size:11px; font-weight:600; color:var(--cr-dim); background:var(--cr-bg); border:1px solid var(--cr-border); border-radius:20px; padding:1px 9px;}
+
+.cr-input{width:100%; padding:9px 12px; border:1px solid var(--cr-border); border-radius:8px; font-size:13px; background:var(--cr-bg); color:var(--cr-text); font-family:inherit;}
+.cr-search-wrap{position:relative; margin-bottom:10px;}
+.cr-search-wrap svg{position:absolute; left:11px; top:50%; transform:translateY(-50%); width:14px; height:14px; color:var(--cr-faint);}
+.cr-search-wrap input{padding-left:32px;}
+
+.cr-table{width:100%; border-collapse:collapse;}
+.cr-table th{text-align:left; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--cr-faint); padding:9px 10px; border-bottom:1px solid var(--cr-border);}
+.cr-table td{padding:10px; font-size:13px; border-bottom:1px solid var(--cr-border); vertical-align:middle;}
+.cr-table tr:last-child td{border-bottom:none;}
+.cr-empty{color:var(--cr-faint); font-size:13px; text-align:center; padding:20px 0;}
+
+.cr-result-row{display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border:1px solid var(--cr-border); border-radius:8px; margin-bottom:6px;}
+.cr-result-row:last-child{margin-bottom:0;}
+.cr-result-info{font-size:13px;}
+.cr-result-id{color:var(--cr-faint); font-size:11.5px;}
+.cr-add-btn{padding:4px 12px; font-size:12px; border-radius:6px; background:var(--cr-green); color:#0a0e12; font-weight:600; border:none; cursor:pointer;}
+
+.cr-view-attendance{display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:7px; background:var(--cr-blue-tint); color:var(--cr-blue); font-weight:600; font-size:12px;}
+.cr-view-attendance:hover{text-decoration:none; background:var(--cr-blue); color:#fff;}
+
+@media (max-width:1100px){
+  .cr-info-grid{grid-template-columns:repeat(2,1fr);}
+  .cr-two-col{grid-template-columns:1fr;}
+}
+</style>
+
+<div class="cr">
+
+  <a href="{% url 'roster_list' %}" class="cr-back">&larr; Back to Rosters</a>
+
+  <div class="page-header" style="margin-bottom:16px; align-items:flex-start;">
+    <div>
+      <h1 style="font-size:20px; font-weight:600; margin:0; display:flex; align-items:center; gap:10px;">
+        Manage Class Roster
+        <span class="cr-badge" style="font-size:12px; background:var(--cr-purple-tint); color:var(--cr-purple);">{{ roster.course_code|default:roster.name }}</span>
+        {% if roster.status == 'inactive' %}<span class="cr-badge inactive" style="font-size:12px;">Archived</span>{% endif %}
+      </h1>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <a href="{% url 'roster_import_students' roster.pk %}" class="cr-btn">&#8593; Import Students</a>
+      <a href="{% url 'roster_edit' roster.pk %}" class="cr-btn">&#9998; Edit Roster</a>
+      <form method="post" action="{% url 'roster_archive' roster.pk %}"
+            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: '{% if roster.status == "active" %}Archive{% else %}Reactivate{% endif %} this roster?', text: '{% if roster.status == "active" %}{{ roster.name|escapejs }} will be marked inactive. You can reactivate it anytime.{% else %}{{ roster.name|escapejs }} will be marked active again.{% endif %}', icon: 'question', confirmButtonText: 'Yes, continue'}); return false;"
+            style="display:inline">
+        {% csrf_token %}
+        <button type="submit" class="cr-btn danger">
+          {% if roster.status == 'active' %}&#128230; Archive Roster{% else %}&#8635; Reactivate Roster{% endif %}
+        </button>
+      </form>
+      <form method="post" action="{% url 'roster_delete' roster.pk %}"
+            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this roster?', text: 'This action cannot be undone. {{ roster.name|escapejs }}{% with n=roster.students.count %}{% if n %} and its {{ n }} student{{ n|pluralize }}{% endif %}{% endwith %} will be removed.', confirmButtonText: 'Yes, delete roster'}); return false;"
+            style="display:inline">
+        {% csrf_token %}
+        <button type="submit" class="cr-icon-btn danger" title="Delete roster permanently"><svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+      </form>
+    </div>
+  </div>
+
+  <div class="cr-info-grid">
+    <div class="cr-card cr-info">
+      <div class="cr-info-icon ic-purple"><svg viewBox="0 0 24 24" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/></svg></div>
+      <div>
+        <div class="cr-info-label">Instructor</div>
+        <div class="cr-info-val">{{ roster.instructor.get_full_name|default:"Not assigned" }}</div>
+      </div>
+    </div>
+    <div class="cr-card cr-info">
+      <div class="cr-info-icon ic-blue"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div>
+        <div class="cr-info-label">Course & Section</div>
+        <div class="cr-info-val">{{ roster.subject|default:"—" }}{% if roster.section %} - {{ roster.section }}{% endif %}</div>
+      </div>
+    </div>
+    <div class="cr-card cr-info">
+      <div class="cr-info-icon ic-green"><svg viewBox="0 0 24 24" fill="none"><path d="M17 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M10 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM21 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div>
+        <div class="cr-info-label">Total Students</div>
+        <div class="cr-info-val">{{ students|length }}</div>
+      </div>
+    </div>
+    <div class="cr-card cr-info">
+      <div class="cr-info-icon ic-orange"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="1.8"/><line x1="8" y1="3" x2="8" y2="7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="16" y1="3" x2="16" y2="7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <div>
+        <div class="cr-info-label">Schedule</div>
+        <div class="cr-info-val">{{ roster.schedule|default:"Not set" }}</div>
+      </div>
+    </div>
+    <div class="cr-card cr-info">
+      <div class="cr-info-icon ic-blue"><svg viewBox="0 0 24 24" fill="none"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v15H6.5A2.5 2.5 0 0 0 4 19.5v-15Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div>
+        <div class="cr-info-label">Semester / A.Y.</div>
+        <div class="cr-info-val">{% if roster.semester %}{{ roster.get_semester_display }}{% else %}—{% endif %}{% if roster.academic_year %} {{ roster.academic_year }}{% endif %}</div>
+      </div>
+    </div>
+    <div class="cr-card cr-info">
+      <div class="cr-info-icon ic-purple"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.8"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="1.8"/></svg></div>
+      <div>
+        <div class="cr-info-label">Created</div>
+        <div class="cr-info-val">{{ roster.created_at|date:"F j, Y" }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cr-two-col">
+    <div class="cr-card">
+      <div class="cr-section-title">Students List<span class="count">{{ students|length }}</span></div>
+      <div class="cr-search-wrap">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <input type="text" id="cr-roster-search" class="cr-input" placeholder="Search student…" autocomplete="off">
+      </div>
+      <table class="cr-table" id="cr-students-table">
+        <thead><tr><th>Student ID</th><th>Full Name</th><th>Department</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for s in students %}
+            <tr data-search="{{ s.id_number|lower }} {{ s.full_name|lower }}">
+              <td>{{ s.id_number }}</td>
+              <td>{{ s.full_name }}{% if not s.student_id %} <span class="helptext" title="This account was removed/renamed since being added.">(unlinked)</span>{% endif %}</td>
+              <td>{{ s.student.department_display|default:"—" }}</td>
+              <td><span class="cr-badge {% if s.student_id and s.student.is_active %}active{% else %}inactive{% endif %}">{% if s.student_id and s.student.is_active %}Active{% else %}Inactive{% endif %}</span></td>
+              <td>
+                <form method="post" action="{% url 'roster_remove_student' roster.pk s.pk %}"
+                      onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Remove student?', text: 'Remove {{ s.full_name|escapejs }} from this roster?', confirmButtonText: 'Yes, remove'}); return false;"
+                      style="display:inline">
+                  {% csrf_token %}
+                  <button type="submit" class="cr-icon-btn danger" title="Remove student"><svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                </form>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5"><p class="cr-empty">No students added yet.</p></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cr-card">
+      <div class="cr-section-title">Add Student</div>
+      <p class="helptext" style="font-size:12px; color:var(--cr-dim); margin-top:-6px; margin-bottom:12px;">Search by ID or name. Only students registered by an Admin (under Users) will appear.</p>
+      <div class="cr-search-wrap">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <input type="text" id="roster-student-search" class="cr-input" placeholder="Search by ID or name…" autocomplete="off">
+      </div>
+      <div id="roster-student-results"></div>
+
+      <form method="post" action="{% url 'roster_add_student' roster.pk %}" id="roster-add-student-form">
+        {% csrf_token %}
+        <input type="hidden" name="student_id" id="roster-add-student-id">
+      </form>
+    </div>
+  </div>
+
+  <div class="cr-card">
+    <div class="cr-section-title">Reservation History<span class="count">{{ linked_sessions|length }}</span></div>
+    <table class="cr-table">
+      <thead><tr><th>Date</th><th>Laboratory</th><th>Subject / Activity</th><th>Time</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>
-        {% for s in students %}
+        {% for s in linked_sessions %}
           <tr>
-            <td>{{ s.id_number }}</td>
-            <td>{{ s.full_name }}</td>
+            <td>{{ s.date|date:"F j, Y" }}</td>
+            <td>{{ s.lab.name|default:"—" }}</td>
+            <td>{{ s.subject }}</td>
+            <td>{{ s.start_time|time:"g:i A" }} – {{ s.end_time|time:"g:i A" }}</td>
             <td>
-              <form method="post" action="{% url 'roster_remove_student' roster.pk s.pk %}"
-                    onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Remove student?', text: 'Remove {{ s.full_name|escapejs }} from this roster?', confirmButtonText: 'Yes, remove'}); return false;"
-                    style="display:inline">
-                {% csrf_token %}
-                <button type="submit" class="action-btn icon-only danger" title="Remove student"><svg><use href="#icon-trash"/></svg></button>
-              </form>
+              {% if s.reservation_status == 'completed' %}
+                <span class="cr-badge completed">Completed</span>
+              {% elif s.reservation_status == 'ongoing' %}
+                <span class="cr-badge ongoing">Ongoing</span>
+              {% else %}
+                <span class="cr-badge scheduled">Scheduled</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if s.instructor_id == request.user.id or roster.instructor_id == request.user.id %}
+                <a href="{% url 'session_attendance_mark' s.pk %}" class="cr-view-attendance">View Attendance</a>
+              {% else %}
+                <span class="cr-empty">—</span>
+              {% endif %}
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="3"><p class="empty">No students added yet.</p></td></tr>
+          <tr><td colspan="6"><p class="cr-empty">Not linked to any session yet — attach this roster when scheduling or editing a session.</p></td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 
-  <div class="card">
-    <div class="section-title">Add a student</div>
-    <form method="post" action="{% url 'roster_add_student' roster.pk %}"
-          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Add this student?', text: 'This student will be added to the roster.', icon: 'question', confirmButtonText: 'Yes, add', confirmButtonColor: '#3ed6c4'}); return false;">
-      {% csrf_token %}
-      <div class="form-group">
-        <label class="form-label" for="{{ student_form.id_number.id_for_label }}">ID number</label>
-        {{ student_form.id_number }}
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="{{ student_form.full_name.id_for_label }}">Full name</label>
-        {{ student_form.full_name }}
-      </div>
-      <div class="form-actions">
-        <button type="submit" class="action-btn primary">Add student</button>
-      </div>
-    </form>
-  </div>
 </div>
 
-<div class="card">
-  <div class="section-title">Sessions using this roster<span class="count">{{ linked_sessions|length }}</span></div>
-  <table class="table">
-    <thead><tr><th>Date</th><th>Lab</th><th>Subject</th><th>Time</th></tr></thead>
-    <tbody>
-      {% for s in linked_sessions %}
-        <tr>
-          <td>{{ s.date }}</td>
-          <td>{{ s.lab.name }}</td>
-          <td>{{ s.subject }}</td>
-          <td>{{ s.start_time|time:"H:i" }}–{{ s.end_time|time:"H:i" }}</td>
-        </tr>
-      {% empty %}
-        <tr><td colspan="4"><p class="empty">Not linked to any session yet — attach this roster when editing a scheduled session.</p></td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+<script>
+(function () {
+  const rows = document.querySelectorAll('#cr-students-table tbody tr[data-search]');
+  const filterInput = document.getElementById('cr-roster-search');
+  if (filterInput) {
+    filterInput.addEventListener('input', function () {
+      const q = filterInput.value.trim().toLowerCase();
+      rows.forEach(function (row) {
+        row.style.display = row.dataset.search.includes(q) ? '' : 'none';
+      });
+    });
+  }
+
+  const input = document.getElementById('roster-student-search');
+  const results = document.getElementById('roster-student-results');
+  const hiddenId = document.getElementById('roster-add-student-id');
+  const addForm = document.getElementById('roster-add-student-form');
+  const searchUrl = "{% url 'roster_search_students' roster.pk %}";
+  let debounceTimer = null;
+
+  function renderResults(items) {
+    results.innerHTML = '';
+    if (!items.length) {
+      if (input.value.trim()) {
+        results.innerHTML = '<p class="helptext" style="font-size:12px; color:var(--cr-dim);">No matching registered students found.</p>';
+      }
+      return;
+    }
+    items.forEach(function (s) {
+      const row = document.createElement('div');
+      row.className = 'cr-result-row';
+      const info = document.createElement('span');
+      info.className = 'cr-result-info';
+      info.innerHTML = s.id_number + ' &nbsp; <span style="color:var(--cr-text);">' + s.full_name + '</span>' + (s.course_year_section ? ' <span class="cr-result-id">(' + s.course_year_section + ')</span>' : '') + (s.department ? ' <span class="cr-result-id">— ' + s.department + '</span>' : '');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cr-add-btn';
+      btn.textContent = 'Add';
+      btn.onclick = function () {
+        hiddenId.value = s.id;
+        compulabConfirmSubmit(addForm, {
+          title: 'Add this student?',
+          text: s.full_name + ' will be added to the roster.',
+          icon: 'question',
+          confirmButtonText: 'Yes, add',
+          confirmButtonColor: '#3ed6c4',
+        });
+      };
+      row.appendChild(info);
+      row.appendChild(btn);
+      results.appendChild(row);
+    });
+  }
+
+  input.addEventListener('input', function () {
+    clearTimeout(debounceTimer);
+    const q = input.value.trim();
+    if (!q) { results.innerHTML = ''; return; }
+    debounceTimer = setTimeout(function () {
+      fetch(searchUrl + '?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) { renderResults(data.results || []); })
+        .catch(function () { results.innerHTML = '<p class="helptext">Search failed — try again.</p>'; });
+    }, 250);
+  });
+})();
+</script>
 
 {% endblock %}

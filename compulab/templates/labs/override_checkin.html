@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Override Check-in{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Override Check-in</h1>
+    <div class="sub">Manually grant a registered student or instructor access to an available computer — recorded separately as an Override transaction for monitoring and attendance.</div>
+  </div>
+  <a href="{% url 'pc_status' %}" class="action-btn">Back to PC Status</a>
+</div>
+
+<div class="card" style="max-width:640px">
+  <form method="get" class="form-row" style="align-items:end;">
+    <div class="form-group" style="margin-bottom:0; flex:1;">
+      <label class="form-label" for="lab">Laboratory</label>
+      <select name="lab" id="lab" class="form-control" onchange="this.form.submit()">
+        <option value="">Select a laboratory…</option>
+        {% for lab in all_labs %}
+          <option value="{{ lab.pk }}" {% if selected_lab == lab.pk|stringformat:"s" %}selected{% endif %}>{{ lab.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+</div>
+
+{% if selected_lab %}
+<div class="card" style="max-width:640px; margin-top:14px;">
+  {% if available_pcs %}
+    <form method="post"
+          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Override check-in?', text: 'This grants the selected account access to this computer right now, bypassing the normal reservation code.', icon: 'warning', confirmButtonText: 'Yes, check them in', confirmButtonColor: '#f2a93b'});">
+      {% csrf_token %}
+      <input type="hidden" name="lab" value="{{ selected_lab }}">
+
+      <div class="form-group">
+        <label class="form-label" for="pc">Available computer</label>
+        <select name="pc" id="pc" class="form-control" required>
+          <option value="">Select a computer…</option>
+          {% for pc in available_pcs %}
+            <option value="{{ pc.pk }}">{{ pc.pc_id }}</option>
+          {% endfor %}
+        </select>
+        <span class="helptext">Only computers currently online and not already in use are listed — this is the same availability check the walk-in path uses.</span>
+      </div>
+
+      <div class="form-group" style="position:relative;">
+        <label class="form-label" for="override-search">Student / Instructor</label>
+        <input type="text" id="override-search" class="form-control" autocomplete="off"
+               placeholder="Type a name or ID number to find a registered account…">
+        <input type="hidden" name="student_id" id="override-student-id">
+        <div id="override-search-results" class="search-results"
+             style="display:none; position:absolute; z-index:10; background:#fff; border:1px solid #ddd; border-radius:6px; width:100%; max-height:220px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.08);"></div>
+        <span class="helptext">Must be an already-registered, active account — same rule as everywhere else in the system.</span>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="action-btn primary">Override Check-in</button>
+      </div>
+    </form>
+  {% else %}
+    <p class="empty">This laboratory has no available computers right now — nothing online and free to override into. Check <a href="{% url 'pc_status' %}?lab={{ selected_lab }}">PC Status</a> for this lab.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+<script>
+(function() {
+  var searchInput = document.getElementById('override-search');
+  if (!searchInput) return;
+  var resultsBox = document.getElementById('override-search-results');
+  var idField = document.getElementById('override-student-id');
+  var debounceTimer = null;
+
+  function doSearch(q) {
+    var url = '{% url "search_requesters" %}?role=any&q=' + encodeURIComponent(q);
+    fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+      renderResults(data.results || []);
+    });
+  }
+
+  function renderResults(results) {
+    resultsBox.innerHTML = '';
+    if (!results.length) {
+      resultsBox.style.display = 'none';
+      return;
+    }
+    results.forEach(function(r) {
+      var item = document.createElement('div');
+      var extra = r.course_year_section || r.department || '';
+      item.textContent = r.full_name + ' — ' + r.id_number + (extra ? ' (' + extra + ')' : '') + ' [' + r.role + ']';
+      item.style.cursor = 'pointer';
+      item.style.padding = '8px 10px';
+      item.addEventListener('mouseenter', function() { item.style.background = '#f2f2f2'; });
+      item.addEventListener('mouseleave', function() { item.style.background = ''; });
+      item.addEventListener('click', function() { selectResult(r); });
+      resultsBox.appendChild(item);
+    });
+    resultsBox.style.display = 'block';
+  }
+
+  function selectResult(r) {
+    idField.value = r.id;
+    searchInput.value = r.full_name + ' — ' + r.id_number;
+    resultsBox.style.display = 'none';
+    resultsBox.innerHTML = '';
+  }
+
+  searchInput.addEventListener('input', function() {
+    idField.value = '';
+    var q = searchInput.value.trim();
+    clearTimeout(debounceTimer);
+    if (q.length < 2) { resultsBox.style.display = 'none'; return; }
+    debounceTimer = setTimeout(function() { doSearch(q); }, 200);
+  });
+  document.addEventListener('click', function(e) {
+    if (!resultsBox.contains(e.target) && e.target !== searchInput) resultsBox.style.display = 'none';
+  });
+})();
+</script>
+
+{% endblock %}

@@ -2,32 +2,102 @@ from django.db import models
 from django.conf import settings
 
 class ClassRoster(models.Model):
-    """A named list of enrolled students (ID + name) for a class/subject,
-    used to compute real present/absent attendance instead of estimates."""
-    name = models.CharField(max_length=200, help_text='e.g. "BSCS 2A — CS101 Programming Logic"')
-    subject = models.CharField(max_length=200, blank=True)
-    lab = models.ForeignKey('labs.Lab', on_delete=models.SET_NULL, null=True, blank=True, related_name='class_rosters')
+    """A class-level record — course/section/schedule info for one class.
+    Students are NOT entered here; they're added afterwards (on the roster's
+    detail page) by searching the already-registered student accounts, so
+    only officially registered students can end up on a roster and there's
+    no risk of duplicate/typo'd student records."""
+
+    SEMESTER_CHOICES = [
+        ('1st', '1st Semester'),
+        ('2nd', '2nd Semester'),
+        ('summer', 'Summer'),
+    ]
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+    ]
+
+    name = models.CharField(
+        max_length=200, blank=True,
+        help_text='Auto-generated from Course Code + Subject if left blank.'
+    )
+    course_code = models.CharField(max_length=50, blank=True, help_text='e.g. "BSIS 3A"')
+    subject = models.CharField(max_length=200, blank=True, help_text='e.g. "Systems Analysis and Design"')
+    section = models.CharField(max_length=50, blank=True, help_text='e.g. "BSIS-3A"')
+    lab = models.ForeignKey(
+        'labs.Lab', on_delete=models.SET_NULL, null=True, blank=True, related_name='class_rosters',
+        help_text='Laboratory room.'
+    )
     instructor = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='class_rosters'
     )
+    semester = models.CharField(max_length=10, choices=SEMESTER_CHOICES, blank=True)
+    academic_year = models.CharField(max_length=20, blank=True, help_text='e.g. "2026-2027"')
+    DAY_CHOICES = [
+        ('mon', 'Monday'), ('tue', 'Tuesday'), ('wed', 'Wednesday'),
+        ('thu', 'Thursday'), ('fri', 'Friday'), ('sat', 'Saturday'), ('sun', 'Sunday'),
+    ]
+    DAY_LABELS = dict(DAY_CHOICES)
+
+    schedule_days = models.CharField(
+        max_length=50, blank=True,
+        help_text='Comma-separated day keys (mon,tue,...) — set via the day checkboxes in the form.'
+    )
+    schedule_start_time = models.TimeField(null=True, blank=True)
+    schedule_end_time = models.TimeField(null=True, blank=True)
+    schedule = models.CharField(
+        max_length=150, blank=True,
+        help_text='Auto-generated from the selected day(s) and time range.'
+    )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['name']
+        ordering = ['status', 'name']
+
+    def save(self, *args, **kwargs):
+        if not self.name:
+            label = self.course_code or self.section or 'Class'
+            self.name = f'{label} — {self.subject}' if self.subject else label
+        if self.schedule_days and self.schedule_start_time and self.schedule_end_time:
+            day_labels = [self.DAY_LABELS.get(d, d) for d in self.schedule_days.split(',') if d]
+            start = self.schedule_start_time.strftime('%I:%M %p').lstrip('0')
+            end = self.schedule_end_time.strftime('%I:%M %p').lstrip('0')
+            self.schedule = f'{", ".join(day_labels)} · {start}–{end}'
+        else:
+            self.schedule = ''
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
 
 
 class RosterStudent(models.Model):
+    """One enrolled student on a roster. `student` links to the actual
+    registered account (role='student') picked via the search-and-add
+    workflow — id_number/full_name are a denormalized snapshot copied from
+    that account (kept even if the account is later edited/removed, so the
+    roster's historical record doesn't silently change or break)."""
     roster = models.ForeignKey(ClassRoster, on_delete=models.CASCADE, related_name='students')
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='roster_memberships',
+        help_text='The registered student account this entry was added from.'
+    )
     id_number = models.CharField(max_length=50)
     full_name = models.CharField(max_length=150)
 
     class Meta:
         ordering = ['full_name']
         unique_together = [('roster', 'id_number')]
+
+    def save(self, *args, **kwargs):
+        if self.student_id and (not self.id_number or not self.full_name):
+            self.id_number = self.id_number or self.student.id_number or self.student.username
+            self.full_name = self.full_name or self.student.get_full_name() or self.student.username
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f'{self.full_name} ({self.id_number})'
@@ -67,15 +137,34 @@ class Session(models.Model):
 
 
 class SessionCheckIn(models.Model):
-    """One row per distinct ID number that has checked in to a Session via
-    the shared reservation code. Used to cap 'Group of students' bookings
-    (which accept any ID) at the declared student_count, so a shared code
-    can't be handed out beyond the group size that was actually requested.
-    Re-checking in with the same ID (e.g. logging into a different PC) does
-    not count again — it's the same person.
+    """One row per distinct ID number that has checked in to a Session.
+    Originally only used to cap 'Group of students' bookings (which accept
+    any ID) at the declared student_count — now records EVERY successful
+    check-in (requester, roster member, group member, walk-in, or
+    Admin/In-Charge override), so there's a single canonical transaction
+    log of who actually used a PC during a reservation, separate from
+    who the reservation was filed under. Re-checking in with the same ID
+    (e.g. logging into a different PC) does not count again — it's the
+    same person.
     """
-    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='check_ins')
+    CHECKIN_TYPE = [
+        ('requester', 'Primary Requester'),
+        ('roster', 'Roster Member'),
+        ('group', 'Group Member'),
+        ('walk_in', 'Walk-in'),
+        ('override', 'Override'),
+    ]
+    # Nullable: an Admin/In-Charge Override can grant PC access even when
+    # no reservation is currently occupying that lab/time slot at all.
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='check_ins', null=True, blank=True)
     id_number = models.CharField(max_length=50)
+    checkin_type = models.CharField(max_length=10, choices=CHECKIN_TYPE, default='requester')
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='session_checkins',
+        help_text='The registered account resolved from id_number, if any.',
+    )
+    pc = models.ForeignKey('labs.PC', on_delete=models.SET_NULL, null=True, blank=True, related_name='checkins')
     checked_in_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

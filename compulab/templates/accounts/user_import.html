@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Import Students{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Import Students (Excel/CSV)</h1>
+    <div class="sub">Bulk-create student accounts under one Department at a time</div>
+  </div>
+  <div>
+    <a href="{% url 'users' %}" class="action-btn">&larr; Back to Users</a>
+  </div>
+</div>
+
+<div class="card" style="max-width:640px">
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.department.id_for_label }}">Department</label>
+      {{ form.department }}
+      <span class="helptext">Every student in the file will be filed under this Department. To import a second department, run the import again with a separate file.</span>
+      {% if form.department.errors %}<div class="form-errors">{{ form.department.errors|join:", " }}</div>{% endif %}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.file.id_for_label }}">{{ form.file.label }}</label>
+      {{ form.file }}
+      <span class="helptext">{{ form.file.help_text }} Year Level must be valid for the Department chosen above. <a href="{% url 'user_import_template' %}">Download a starter CSV template</a>.</span>
+      {% if form.file.errors %}<div class="form-errors">{{ form.file.errors|join:", " }}</div>{% endif %}
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="action-btn primary">Import Students</button>
+      <a href="{% url 'users' %}" class="action-btn">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% if results %}
+<div class="card" style="max-width:800px; margin-top:16px;">
+  <h3 style="margin-top:0;">Results — {{ results.department }}</h3>
+
+  <p><strong>{{ results.created|length }}</strong> student{{ results.created|length|pluralize }} created.
+     <strong>{{ results.skipped|length }}</strong> row{{ results.skipped|length|pluralize }} skipped.</p>
+
+  {% if results.created %}
+    <h4>Created</h4>
+    <table class="cr-table" style="width:100%; border-collapse:collapse; font-size:13px;">
+      <thead><tr><th style="text-align:left; padding:6px;">Row</th><th style="text-align:left; padding:6px;">ID Number</th><th style="text-align:left; padding:6px;">Name</th></tr></thead>
+      <tbody>
+        {% for c in results.created %}
+          <tr><td style="padding:6px;">{{ c.row }}</td><td style="padding:6px;">{{ c.id_number }}</td><td style="padding:6px;">{{ c.name }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  {% if results.skipped %}
+    <h4 style="margin-top:16px;">Skipped</h4>
+    <table class="cr-table" style="width:100%; border-collapse:collapse; font-size:13px;">
+      <thead><tr><th style="text-align:left; padding:6px;">Row</th><th style="text-align:left; padding:6px;">ID Number</th><th style="text-align:left; padding:6px;">Reason</th></tr></thead>
+      <tbody>
+        {% for s in results.skipped %}
+          <tr><td style="padding:6px;">{{ s.row }}</td><td style="padding:6px;">{{ s.id_number }}</td><td style="padding:6px; color:var(--red, #ff5d5d);">{{ s.errors|join:" " }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}
