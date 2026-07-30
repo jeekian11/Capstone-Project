@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}Class Rosters{% endblock %}
 
 {% block content %}
@@ -8,13 +8,13 @@
 
 <style>
 .cr{
-  --cr-bg:#0a0e12; --cr-card:#12171d; --cr-border:#232b34;
-  --cr-text:#e7ebee; --cr-dim:#8b98a3; --cr-faint:#4d5761;
-  --cr-purple:#a78bfa; --cr-purple-tint:rgba(167,139,250,0.14);
-  --cr-green:#3ed6c4; --cr-green-tint:rgba(62,214,196,0.14);
-  --cr-blue:#5b9dff; --cr-blue-tint:rgba(91,157,255,0.14);
-  --cr-orange:#f2a93b; --cr-orange-tint:rgba(242,169,59,0.14);
-  --cr-red:#ff5d5d; --cr-red-tint:rgba(255,93,93,0.14);
+  --cr-bg:var(--bg); --cr-card:var(--surface); --cr-border:var(--border);
+  --cr-text:var(--text); --cr-dim:var(--text-dim); --cr-faint:var(--text-faint);
+  --cr-purple:var(--purple); --cr-purple-tint:var(--purple-dim);
+  --cr-green:var(--green); --cr-green-tint:var(--green-dim);
+  --cr-blue:var(--blue); --cr-blue-tint:var(--blue-dim);
+  --cr-orange:var(--amber); --cr-orange-tint:var(--amber-dim);
+  --cr-red:var(--red); --cr-red-tint:var(--red-dim);
   font-family:'Inter',sans-serif; background:var(--cr-bg); color:var(--cr-text);
   margin:-20px; padding:20px; min-height:100%;
 }
@@ -34,7 +34,7 @@
 .ic-blue{background:var(--cr-blue-tint); color:var(--cr-blue);}
 .ic-orange{background:var(--cr-orange-tint); color:var(--cr-orange);}
 
-.cr-filter-form{display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr auto auto; gap:12px; align-items:end;}
+.cr-filter-form{display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr 1fr auto auto; gap:12px; align-items:end;}
 .cr-label{font-size:12px; font-weight:500; color:var(--cr-dim); margin-bottom:6px; display:block;}
 .cr-input, .cr-select{width:100%; padding:9px 12px; border:1px solid var(--cr-border); border-radius:8px; font-size:13px; background:var(--cr-bg); color:var(--cr-text); font-family:inherit;}
 .cr-btn{display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:8px; border:1px solid var(--cr-border); background:var(--cr-card); color:var(--cr-text); font-size:13px; font-weight:500; cursor:pointer; white-space:nowrap;}
@@ -51,6 +51,9 @@
 .cr-badge{display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600;}
 .cr-badge.active{background:var(--cr-green-tint); color:var(--cr-green);}
 .cr-badge.inactive{background:var(--cr-red-tint); color:var(--cr-red);}
+.cr-badge.pending{background:var(--cr-orange-tint); color:var(--cr-orange);}
+.cr-badge.approved{background:var(--cr-green-tint); color:var(--cr-green);}
+.cr-badge.rejected{background:var(--cr-red-tint); color:var(--cr-red);}
 
 .cr-manage-btn{display:inline-flex; align-items:center; gap:5px; padding:6px 14px; border-radius:7px; background:var(--cr-green); color:#0a0e12; font-weight:600; font-size:12.5px;}
 .cr-manage-btn:hover{text-decoration:none; opacity:.9;}
@@ -60,6 +63,9 @@
 .cr-pagination a, .cr-pagination span.cr-page{display:flex; align-items:center; justify-content:center; min-width:28px; height:28px; border-radius:7px; border:1px solid var(--cr-border); color:var(--cr-text); font-size:12.5px;}
 .cr-pagination a:hover{border-color:var(--cr-faint); text-decoration:none;}
 .cr-pagination span.cr-page.current{background:var(--cr-green); border-color:var(--cr-green); color:#0a0e12; font-weight:700;}
+html[data-theme="light"] .cr-btn.primary,
+html[data-theme="light"] .cr-manage-btn,
+html[data-theme="light"] .cr-pagination span.cr-page.current{ color:#fff; }
 .cr-pagination span.cr-page.disabled{color:var(--cr-faint); border-color:var(--cr-border);}
 
 .cr-empty{color:var(--cr-faint); font-size:13px; text-align:center; padding:24px 0;}
@@ -78,7 +84,7 @@
         Manage all class rosters used for laboratory reservations.
       </div>
     </div>
-    <a href="{% url 'roster_create' %}" class="cr-btn primary">+ New Roster</a>
+    <a href="{% url 'roster_create' %}" class="cr-btn primary js-modal-link">+ New Roster</a>
   </div>
 
   <div class="cr-metrics">
@@ -108,6 +114,13 @@
       <div>
         <div class="cr-metric-label">Archived Rosters</div>
         <div class="cr-metric-val">{{ archived_rosters }}</div>
+      </div>
+    </div>
+    <div class="cr-card cr-metric">
+      <div class="cr-metric-icon ic-orange"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div>
+        <div class="cr-metric-label">Pending Approval</div>
+        <div class="cr-metric-val">{{ pending_rosters }}</div>
       </div>
     </div>
   </div>
@@ -144,6 +157,15 @@
           <option value="inactive" {% if selected_status == "inactive" %}selected{% endif %}>Inactive</option>
         </select>
       </div>
+      <div>
+        <label class="cr-label" for="cr-approval">Approval</label>
+        <select name="approval" id="cr-approval" class="cr-select">
+          <option value="">All</option>
+          {% for key, label in approval_choices %}
+            <option value="{{ key }}" {% if selected_approval == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
       <a href="{% url 'roster_list' %}" class="cr-btn">Clear</a>
       <button type="submit" class="cr-btn primary">Search</button>
     </form>
@@ -154,13 +176,13 @@
       <thead>
         <tr>
           <th>Roster Name</th><th>Course & Section</th><th>Instructor</th>
-          <th>Semester / A.Y.</th><th>Students</th><th>Status</th><th>Actions</th>
+          <th>Semester / A.Y.</th><th>Students</th><th>Status</th><th>Approval</th><th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for roster in rosters %}
           <tr>
-            <td><a href="{% url 'roster_detail' roster.pk %}" class="cr-name">{{ roster.course_code|default:roster.name }}</a></td>
+            <td><a href="{% url 'roster_detail' roster.pk %}" class="cr-name js-modal-link">{{ roster.course_code|default:roster.name }}</a></td>
             <td>{{ roster.subject|default:"—" }}{% if roster.section %} · {{ roster.section }}{% endif %}</td>
             <td>{{ roster.instructor.get_full_name|default:"—" }}</td>
             <td>{% if roster.semester %}{{ roster.get_semester_display }}{% else %}—{% endif %}{% if roster.academic_year %} {{ roster.academic_year }}{% endif %}</td>
@@ -172,10 +194,11 @@
                 <span class="cr-badge inactive">Inactive</span>
               {% endif %}
             </td>
-            <td><a href="{% url 'roster_detail' roster.pk %}" class="cr-manage-btn">⚙ Manage</a></td>
+            <td><span class="cr-badge {{ roster.approval_status }}">{{ roster.get_approval_status_display }}</span></td>
+            <td><a href="{% url 'roster_detail' roster.pk %}" class="cr-manage-btn js-modal-link">⚙ Manage</a></td>
           </tr>
         {% empty %}
-          <tr><td colspan="7"><p class="cr-empty">No class rosters yet. Create one to enable real attendance names.</p></td></tr>
+          <tr><td colspan="8"><p class="cr-empty">No class rosters yet. Create one to enable real attendance names.</p></td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -187,7 +210,7 @@
         </div>
         <div class="cr-pages">
           {% if page_obj.has_previous %}
-            <a href="?{% if selected_q %}q={{ selected_q }}&{% endif %}{% if selected_semester %}semester={{ selected_semester }}&{% endif %}{% if selected_course %}course={{ selected_course }}&{% endif %}{% if selected_status %}status={{ selected_status }}&{% endif %}page={{ page_obj.previous_page_number }}">&lsaquo;</a>
+            <a href="?{% if selected_q %}q={{ selected_q }}&{% endif %}{% if selected_semester %}semester={{ selected_semester }}&{% endif %}{% if selected_course %}course={{ selected_course }}&{% endif %}{% if selected_status %}status={{ selected_status }}&{% endif %}{% if selected_approval %}approval={{ selected_approval }}&{% endif %}page={{ page_obj.previous_page_number }}">&lsaquo;</a>
           {% else %}
             <span class="cr-page disabled">&lsaquo;</span>
           {% endif %}
@@ -195,11 +218,11 @@
             {% if num == page_obj.number %}
               <span class="cr-page current">{{ num }}</span>
             {% else %}
-              <a href="?{% if selected_q %}q={{ selected_q }}&{% endif %}{% if selected_semester %}semester={{ selected_semester }}&{% endif %}{% if selected_course %}course={{ selected_course }}&{% endif %}{% if selected_status %}status={{ selected_status }}&{% endif %}page={{ num }}">{{ num }}</a>
+              <a href="?{% if selected_q %}q={{ selected_q }}&{% endif %}{% if selected_semester %}semester={{ selected_semester }}&{% endif %}{% if selected_course %}course={{ selected_course }}&{% endif %}{% if selected_status %}status={{ selected_status }}&{% endif %}{% if selected_approval %}approval={{ selected_approval }}&{% endif %}page={{ num }}">{{ num }}</a>
             {% endif %}
           {% endfor %}
           {% if page_obj.has_next %}
-            <a href="?{% if selected_q %}q={{ selected_q }}&{% endif %}{% if selected_semester %}semester={{ selected_semester }}&{% endif %}{% if selected_course %}course={{ selected_course }}&{% endif %}{% if selected_status %}status={{ selected_status }}&{% endif %}page={{ page_obj.next_page_number }}">&rsaquo;</a>
+            <a href="?{% if selected_q %}q={{ selected_q }}&{% endif %}{% if selected_semester %}semester={{ selected_semester }}&{% endif %}{% if selected_course %}course={{ selected_course }}&{% endif %}{% if selected_status %}status={{ selected_status }}&{% endif %}{% if selected_approval %}approval={{ selected_approval }}&{% endif %}page={{ page_obj.next_page_number }}">&rsaquo;</a>
           {% else %}
             <span class="cr-page disabled">&rsaquo;</span>
           {% endif %}

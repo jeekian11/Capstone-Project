@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}Manage Requests{% endblock %}
 
 {% block content %}
@@ -9,7 +9,7 @@
     <div class="sub">{{ pending_requests|length }} pending request{{ pending_requests|length|pluralize }}</div>
   </div>
   <div style="display:flex; gap:8px">
-    <a href="{% url 'request_new' %}" class="action-btn primary">+ Log reservation</a>
+    <a href="{% url 'request_new' %}" class="action-btn primary js-modal-link">+ Log reservation</a>
     <a href="{% url 'schedule' %}" class="action-btn">Back</a>
   </div>
 </div>
@@ -21,7 +21,7 @@
 <div class="card">
   <table class="table">
     <thead>
-      <tr><th>Requester</th><th>ID number</th><th>Lab</th><th>Subject</th><th>Date</th><th>Time</th><th>Students</th><th></th></tr>
+      <tr><th>Requester</th><th>ID number</th><th>Lab</th><th>Subject</th><th>Date</th><th>Time</th><th>Students / PCs</th><th></th></tr>
     </thead>
     <tbody>
       {% for req in pending_requests %}
@@ -32,10 +32,10 @@
           <td>{{ req.subject }}</td>
           <td>{{ req.date|date:"M d, Y" }}</td>
           <td>{{ req.start_time|time:"H:i" }}–{{ req.end_time|time:"H:i" }}</td>
-          <td>{{ req.student_count }}</td>
+          <td>{% if req.requester_type == 'walk_in' or req.requester_type == 'override' %}{{ req.pcs_requested }} PC{{ req.pcs_requested|pluralize }}{% else %}{{ req.student_count }}{% endif %}</td>
           <td>
-            <a href="{% url 'request_detail' req.pk %}" class="action-btn small primary">Select</a>
-            <a href="{% url 'request_edit' req.pk %}" class="action-btn icon-only" title="Edit request"><svg><use href="#icon-edit"/></svg></a>
+            <a href="{% url 'request_detail' req.pk %}" class="action-btn small primary js-modal-link">Select</a>
+            <a href="{% url 'request_edit' req.pk %}" class="action-btn icon-only js-modal-link" title="Edit request"><svg><use href="#icon-edit"/></svg></a>
           </td>
         </tr>
       {% empty %}

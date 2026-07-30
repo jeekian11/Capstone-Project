@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from labs.models import Lab, InventoryItem
+from notifications.models import AlertSettings
 
 User = get_user_model()
 
@@ -98,11 +99,17 @@ class NotificationComposeForm(forms.Form):
         return User.objects.filter(is_active=True, role=audience)
 
 
-class NotificationSettingsForm(forms.ModelForm):
-    """Notifications are in-app only now that the system doesn't collect
-    email addresses, so there are currently no per-user delivery settings
-    to configure — kept as an empty ModelForm so the settings page/URL and
-    its view keep working if a non-email setting is added here later."""
+class AlertSettingsForm(forms.ModelForm):
+    """Admin-only toggles for which categories of AUTO-GENERATED
+    notifications the system is allowed to send. Manual "+ Create
+    Notification" announcements are never gated by these."""
+
     class Meta:
-        model = User
-        fields = []
+        model = AlertSettings
+        fields = [
+            'reservation_notifications', 'pc_status_alerts', 'maintenance_alerts',
+            'login_security_alerts', 'session_reminders', 'system_announcements',
+        ]
+        widgets = {
+            field: forms.CheckboxInput() for field in fields
+        }

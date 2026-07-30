@@ -10,7 +10,7 @@ class CustomUserAdmin(UserAdmin):
         (None, {'fields': ('username', 'password')}),
         ('Personal info', {'fields': ('first_name', 'last_name', 'avatar')}),
         ('Role, Department & Lab', {
-            'fields': ('role', 'id_number', 'department', 'year_level', 'course_year_section', 'assigned_lab'),
+            'fields': ('role', 'id_number', 'department', 'year_level', 'assigned_lab'),
         }),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),

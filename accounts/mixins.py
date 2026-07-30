@@ -1,5 +1,6 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.http import JsonResponse
 
 class RoleRequiredMixin(LoginRequiredMixin):
     allowed_roles = []
@@ -10,3 +11,80 @@ class RoleRequiredMixin(LoginRequiredMixin):
         if self.allowed_roles and request.user.role not in self.allowed_roles:
             raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
+
+
+def is_modal_request(request):
+    """True when the page was fetched by the app-wide modal JS (see
+    base.html) instead of a normal full-page navigation. Public helper —
+    use this directly in get()/post()/dispatch() overrides that redirect
+    before form_valid() ever runs, so those early exits stay modal-aware
+    too instead of just always doing a normal redirect."""
+    return request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+
+# kept as an alias so existing internal references keep working
+_is_modal_request = is_modal_request
+
+
+def modal_redirect(request, view_name, *args, **kwargs):
+    """Drop-in replacement for `redirect(view_name, *args, **kwargs)` in a
+    plain function-based view, for "action" endpoints (approve/reject/
+    resolve/archive/etc.) that a form inside a modal-opened detail page
+    posts to. A normal redirect() would get transparently followed by the
+    modal's AJAX fetch, dumping the *entire* destination page (sidebar,
+    navbar and all) into the modal instead of just closing it. This
+    returns JSON telling the modal to close and refresh instead, when the
+    request came from the modal — and the normal redirect otherwise."""
+    from django.shortcuts import redirect
+    from django.urls import reverse
+    if is_modal_request(request):
+        return JsonResponse({'success': True, 'redirect': reverse(view_name, args=args, kwargs=kwargs)})
+    return redirect(view_name, *args, **kwargs)
+
+
+class ModalFormMixin:
+    """Mix into a CreateView/UpdateView (or any FormView) so it can render
+    inside the app-wide "add / edit" modal (base.html) as well as work as
+    a normal full page when visited directly.
+
+    - GET via the modal: renders only the {% block content %} portion
+      (no sidebar/navbar), by swapping which template it extends.
+    - POST via the modal, success: returns JSON {"success": true} so the
+      JS can close the modal and refresh the page behind it.
+    - POST via the modal, validation errors: re-renders the bare form
+      (status 200) so the JS can swap it back into the modal with the
+      errors shown, instead of following a redirect/reload.
+    """
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if is_modal_request(self.request):
+            context['base_template'] = 'partials/bare.html'
+            context['is_modal'] = True
+        return context
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        if is_modal_request(self.request):
+            return JsonResponse({'success': True, 'redirect': self.get_success_url()})
+        return response
+
+    def form_invalid(self, form):
+        response = super().form_invalid(form)
+        if is_modal_request(self.request):
+            response.status_code = 200
+        return response
+
+
+class ModalDetailMixin:
+    """Mix into a TemplateView/DetailView-style "view" page so it can be
+    opened inside the app-wide modal instead of navigating to a separate
+    page, while still working as a normal full page when visited directly.
+    """
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if is_modal_request(self.request):
+            context['base_template'] = 'partials/bare.html'
+            context['is_modal'] = True
+        return context

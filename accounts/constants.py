@@ -13,41 +13,25 @@ reads from this single source of truth.
 """
 
 DEPARTMENTS = {
-    'CCS': {
-        'name': 'College of Computer Studies',
+    'BSIS': {
+        'name': 'Bachelor of Science in Information Systems (BSIS)',
         'year_levels': [1, 2, 3, 4],
     },
-    'COE': {
-        'name': 'College of Engineering',
+    'BSCJ': {
+        'name': 'Bachelor of Science in Criminal Justice (BSCJ)',
         'year_levels': [1, 2, 3, 4, 5],
     },
-    'CBA': {
-        'name': 'College of Business Administration',
+    'BSTM': {
+        'name': 'Bachelor of Science in Tourism Management (BSTM)',
         'year_levels': [1, 2, 3, 4],
     },
-    'CAS': {
-        'name': 'College of Arts and Sciences',
+    'BTVTED': {
+        'name': 'Bachelor of Technical-Vocational Teacher Education (BTVTED)',
         'year_levels': [1, 2, 3, 4],
-    },
-    'COED': {
-        'name': 'College of Education',
-        'year_levels': [1, 2, 3, 4],
-    },
-    'CCJE': {
-        'name': 'College of Criminal Justice Education',
-        'year_levels': [1, 2, 3, 4],
-    },
-    'CHTM': {
-        'name': 'College of Hospitality and Tourism Management',
-        'year_levels': [1, 2, 3, 4],
-    },
-    'CTE': {
-        'name': 'College of Technical Education',
-        'year_levels': [1, 2],
     },
 }
 
-# e.g. [('CCS', 'College of Computer Studies'), ...] — for model/form choices
+# e.g. [('BSIS', 'Bachelor of Science in Information Systems (BSIS)'), ...] — for model/form choices
 DEPARTMENT_CHOICES = [(code, info['name']) for code, info in DEPARTMENTS.items()]
 
 YEAR_LEVEL_LABELS = {
@@ -65,7 +49,7 @@ def year_level_choices_for(department_code):
 
 
 def department_year_levels_json():
-    """{'CCS': [{'value': 1, 'label': '1st Year'}, ...], ...} — handed to
+    """{'BSIS': [{'value': 1, 'label': '1st Year'}, ...], ...} — handed to
     templates so the Department -> Year Level dropdowns can be wired up
     client-side without a round trip."""
     return {

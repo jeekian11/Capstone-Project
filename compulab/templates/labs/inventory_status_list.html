@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}Equipment Status{% endblock %}
 
 {% block content %}
@@ -8,7 +8,7 @@
     <h1>Equipment status</h1>
     <div class="sub">{{ items|length }} items</div>
   </div>
-  <a href="{% url 'inventory' %}" class="action-btn">← Back to inventory</a>
+  <a href="{% url 'inventory' %}" class="action-btn">Back</a>
 </div>
 
 <div class="card">
@@ -19,7 +19,7 @@
     <tbody>
       {% for item in items %}
         <tr>
-          <td><a href="{% url 'inventory_detail' item.pk %}">{{ item.name }}</a></td>
+          <td><a href="{% url 'inventory_detail' item.pk %}" class="js-modal-link">{{ item.name }}</a></td>
           <td>{{ item.lab.name }}</td>
           <td><span class="status-pill pill-{{ item.status }}">{{ item.get_status_display }}</span></td>
           {% if request.user.role == 'admin' or request.user.role == 'incharge' %}

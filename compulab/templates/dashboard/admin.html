@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}Admin Dashboard{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
 
@@ -10,19 +10,19 @@
 
 <style>
 .ld{
-  --ld-bg:#0a0e12;
-  --ld-card:#12171d;
-  --ld-border:#232b34;
-  --ld-text:#e7ebee;
-  --ld-dim:#8b98a3;
-  --ld-faint:#4d5761;
-  --ld-purple:#a78bfa; --ld-purple-tint:rgba(167,139,250,0.14);
-  --ld-green:#3ed6c4; --ld-green-tint:rgba(62,214,196,0.14);
-  --ld-blue:#5b9dff; --ld-blue-tint:rgba(91,157,255,0.14);
-  --ld-orange:#f2a93b; --ld-orange-tint:rgba(242,169,59,0.14);
-  --ld-teal:#3ed6c4; --ld-teal-tint:rgba(62,214,196,0.14);
-  --ld-red:#ff5d5d; --ld-red-tint:rgba(255,93,93,0.14);
-  --ld-amber:#f2a93b; --ld-amber-tint:rgba(242,169,59,0.14);
+  --ld-bg:var(--bg);
+  --ld-card:var(--surface);
+  --ld-border:var(--border);
+  --ld-text:var(--text);
+  --ld-dim:var(--text-dim);
+  --ld-faint:var(--text-faint);
+  --ld-purple:var(--purple); --ld-purple-tint:var(--purple-dim);
+  --ld-green:var(--green); --ld-green-tint:var(--green-dim);
+  --ld-blue:var(--blue); --ld-blue-tint:var(--blue-dim);
+  --ld-orange:var(--amber); --ld-orange-tint:var(--amber-dim);
+  --ld-teal:var(--green); --ld-teal-tint:var(--green-dim);
+  --ld-red:var(--red); --ld-red-tint:var(--red-dim);
+  --ld-amber:var(--amber); --ld-amber-tint:var(--amber-dim);
   font-family:'Inter',sans-serif;
   background:var(--ld-bg);
   color:var(--ld-text);

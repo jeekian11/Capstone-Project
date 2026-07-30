@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}Delete Roster{% endblock %}
 
 {% block content %}
@@ -16,7 +16,9 @@
     {% with n=roster.students.count %}
       {% if n %}This will also remove its {{ n }} student{{ n|pluralize }}.{% endif %}
     {% endwith %}
-    Sessions linked to this roster will keep their attendance history but lose the name lookup.
+    Its upcoming, not-yet-attended schedule (today-or-later sessions with no check-ins) will be
+    deleted along with it. Past sessions, and any session that already has a check-in, keep their
+    attendance history but lose the name lookup.
   </p>
   <form method="post">
     {% csrf_token %}

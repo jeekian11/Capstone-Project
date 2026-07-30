@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}{% if object %}Edit User{% else %}Add User{% endif %}{% endblock %}
 
 {% block content %}
@@ -32,10 +32,10 @@
     </div>
 
     {% if form.username %}
-    <div class="form-group">
+    <div class="form-group" data-hide-for-role="student">
       <label class="form-label" for="{{ form.username.id_for_label }}">Username</label>
       {{ form.username }}
-      <span class="helptext">Used to log into SCLAMS (the dashboard). Not the same as ID Number below.</span>
+      <span class="helptext">Used to log into SCLAMS (the dashboard). Not the same as ID Number below. Not needed for Students — their Student ID is used to sign in at the lab PC instead.</span>
       {% if form.username.errors %}<div class="form-errors">{{ form.username.errors|join:", " }}</div>{% endif %}
     </div>
     {% endif %}
@@ -44,17 +44,8 @@
     <div class="form-group">
       <label class="form-label" for="{{ form.id_number.id_for_label }}">ID Number</label>
       {{ form.id_number }}
-      <span class="helptext">Student/Instructor ID — this is what they present at the lab PC and what reservation requests are matched against. Required for the account to be linked to a reservation.</span>
+      <span class="helptext">Student/Instructor ID — this is what they present at the lab PC and what reservation requests are matched against. Required for Students — it's their only login credential for PC access — and links the account to a reservation.</span>
       {% if form.id_number.errors %}<div class="form-errors">{{ form.id_number.errors|join:", " }}</div>{% endif %}
-    </div>
-    {% endif %}
-
-    {% if form.course_year_section %}
-    <div class="form-group" data-role-field="student">
-      <label class="form-label" for="{{ form.course_year_section.id_for_label }}">Course &amp; Year/Section</label>
-      {{ form.course_year_section }}
-      <span class="helptext">Students only — e.g. "BSIS 4A". Shown automatically when this student is picked as a requester.</span>
-      {% if form.course_year_section.errors %}<div class="form-errors">{{ form.course_year_section.errors|join:", " }}</div>{% endif %}
     </div>
     {% endif %}
 
@@ -81,6 +72,7 @@
       <div class="form-group">
         <label class="form-label" for="{{ form.role.id_for_label }}">Role</label>
         {{ form.role }}
+        <span class="helptext">Admin, Lab In-Charge, and Instructor accounts need a password. Students sign in at the lab PC with their Student ID instead — no password required.</span>
         {% if form.role.errors %}<div class="form-errors">{{ form.role.errors|join:", " }}</div>{% endif %}
       </div>
       <div class="form-group">
@@ -99,7 +91,7 @@
     {% endif %}
 
     {% if form.password1 %}
-    <div class="form-row">
+    <div class="form-row" data-hide-for-role="student">
       <div class="form-group">
         <label class="form-label" for="{{ form.password1.id_for_label }}">Password</label>
         {{ form.password1 }}
@@ -134,6 +126,9 @@
     var role = roleSelect.value;
     document.querySelectorAll('[data-role-field]').forEach(function(el) {
       el.style.display = (el.dataset.roleField === role) ? '' : 'none';
+    });
+    document.querySelectorAll('[data-hide-for-role]').forEach(function(el) {
+      el.style.display = (el.dataset.hideForRole === role) ? 'none' : '';
     });
   }
 

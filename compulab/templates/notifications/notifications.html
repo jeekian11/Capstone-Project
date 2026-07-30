@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}Notifications{% endblock %}
 
 {% block content %}
@@ -7,10 +7,9 @@
 <div class="page-header">
   <div>
     <h1>Notifications</h1>
-    <div class="sub">{{ notifications|length }} total</div>
+    <div class="sub">{{ stats.total }} total</div>
   </div>
   <div style="display:flex; gap:8px">
-    <a href="{% url 'notification_settings' %}" class="action-btn">Settings</a>
     <form method="post" action="{% url 'mark_all_read' %}"
           onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Mark all as read?', text: 'All of your notifications will be marked as read.', icon: 'question', confirmButtonText: 'Yes, mark all read', confirmButtonColor: '#3ed6c4'}); return false;">
       {% csrf_token %}
@@ -19,11 +18,33 @@
   </div>
 </div>
 
+<form method="get" class="notif-toolbar">
+  <select name="category" class="notif-select" onchange="this.form.submit()">
+    {% for value, label in category_choices %}
+      <option value="{{ value }}" {% if selected_category == value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <div class="notif-search">
+    <button type="submit" style="all:unset; position:absolute; left:11px; top:50%; transform:translateY(-50%); cursor:pointer; display:flex;" aria-label="Search">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
+    <input type="text" name="q" value="{{ q }}" placeholder="Search notification...">
+  </div>
+  <select name="sort" class="notif-select" onchange="this.form.submit()">
+    <option value="latest" {% if sort == 'latest' %}selected{% endif %}>Sort: Latest</option>
+    <option value="oldest" {% if sort == 'oldest' %}selected{% endif %}>Sort: Oldest</option>
+  </select>
+</form>
+
 <div class="card">
   {% for notif in notifications %}
     {% include "notifications/_item.html" %}
   {% empty %}
-    <p class="empty">No notifications yet.</p>
+    <div class="notif-empty">
+      <svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 5.5h-15S6 13 6 9z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
+      <div class="notif-empty-title">No notifications yet</div>
+      <div class="notif-empty-sub">You'll see updates here as they come in.</div>
+    </div>
   {% endfor %}
 </div>
 

@@ -137,6 +137,7 @@ def refresh_pc_statuses(pcs):
         summary['checked'] += 1
         new_status = 'online' if reachable else 'offline'
         update_fields = ['status', 'last_active']
+        previous_status = pc.status
 
         if reachable:
             # don't clobber a manually-flagged "in_use" or "issue" status with
@@ -160,6 +161,16 @@ def refresh_pc_statuses(pcs):
 
         pc.save(update_fields=update_fields)
         summary['online' if reachable else 'offline'] += 1
+
+        # Auto-notify only on a genuine online<->offline transition — not
+        # on every refresh tick, and not for PCs left alone because they're
+        # flagged 'issue'/'maintenance'/'in_use' above.
+        if pc.status != previous_status:
+            from notifications import services as notify_service
+            if pc.status == 'offline' and previous_status in ('online', 'in_use'):
+                notify_service.notify_pc_offline(pc)
+            elif pc.status == 'online' and previous_status == 'offline':
+                notify_service.notify_pc_online(pc)
 
     return summary
 

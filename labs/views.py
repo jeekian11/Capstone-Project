@@ -9,10 +9,12 @@ from django.core.exceptions import PermissionDenied
 from django.urls import reverse_lazy, reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
-from accounts.mixins import RoleRequiredMixin
+from accounts.mixins import RoleRequiredMixin, ModalFormMixin, ModalDetailMixin, modal_redirect
 from labs.models import PC, Lab, InventoryItem, MaintenanceLog, EquipmentIssue, PCActivityLog
 from labs.network import refresh_pc_statuses
+from labs.privacy import resolve_site_label
 from labs.forms import ReservationPCLoginForm, MaintenanceScheduleForm, LabForm, InventoryItemForm, PCForm, PCImportForm
+from notifications import services as notify_service
 
 
 # admin main dashboard
@@ -243,7 +245,32 @@ def verify_reservation_and_check_in(remote_addr, id_number, code):
     if not id_number:
         return {'ok': False, 'error': 'Please enter your Student/Instructor ID.'}
 
+    # Concurrency guard: this ID number may already be actively logged in on
+    # a DIFFERENT PC right now. SessionCheckIn.pc always reflects the last
+    # machine that ID successfully checked into (see the update_or_create
+    # below), so if that PC is still marked 'in_use', this same person is
+    # currently occupying it — block a second, simultaneous login elsewhere
+    # instead of silently letting them take over a second machine while the
+    # first one stays live. Excludes THIS pc so re-submitting the login form
+    # on the same machine (e.g. a double click, or refreshing after a
+    # successful unlock) still works normally.
+    other_active_checkin = SessionCheckIn.objects.filter(
+        id_number__iexact=id_number, pc__status='in_use',
+    ).exclude(pc=pc).select_related('pc', 'pc__lab').first()
+    if other_active_checkin and other_active_checkin.pc:
+        other_pc = other_active_checkin.pc
+        return {'ok': False, 'error': (
+            f"This ID is already logged in on {other_pc.pc_id} ({other_pc.lab.name}). "
+            "Please log out there first, or ask your Lab In-Charge for help if that session is stuck."
+        )}
+
     is_group_booking = session.requester_type == 'group'
+    # Walk-in and Override reservations now book a specific NUMBER of PCs
+    # in advance (see scheduling.utils.capacity_error) rather than a single
+    # named person, so — just like Group bookings — their shared code
+    # should work for any ID, capped at how many PCs were approved.
+    is_capacity_booking = session.requester_type in ('walk_in', 'override')
+    is_shared_code_booking = is_group_booking or is_capacity_booking
     is_primary_requester = id_number.lower() == (session.requester_id_number or '').strip().lower()
     roster_student = None
     if not is_primary_requester and session.roster_id:
@@ -251,17 +278,18 @@ def verify_reservation_and_check_in(remote_addr, id_number, code):
 
     User = get_user_model()
     walk_in_account = None
-    if not is_group_booking and not is_primary_requester and roster_student is None:
-        # Not the requester, not a group booking, not on this session's
-        # roster — they have no claim on this specific reservation. Only a
-        # Class (instructor) reservation has a WALK-IN path: any other
-        # registered, active account may still use a PC during that class's
-        # slot, but only if the laboratory currently has an available
-        # (working, not-already-in-use) PC — a reservation guarantees a
-        # slot for the people it was actually made for, not for anyone who
-        # happens to be in the room. Individual and Group bookings don't
-        # get a walk-in path: an Individual code is for exactly one person,
-        # and a Group booking is already open to any ID up to its own cap.
+    if not is_shared_code_booking and not is_primary_requester and roster_student is None:
+        # Not the requester, not a group/walk-in/override booking, not on
+        # this session's roster — they have no claim on this specific
+        # reservation. Only a Class (instructor) reservation has a WALK-IN
+        # path: any other registered, active account may still use a PC
+        # during that class's slot, but only if the laboratory currently
+        # has an available (working, not-already-in-use) PC — a reservation
+        # guarantees a slot for the people it was actually made for, not
+        # for anyone who happens to be in the room. Individual bookings
+        # don't get a walk-in path either: an Individual code is for
+        # exactly one person. (Group/Walk-in/Override bookings already
+        # accept any ID up to their own cap, handled above.)
         if session.requester_type != 'instructor':
             return {'ok': False, 'error': 'No matching reservation for this lab. Check your ID and reservation code, or ask your Lab In-Charge.'}
 
@@ -279,15 +307,24 @@ def verify_reservation_and_check_in(remote_addr, id_number, code):
                 'Please try again later or ask your Lab In-Charge.'
             )}
 
-    already_checked_in = False
-    if is_group_booking:
-        already_checked_in = session.check_ins.filter(id_number__iexact=id_number).exists()
-        cap = session.student_count or 0
-        if not already_checked_in and cap > 0 and session.check_ins.count() >= cap:
+    if is_shared_code_booking:
+        cap = (session.pcs_requested if is_capacity_booking else session.student_count) or 0
+        unit = 'PC' if is_capacity_booking else 'student'
+        # Compare against everyone ELSE already checked in (not the raw
+        # total), and do this on every attempt — not just a person's first
+        # one. Previously this whole check was skipped for anyone with an
+        # existing SessionCheckIn row, which meant lowering student_count/
+        # pcs_requested after people had already checked in (e.g. editing a
+        # reservation from 2 students down to 1) never actually revoked
+        # anyone's access: whoever had already checked in could keep
+        # re-entering indefinitely regardless of the new, lower cap.
+        # Excluding "self" is still necessary so a legitimate repeat login
+        # doesn't count its own earlier check-in against itself.
+        others_checked_in = session.check_ins.exclude(id_number__iexact=id_number).count()
+        if cap > 0 and others_checked_in >= cap:
             return {'ok': False, 'error': (
-                f"This group's check-in limit ({cap} student{'s' if cap != 1 else ''}) has already been "
-                "reached for this reservation. If that count is wrong, ask your Admin or Lab In-Charge to "
-                "update the request."
+                f"This reservation's check-in limit ({cap} {unit}{'s' if cap != 1 else ''}) has already been "
+                "reached. If that count is wrong, ask your Admin or Lab In-Charge to update the request."
             )}
 
     if session.instructor is None:
@@ -325,6 +362,9 @@ def verify_reservation_and_check_in(remote_addr, id_number, code):
     elif is_group_booking:
         checkin_type = 'group'
         checked_in_user = User.objects.filter(id_number__iexact=id_number).first() or session.instructor
+    elif is_capacity_booking:
+        checkin_type = session.requester_type  # 'walk_in' or 'override' — same labels used by the live check-in features
+        checked_in_user = User.objects.filter(id_number__iexact=id_number).first() or session.instructor
     else:
         checkin_type = 'walk_in'
         checked_in_user = walk_in_account
@@ -347,6 +387,9 @@ def verify_reservation_and_check_in(remote_addr, id_number, code):
         checked_in_name = session.requester_name
     elif checkin_type == 'group':
         checked_in_name = f'{session.requester_name} — group member'
+    elif is_capacity_booking:
+        label = 'Walk-in' if session.requester_type == 'walk_in' else 'Override'
+        checked_in_name = f'{id_number} — {label} reservation ({session.requester_name})'
     else:
         checked_in_name = f"{walk_in_account.get_full_name() or walk_in_account.username} — walk-in"
 
@@ -474,6 +517,42 @@ def pc_agent_login_api(request):
     })
 
 
+# JSON endpoint the lab_pc_agent calls (typically once at startup, and
+# whenever it shows the lock screen) to find out its OWN registered name —
+# the "PC 01"-style label shown on the lock screen BEFORE anyone has logged
+# in, so it never has to be hand-typed into agent_config.json and drift out
+# of sync with what's actually set for this PC in the admin panel (Manage
+# PCs -> Edit). Same shared-secret + IP-based PC lookup as the other
+# pc-agent-* endpoints; GET is fine since this is a read-only lookup, but
+# the secret is still required so a random device on the network can't
+# fish for lab PC names.
+@csrf_exempt
+def pc_agent_info_api(request):
+    from django.conf import settings
+
+    expected_secret = getattr(settings, 'PC_AGENT_SHARED_SECRET', '')
+    secret = request.GET.get('secret') if request.method == 'GET' else None
+    if secret is None:
+        try:
+            payload = json.loads(request.body or b'{}')
+        except (ValueError, TypeError):
+            payload = {}
+        secret = payload.get('secret')
+
+    if not expected_secret or secret != expected_secret:
+        return JsonResponse({'ok': False, 'error': 'invalid secret'}, status=403)
+
+    pc = PC.objects.select_related('lab').filter(ip_address=request.META.get('REMOTE_ADDR')).first()
+    if pc is None:
+        return JsonResponse({'ok': False, 'error': 'PC not registered'}, status=200)
+
+    return JsonResponse({
+        'ok': True,
+        'pc_id': pc.pc_id,
+        'lab_name': pc.lab.name,
+    })
+
+
 # JSON endpoint used by the lab_pc_agent while a PC is UNLOCKED — it calls
 # this every `activity_report_interval_seconds` (agent_config.json) with
 # the current foreground window's title bar text. This is the closest
@@ -502,19 +581,30 @@ def pc_agent_activity_api(request):
     if pc is None:
         return JsonResponse({'ok': False, 'error': 'PC not registered'}, status=200)
 
-    # Ignore samples that arrive for a PC the server doesn't currently
-    # think is in use (e.g. a stray call that lands right as a session
-    # ends) — there's no student to attribute it to at that point.
-    if pc.current_user is None and pc.current_session is None:
-        return JsonResponse({'ok': True, 'skipped': 'no active session'})
+    # Only log activity for a PC the server thinks is actually being used
+    # by an authenticated account. pc.current_user is None both for (a) a
+    # stray call that lands right as a normal session ends, and (b) a PC
+    # that's currently unlocked via Manual Unlock or the offline emergency
+    # tool — those set current_session to whatever reservation happens to
+    # overlap the unlock, but never set current_user, precisely because
+    # there is no login and no verified identity behind that access.
+    # Manual Unlock is emergency-only and must never generate a PC
+    # Activity Log trail or get attributed to any user (including a
+    # student whose earlier, unrelated session happens to still overlap
+    # that reservation slot) — so we skip on current_user alone rather
+    # than requiring current_session to also be empty.
+    if pc.current_user is None:
+        return JsonResponse({'ok': True, 'skipped': 'no authenticated user for this PC'})
 
     window_title = (payload.get('window_title') or '').strip()[:500]
+    page_url = (payload.get('page_url') or '').strip()[:500]
 
     PCActivityLog.objects.create(
         pc=pc,
         student=pc.current_user,
         session=pc.current_session,
         window_title=window_title,
+        page_url=page_url,
     )
 
     return JsonResponse({'ok': True})
@@ -549,27 +639,34 @@ def pc_agent_end_session_api(request):
     if pc is None:
         return JsonResponse({'ok': False, 'error': 'PC not registered'}, status=200)
 
-    reason = payload.get('reason', 'manual')  # 'manual' or 'expired'
+    reason = payload.get('reason', 'manual')  # 'manual', 'expired', or 'remote_lock'
     session = pc.current_session
     user = pc.current_user
 
     if session is not None or user is not None:
+        if reason == 'expired':
+            detail_msg = f"{pc.pc_id} ({pc.lab.name}) re-locked — reservation time ended."
+        elif reason == 'remote_lock':
+            detail_msg = (
+                f"{pc.pc_id} ({pc.lab.name}) locked remotely by a Lab In-Charge "
+                f"(Manual PC Control tool)."
+            )
+        else:
+            detail_msg = f"{pc.pc_id} ({pc.lab.name}) locked by the student (session ended early)."
+
         ActivityLog.objects.create(
             actor=user,
             action='pc_lock',
             target_username=session.requester_id_number if session else '',
             pc=pc,
-            details=(
-                f"{pc.pc_id} ({pc.lab.name}) re-locked — reservation time ended."
-                if reason == 'expired' else
-                f"{pc.pc_id} ({pc.lab.name}) locked by the student (session ended early)."
-            )
+            details=detail_msg,
         )
 
     pc.status = 'online'
     pc.current_user = None
     pc.current_session = None
-    pc.save(update_fields=['status', 'current_user', 'current_session'])
+    pc.current_guest_name = ''
+    pc.save(update_fields=['status', 'current_user', 'current_session', 'current_guest_name'])
 
     return JsonResponse({'ok': True})
 
@@ -606,8 +703,9 @@ def pc_agent_logout_api(request):
 
     pc.status = 'locked'
     pc.current_user = None
+    pc.current_guest_name = ''
     pc.last_active = timezone.now()
-    pc.save(update_fields=['status', 'current_user', 'last_active'])
+    pc.save(update_fields=['status', 'current_user', 'current_guest_name', 'last_active'])
 
     ActivityLog.objects.create(
         actor=previous_user,
@@ -618,6 +716,82 @@ def pc_agent_logout_api(request):
             f"{pc.pc_id} ({pc.lab.name}) re-locked — reservation time ended."
             if reason == 'expired' else
             f"{pc.pc_id} ({pc.lab.name}) locked by student (logged out)."
+        )
+    )
+
+    return JsonResponse({'ok': True})
+
+
+# Called by lab_pc_agent/manual_unlock.html — the standalone, no-login HTML
+# tool that Lab In-Charges open to unlock a PC *directly* through its agent
+# (IP + shared secret) when the CompuLab server itself is unreachable. That
+# tool's own "Unlock PC" button already talks straight to the agent and
+# does not depend on this endpoint at all — a PC can still be unlocked for
+# a guest even while the server is down. This endpoint's only job is the
+# separate, best-effort step of recording that guest access in the system's
+# access log, tried right after the direct unlock and again whenever the
+# tool is later able to reach the server. Because there is no login on that
+# offline tool, the "Lab In-Charge name" here is a typed, unverified string
+# (not tied to an authenticated account) — logged as such rather than
+# attributed to a real actor, so the audit trail stays honest about what it
+# actually knows.
+@csrf_exempt
+def manual_unlock_log_api(request):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+
+    from django.conf import settings
+    from accounts.models import ActivityLog
+    from scheduling.models import Session, SessionCheckIn
+
+    try:
+        payload = json.loads(request.body or b'{}')
+    except (ValueError, TypeError):
+        return JsonResponse({'ok': False, 'error': 'invalid JSON body'}, status=400)
+
+    expected_secret = getattr(settings, 'PC_AGENT_SHARED_SECRET', '')
+    if not expected_secret or payload.get('secret') != expected_secret:
+        return JsonResponse({'ok': False, 'error': 'invalid secret'}, status=403)
+
+    pc_ip = (payload.get('pc_ip') or '').strip()
+    guest_name = (payload.get('guest_name') or '').strip()
+    incharge_name = (payload.get('incharge_name') or '').strip()
+
+    if not guest_name or not incharge_name:
+        return JsonResponse({'ok': False, 'error': 'guest_name and incharge_name are both required'}, status=400)
+
+    pc = PC.objects.select_related('lab').filter(ip_address=pc_ip).first()
+    if pc is None:
+        return JsonResponse({'ok': False, 'error': 'No PC in the system is registered with that IP address'}, status=200)
+
+    now = timezone.localtime()
+    active_session = Session.objects.filter(
+        lab=pc.lab, date=now.date(), start_time__lte=now.time(), end_time__gte=now.time(),
+    ).order_by('start_time').first()
+
+    guest_id_number = f"GUEST-{pc.pc_id}-{int(timezone.now().timestamp())}"
+    SessionCheckIn.objects.update_or_create(
+        session=active_session, id_number=guest_id_number,
+        defaults={'checkin_type': 'guest', 'student': None, 'guest_name': guest_name, 'pc': pc},
+    )
+
+    pc.status = 'in_use'
+    pc.last_active = timezone.now()
+    pc.current_user = None
+    pc.current_guest_name = guest_name
+    pc.current_session = active_session
+    pc.save(update_fields=['status', 'last_active', 'current_user', 'current_guest_name', 'current_session'])
+
+    ActivityLog.objects.create(
+        actor=None,
+        action='pc_unlock',
+        target_username=guest_id_number,
+        pc=pc,
+        details=(
+            f'Emergency Manual Unlock (offline tool — used because the CompuLab server could not be reached '
+            f'at the time of unlock): walk-in guest "{guest_name}" was granted access to {pc.pc_id} ({pc.lab.name}). '
+            f'Lab In-Charge name entered on the offline tool (typed, not verified via login): "{incharge_name}". '
+            + (f'Overlapping reservation {active_session.reservation_code}.' if active_session else 'No active reservation.')
         )
     )
 
@@ -643,7 +817,7 @@ class PCStatusView(RoleRequiredMixin, TemplateView):
         q = self.request.GET.get('q', '').strip()
 
         labs_qs = Lab.objects.order_by('name')
-        pcs_qs = PC.objects.select_related('lab', 'current_user')
+        pcs_qs = PC.objects.select_related('lab', 'current_user', 'current_session')
 
         # Lab In-charge only ever sees their own assigned lab — same scoping
         # rule used by refresh_pc_status_view.
@@ -805,13 +979,13 @@ class OverrideCheckInView(RoleRequiredMixin, TemplateView):
         pc_id = request.POST.get('pc', '')
         student_pk = request.POST.get('student_id', '')
 
-        pc = PC.objects.select_related('lab').filter(pk=pc_id).first()
+        pc = PC.objects.select_related('lab').filter(pk=pc_id).first() if pc_id.isdigit() else None
         if pc is None:
             messages.error(request, 'Select a computer to override into.')
             return redirect(f"{reverse('override_checkin')}?lab={request.POST.get('lab', '')}")
 
         User = get_user_model()
-        account = User.objects.filter(pk=student_pk, role__in=('student', 'instructor'), is_active=True).first()
+        account = User.objects.filter(pk=student_pk, role__in=('student', 'instructor'), is_active=True).first() if student_pk.isdigit() else None
         if account is None:
             messages.error(request, 'Select a registered, active student or instructor account.')
             return redirect(f"{reverse('override_checkin')}?lab={pc.lab_id}")
@@ -865,16 +1039,117 @@ class OverrideCheckInView(RoleRequiredMixin, TemplateView):
         return redirect(f"{reverse('override_checkin')}?lab={pc.lab_id}")
 
 
+# Lab In-Charge / Admin action: unlock a PC for a first-time walk-in Guest —
+# someone with NO registered account in the system at all (as opposed to
+# Override Check-in above, which is only for already-registered student/
+# instructor accounts). Since there's no account to identify the person by,
+# the Lab In-Charge must type in the guest's Full Name before the unlock is
+# allowed to go through; that name is what gets recorded in the access log
+# (SessionCheckIn + ActivityLog) instead of a student ID.
+class ManualUnlockView(RoleRequiredMixin, TemplateView):
+    allowed_roles = ['admin', 'incharge']
+    template_name = 'labs/manual_unlock.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        user = self.request.user
+        labs_qs = Lab.objects.order_by('name')
+        if user.role == 'incharge' and user.assigned_lab_id:
+            labs_qs = labs_qs.filter(pk=user.assigned_lab_id)
+        ctx['all_labs'] = labs_qs
+        ctx['selected_lab'] = self.request.GET.get('lab', '')
+        if ctx['selected_lab']:
+            ctx['available_pcs'] = PC.objects.filter(lab_id=ctx['selected_lab'], status='online').order_by('pc_id')
+        return ctx
+
+    def post(self, request, *args, **kwargs):
+        from accounts.models import ActivityLog
+        from labs.network import unlock_pc
+        from scheduling.models import Session, SessionCheckIn
+
+        pc_id = request.POST.get('pc', '')
+        guest_name = (request.POST.get('guest_name') or '').strip()
+
+        pc = PC.objects.select_related('lab').filter(pk=pc_id).first() if pc_id.isdigit() else None
+        if pc is None:
+            messages.error(request, 'Select a computer to unlock.')
+            return redirect(f"{reverse('manual_unlock')}?lab={request.POST.get('lab', '')}")
+
+        if not guest_name:
+            messages.error(
+                request,
+                "Enter the guest's Full Name before unlocking — this is required so the access log can identify who used the computer."
+            )
+            return redirect(f"{reverse('manual_unlock')}?lab={pc.lab_id}")
+
+        # Re-check occupancy at submit time too, same reasoning as Override
+        # Check-in — the picker above is just a convenience.
+        pc.refresh_from_db()
+        if pc.status != 'online':
+            messages.error(request, f'{pc.pc_id} is no longer available — someone else may have just taken it.')
+            return redirect(f"{reverse('manual_unlock')}?lab={pc.lab_id}")
+
+        now = timezone.localtime()
+        active_session = Session.objects.filter(
+            lab=pc.lab, date=now.date(), start_time__lte=now.time(), end_time__gte=now.time(),
+        ).order_by('start_time').first()
+
+        success, detail = unlock_pc(pc)
+
+        # Guests have no account/ID number, so a stable synthetic one is
+        # generated for the SessionCheckIn transaction record — the real,
+        # human-readable identifier is guest_name.
+        guest_id_number = f"GUEST-{pc.pc_id}-{int(timezone.now().timestamp())}"
+        SessionCheckIn.objects.update_or_create(
+            session=active_session, id_number=guest_id_number,
+            defaults={'checkin_type': 'guest', 'student': None, 'guest_name': guest_name, 'pc': pc},
+        )
+
+        pc.status = 'in_use'
+        pc.last_active = timezone.now()
+        pc.current_user = None
+        pc.current_guest_name = guest_name
+        pc.current_session = active_session
+        pc.save(update_fields=['status', 'last_active', 'current_user', 'current_guest_name', 'current_session'])
+
+        ActivityLog.objects.create(
+            actor=request.user,
+            action='pc_unlock',
+            target_username=guest_id_number,
+            pc=pc,
+            details=(
+                f"Manual Unlock by {request.user.get_full_name() or request.user.username}: "
+                f"walk-in guest \"{guest_name}\" (no registered account) granted access to {pc.pc_id} ({pc.lab.name})"
+                + (f", overlapping reservation {active_session.reservation_code}" if active_session else ", no active reservation")
+                + ('.' if success else f' — unlock command did not run: {detail}.')
+            )
+        )
+
+        if success:
+            messages.success(request, f'{guest_name} was checked into {pc.pc_id} ({pc.lab.name}) as a guest.')
+        else:
+            messages.warning(request, f'{guest_name} was recorded as checked into {pc.pc_id}, but the unlock command did not run: {detail}')
+        return redirect(f"{reverse('manual_unlock')}?lab={pc.lab_id}")
+
+
 def _pc_activity_app_name(title):
     """Collapses a raw window-title sample down to just the application name,
     e.g. 'index.html - Visual Studio Code' -> 'Visual Studio Code'. Titles
-    that don't follow the '<page> - <app>' convention are used as-is."""
+    that don't follow the '<page> - <app>' convention are used as-is.
+    Only a fallback for non-browser windows — for browsers, prefer
+    _pc_activity_site_label() below, which can use the captured URL."""
     title = (title or '').strip()
     if not title:
         return 'Unknown'
     if ' - ' in title:
         return title.rsplit(' - ', 1)[-1].strip() or title
     return title
+
+
+def _pc_activity_site_label(title, url):
+    """Best label for a raw activity sample: the resolved site ('Chrome —
+    ChatGPT') when it's a browser window, otherwise the plain app name."""
+    return resolve_site_label(title, url) or _pc_activity_app_name(title)
 
 
 def _pc_activity_fmt_duration(td, long_form=False):
@@ -921,19 +1196,27 @@ def _build_pc_sessions(logs, now, gap):
         pc, student = first.pc, first.student
 
         blocks = []
-        bstart = btitle = bend = None
+        bstart = btitle = bend = burl = None
         for log in run:
             if btitle is None:
                 bstart = bend = log.captured_at
                 btitle = log.window_title
+                burl = log.page_url
                 continue
             if log.window_title != btitle:
-                blocks.append({'title': btitle, 'start': bstart, 'end': bend})
+                blocks.append({
+                    'title': btitle, 'start': bstart, 'end': bend, 'url': burl,
+                    'site_label': _pc_activity_site_label(btitle, burl),
+                })
                 bstart = log.captured_at
                 btitle = log.window_title
+                burl = log.page_url
             bend = log.captured_at
         if btitle is not None:
-            blocks.append({'title': btitle, 'start': bstart, 'end': bend})
+            blocks.append({
+                'title': btitle, 'start': bstart, 'end': bend, 'url': burl,
+                'site_label': _pc_activity_site_label(btitle, burl),
+            })
 
         is_ongoing = (now - last.captured_at) <= gap
         status = 'active' if is_ongoing else 'completed'
@@ -1065,10 +1348,14 @@ class PCActivityLogView(RoleRequiredMixin, TemplateView):
         sessions = _build_pc_sessions(list(logs[:8000]), now, self.SESSION_GAP)
         sessions.sort(key=lambda s: s['login_time'], reverse=True)
 
-        timeline = []
-        for s in sessions:
-            timeline.extend(s['rows'])
-        timeline.sort(key=lambda r: r['time'], reverse=True)
+        timeline = [{
+            'time': s['login_time'],
+            'student': s['student'],
+            'pc': s['pc'],
+            'duration_display': _pc_activity_fmt_duration(s['duration']) if s['duration'] else '—',
+            'status': s['status'],
+            'session_key': s['key'],
+        } for s in sessions]
 
         try:
             page = int(request.GET.get('page', '1'))
@@ -1116,7 +1403,7 @@ class PCActivityLogView(RoleRequiredMixin, TemplateView):
                 dur = b['end'] - b['start']
                 if dur.total_seconds() == 0:
                     dur = timedelta(seconds=8)  # ~ one report interval
-                app_totals[_pc_activity_app_name(b['title'])] += dur
+                app_totals[b['site_label']] += dur
         ranked_apps = sorted(app_totals.items(), key=lambda kv: kv[1], reverse=True)
         total_app_time = sum(app_totals.values(), timedelta()) or timedelta(seconds=1)
         palette = ['#a78bfa', '#f2a93b', '#3ed6c4', '#5b9dff', '#ff5d5d']
@@ -1150,6 +1437,9 @@ class PCActivityLogView(RoleRequiredMixin, TemplateView):
 
         ctx['timeline'] = page_rows
         ctx['selected_session'] = selected
+        ctx['selected_session_blocks_recent_first'] = (
+            list(reversed(selected['blocks'])) if selected else []
+        )
         ctx['selected_session_duration_long'] = (
             _pc_activity_fmt_duration(selected['duration'], long_form=True) if selected else None
         )
@@ -1162,7 +1452,7 @@ class PCActivityLogView(RoleRequiredMixin, TemplateView):
 
         ctx['all_labs'] = Lab.objects.order_by('name')
         ctx['all_pcs'] = PC.objects.select_related('lab').order_by('lab__name', 'pc_id')
-        ctx['all_students'] = get_user_model().objects.filter(role='student').order_by('first_name', 'last_name')
+        ctx['all_students'] = get_user_model().objects.order_by('first_name', 'last_name')
         ctx['selected_lab'] = filters['lab']
         ctx['selected_pc'] = filters['pc']
         ctx['selected_student'] = filters['student']
@@ -1215,12 +1505,13 @@ def export_pc_activity_log(request):
     )
     logs = logs.order_by('-captured_at')
 
-    headers = ['Time', 'PC', 'Student', 'Session', 'Active window title']
+    headers = ['Time', 'PC', 'User', 'Role', 'Session', 'Active window title']
     rows = [
         [
             log.captured_at.strftime('%Y-%m-%d %H:%M:%S'),
             f'{log.pc.lab.name} — {log.pc.pc_id}',
             log.student.get_full_name() or log.student.username if log.student else '—',
+            log.student.get_role_display() if log.student else '—',
             f'{log.session.requester_name} ({log.session.date} {log.session.start_time}-{log.session.end_time})' if log.session else '—',
             log.window_title or '—',
         ]
@@ -1245,11 +1536,18 @@ def pc_status_api(request):
 
 
 # update a single PC's status (admin/incharge action)
-class PCUpdateView(RoleRequiredMixin, UpdateView):
+class PCUpdateView(RoleRequiredMixin, ModalFormMixin, UpdateView):
     allowed_roles = ['admin', 'incharge']
     model = PC
     fields = ['status']
     template_name = 'labs/pc_form.html'
+
+    def form_valid(self, form):
+        previous_status = PC.objects.get(pk=self.object.pk).status
+        response = super().form_valid(form)
+        if self.object.status in ('maintenance', 'issue') and previous_status not in ('maintenance', 'issue'):
+            notify_service.notify_pc_maintenance(self.object, self.object.get_status_display())
+        return response
 
     def get_success_url(self):
         return '/labs/pc-status/'
@@ -1360,10 +1658,27 @@ class LabListView(RoleRequiredMixin, ListView):
 
         ctx['recent_activities'] = ActivityLog.objects.select_related('actor', 'pc', 'pc__lab').order_by('-created_at')[:6]
 
+        # ---- flag PCs sharing one IP address ----
+        # Every pc-agent-* endpoint identifies "which PC is this?" by
+        # matching the request's IP against PC.ip_address and taking the
+        # first row found. If two PC records share an IP, the same one of
+        # them always wins that lookup — from the other PC's point of
+        # view, the lock screen ends up showing the wrong pc_id.
+        from django.db.models import Count
+        dupe_ips = (
+            PC.objects.exclude(ip_address__isnull=True).exclude(ip_address='')
+            .values('ip_address').annotate(n=Count('id')).filter(n__gt=1)
+            .values_list('ip_address', flat=True)
+        )
+        ctx['duplicate_ip_pcs'] = (
+            PC.objects.filter(ip_address__in=list(dupe_ips)).select_related('lab').order_by('ip_address', 'pc_id')
+            if dupe_ips else []
+        )
+
         return ctx
 
 
-class LabCreateView(RoleRequiredMixin, CreateView):
+class LabCreateView(RoleRequiredMixin, ModalFormMixin, CreateView):
     allowed_roles = ['admin']
     model = Lab
     form_class = LabForm
@@ -1375,7 +1690,7 @@ class LabCreateView(RoleRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class LabUpdateView(RoleRequiredMixin, UpdateView):
+class LabUpdateView(RoleRequiredMixin, ModalFormMixin, UpdateView):
     allowed_roles = ['admin']
     model = Lab
     form_class = LabForm
@@ -1402,7 +1717,7 @@ class LabDeleteView(RoleRequiredMixin, DeleteView):
 
 
 # ---- PC management (create/edit/delete, including the IP address used for real status checks) ----
-class PCCreateView(RoleRequiredMixin, CreateView):
+class PCCreateView(RoleRequiredMixin, ModalFormMixin, CreateView):
     allowed_roles = ['admin']
     model = PC
     form_class = PCForm
@@ -1516,7 +1831,7 @@ class PCImportView(RoleRequiredMixin, FormView):
         return self.render_to_response(self.get_context_data(form=self.form_class(), results={'created': created, 'errors': errors}))
 
 
-class PCEditView(RoleRequiredMixin, UpdateView):
+class PCEditView(RoleRequiredMixin, ModalFormMixin, UpdateView):
     allowed_roles = ['admin']
     model = PC
     form_class = PCForm
@@ -1528,7 +1843,7 @@ class PCEditView(RoleRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class PCDeleteView(RoleRequiredMixin, DeleteView):
+class PCDeleteView(RoleRequiredMixin, ModalFormMixin, DeleteView):
     allowed_roles = ['admin']
     model = PC
     template_name = 'labs/pc_confirm_delete.html'
@@ -1543,7 +1858,7 @@ class PCDeleteView(RoleRequiredMixin, DeleteView):
 
 
 # ---- Inventory management (create/edit/delete) ----
-class InventoryCreateView(RoleRequiredMixin, CreateView):
+class InventoryCreateView(RoleRequiredMixin, ModalFormMixin, CreateView):
     allowed_roles = ['admin']
     model = InventoryItem
     form_class = InventoryItemForm
@@ -1555,7 +1870,7 @@ class InventoryCreateView(RoleRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class InventoryUpdateView(RoleRequiredMixin, UpdateView):
+class InventoryUpdateView(RoleRequiredMixin, ModalFormMixin, UpdateView):
     allowed_roles = ['admin']
     model = InventoryItem
     form_class = InventoryItemForm
@@ -1894,21 +2209,34 @@ class AnalyticsView(RoleRequiredMixin, TemplateView):
         return ctx
 
 
-# system-wide alerts for admin, plus any broadcast notifications sent
-# directly to them (the sidebar badge counts both, so the page has to
-# show both too — otherwise a notification can bump the badge with
-# nowhere for the admin/incharge to actually go read or dismiss it)
+# Admin sees every notification in the system (per spec: "Admin: View all
+# notifications"). Lab In-Charge only sees what notifications/services.py
+# actually addressed to them — which is already scoped to their own
+# assigned lab, so no extra lab filter is needed here.
 class AlertsView(RoleRequiredMixin, ListView):
     allowed_roles = ['admin', 'incharge']
     template_name = 'labs/alerts.html'
     context_object_name = 'alerts'
 
-    def get_queryset(self):
-        from django.db.models import Q
+    def get_base_queryset(self):
         from notifications.models import Notification
-        return Notification.objects.filter(
-            Q(is_system_alert=True) | Q(user=self.request.user)
-        ).distinct().order_by('-pinned', '-created_at')
+        if self.request.user.role == 'admin':
+            return Notification.objects.all()
+        return Notification.objects.filter(user=self.request.user)
+
+    def get_queryset(self):
+        from notifications.filters import apply_filters
+        return apply_filters(self.get_base_queryset(), self.request)
+
+    def get_context_data(self, **kwargs):
+        from notifications.filters import stat_counts, CATEGORY_CHOICES
+        ctx = super().get_context_data(**kwargs)
+        ctx['stats'] = stat_counts(self.get_base_queryset())
+        ctx['category_choices'] = CATEGORY_CHOICES
+        ctx['selected_category'] = self.request.GET.get('category', 'all')
+        ctx['q'] = self.request.GET.get('q', '')
+        ctx['sort'] = self.request.GET.get('sort', 'latest')
+        return ctx
 
 
 # equipment health for lab in-charge
@@ -1930,7 +2258,7 @@ class EquipmentView(RoleRequiredMixin, TemplateView):
 # repair history, and equipment-specific issue reporting.
 # ---------------------------------------------------------------------------
 
-class InventoryDetailView(RoleRequiredMixin, TemplateView):
+class InventoryDetailView(RoleRequiredMixin, ModalDetailMixin, TemplateView):
     allowed_roles = ['admin', 'incharge']
     template_name = 'labs/inventory_detail.html'
 
@@ -1964,8 +2292,8 @@ def inventory_status_update(request, pk):
             item.status = new_status
             item.save(update_fields=['status'])
             messages.success(request, f'Status Updated Successfully for {item.name}.')
-        return redirect(redirect_target, *redirect_args)
-    return redirect(redirect_target, *redirect_args)
+        return modal_redirect(request, redirect_target, *redirect_args)
+    return modal_redirect(request, redirect_target, *redirect_args)
 
 
 class MaintenanceLogListView(RoleRequiredMixin, ListView):
@@ -1983,7 +2311,7 @@ class MaintenanceLogListView(RoleRequiredMixin, ListView):
         return ctx
 
 
-class MaintenanceScheduleCreateView(RoleRequiredMixin, CreateView):
+class MaintenanceScheduleCreateView(RoleRequiredMixin, ModalFormMixin, CreateView):
     allowed_roles = ['admin']
     model = MaintenanceLog
     form_class = MaintenanceScheduleForm
@@ -1992,6 +2320,7 @@ class MaintenanceScheduleCreateView(RoleRequiredMixin, CreateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
+        notify_service.notify_maintenance_submitted(self.object)
         messages.success(self.request, 'Schedule Created Successfully.')
         return response
 
@@ -2005,6 +2334,7 @@ def maintenance_complete(request, pk):
         log.completed = True
         log.completed_at = timezone.now()
         log.save(update_fields=['completion_notes', 'completed', 'completed_at'])
+        notify_service.notify_maintenance_completed(log)
         messages.success(request, 'Maintenance Marked as Completed.')
         return redirect('maintenance_logs')
     return render(request, 'labs/maintenance_complete_form.html', {'log': log})
@@ -2057,7 +2387,7 @@ class EquipmentIssueListView(RoleRequiredMixin, ListView):
         return EquipmentIssue.objects.select_related('equipment', 'reporter').order_by('-date_reported')
 
 
-class EquipmentIssueCreateView(RoleRequiredMixin, CreateView):
+class EquipmentIssueCreateView(RoleRequiredMixin, ModalFormMixin, CreateView):
     allowed_roles = ['admin', 'incharge']
     model = EquipmentIssue
     fields = ['equipment', 'description']
@@ -2074,11 +2404,12 @@ class EquipmentIssueCreateView(RoleRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.reporter = self.request.user
         response = super().form_valid(form)
+        notify_service.notify_equipment_issue_reported(self.object)
         messages.success(self.request, 'Issue reported successfully.')
         return response
 
 
-class EquipmentIssueDetailView(RoleRequiredMixin, TemplateView):
+class EquipmentIssueDetailView(RoleRequiredMixin, ModalDetailMixin, TemplateView):
     allowed_roles = ['admin', 'incharge']
     template_name = 'labs/equipment_issue_detail.html'
 
@@ -2097,5 +2428,6 @@ def equipment_issue_resolve(request, pk):
         equipment_issue.status = 'resolved'
         equipment_issue.resolved_at = timezone.now()
         equipment_issue.save(update_fields=['resolution_notes', 'status', 'resolved_at'])
+        notify_service.notify_equipment_issue_resolved(equipment_issue)
         messages.success(request, 'Resolution Saved Successfully.')
-    return redirect('equipment_issues')
+    return modal_redirect(request, 'equipment_issues')

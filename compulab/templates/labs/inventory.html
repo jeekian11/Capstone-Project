@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}Inventory{% endblock %}
 
 {% block content %}
@@ -104,7 +104,7 @@
       <a href="{% url 'maintenance_logs' %}" class="action-btn">Maintenance Logs</a>
       <a href="{% url 'equipment_issues' %}" class="action-btn">Reported Issues</a>
       {% if request.user.role == 'admin' %}
-        <a href="{% url 'inventory_create' %}" class="action-btn primary">+ Add Equipment</a>
+        <a href="{% url 'inventory_create' %}" class="action-btn primary js-modal-link">+ Add Equipment</a>
       {% endif %}
     </div>
   </div>
@@ -246,9 +246,9 @@
               <td>{{ item.last_checked|date:"M d, Y"|default:"—" }}</td>
               <td>
                 <div class="inv-actions">
-                  <a href="{% url 'inventory_detail' item.pk %}" class="action-btn icon-only" title="View item"><svg><use href="#icon-eye"/></svg></a>
+                  <a href="{% url 'inventory_detail' item.pk %}" class="action-btn icon-only js-modal-link" title="View item"><svg><use href="#icon-eye"/></svg></a>
                   {% if request.user.role == 'admin' %}
-                    <a href="{% url 'inventory_update' item.pk %}" class="action-btn icon-only" title="Edit item"><svg><use href="#icon-edit"/></svg></a>
+                    <a href="{% url 'inventory_update' item.pk %}" class="action-btn icon-only js-modal-link" title="Edit item"><svg><use href="#icon-edit"/></svg></a>
                     <form method="post" action="{% url 'inventory_delete' item.pk %}"
                           onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Remove this item?', text: 'This action cannot be undone. {{ item.name|escapejs }} will be removed from {{ item.lab.name|escapejs }}\'s inventory.', confirmButtonText: 'Yes, remove item'}); return false;"
                           style="display:inline">
@@ -374,6 +374,10 @@
 (function () {
   Chart.defaults.font.family = 'Inter, sans-serif';
   Chart.defaults.color = '#8b98a3';
+  // matches whichever surface color the light/dark toggle currently has
+  // active, so donut segment borders blend into the card instead of
+  // showing a leftover dark ring in light mode
+  var surface = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#12171d';
 
   new Chart(document.getElementById('invCategoryDonut'), {
     type: 'doughnut',
@@ -382,7 +386,7 @@
       datasets: [{
         data: [{% for row in category_breakdown %}{{ row.n }}{% if not forloop.last %},{% endif %}{% endfor %}],
         backgroundColor: [{% for row in category_breakdown %}'{{ row.color }}'{% if not forloop.last %},{% endif %}{% endfor %}],
-        borderColor: '#12171d',
+        borderColor: surface,
         borderWidth: 2,
       }]
     },
@@ -396,7 +400,7 @@
       datasets: [{
         data: [{% for row in condition_breakdown %}{{ row.n }}{% if not forloop.last %},{% endif %}{% endfor %}],
         backgroundColor: [{% for row in condition_breakdown %}'{{ row.color }}'{% if not forloop.last %},{% endif %}{% endfor %}],
-        borderColor: '#12171d',
+        borderColor: surface,
         borderWidth: 2,
       }]
     },

@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% load static %}
 {% block title %}Manage Labs{% endblock %}
 
@@ -9,10 +9,10 @@
 
 <style>
 .ml{
-  --ml-bg:#0a0e12; --ml-card:#12171d; --ml-border:#232b34;
-  --ml-text:#e7ebee; --ml-dim:#8b98a3; --ml-faint:#4d5761;
-  --ml-purple:#a78bfa; --ml-green:#3ed6c4; --ml-blue:#5b9dff;
-  --ml-orange:#f2a93b; --ml-red:#ff5d5d; --ml-teal:#2dd4bf; --ml-lime:#84cc16;
+  --ml-bg:var(--bg); --ml-card:var(--surface); --ml-border:var(--border);
+  --ml-text:var(--text); --ml-dim:var(--text-dim); --ml-faint:var(--text-faint);
+  --ml-purple:var(--purple); --ml-green:var(--green); --ml-blue:var(--blue);
+  --ml-orange:var(--amber); --ml-red:var(--red); --ml-teal:#2dd4bf; --ml-lime:#84cc16;
   font-family:'Inter',sans-serif; background:var(--ml-bg); color:var(--ml-text);
   margin:-20px; padding:20px; min-height:100%;
 }
@@ -33,6 +33,8 @@
 .ic-green{background:var(--ml-green); color:#0a0e12;}
 .ic-purple{background:var(--ml-purple); color:#fff;}
 .ic-orange{background:var(--ml-orange); color:#0a0e12;}
+html[data-theme="light"] .ic-green,
+html[data-theme="light"] .ic-orange{ color:#fff; }
 .ic-red{background:var(--ml-red); color:#fff;}
 
 .ml-filter-form{display:grid; grid-template-columns:1fr 1fr 1.6fr auto auto; gap:14px; align-items:end;}
@@ -116,15 +118,33 @@
         {{ lab_cards|length }} of {{ total_labs }} laborator{{ total_labs|pluralize:"y,ies" }} shown
       </div>
     </div>
-    <div style="display:flex; gap:8px;">
-      <form method="post" action="{% url 'pc_status_refresh' %}"
-            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Check all PC status now?', text: 'This will ping every PC across all labs right away — it may take a few seconds.', icon: 'question', confirmButtonText: 'Yes, check now', confirmButtonColor: '#3ed6c4'}); return false;">
-        {% csrf_token %}
-        <button type="submit" class="ml-btn">Check all PC status now</button>
-      </form>
-      <a href="{% url 'lab_create' %}" class="ml-btn primary">+ Add lab</a>
-    </div>
   </div>
+
+  {% if duplicate_ip_pcs %}
+    <div class="ml-card" style="margin-bottom:16px; border-color:var(--ml-red); background:rgba(239,68,68,0.08);">
+      <div style="display:flex; align-items:flex-start; gap:10px;">
+        <span style="font-size:18px; line-height:1;">⚠</span>
+        <div>
+          <strong style="color:var(--ml-red);">Duplicate IP address detected</strong>
+          <div style="font-size:12.5px; color:var(--ml-dim); margin-top:4px;">
+            The system tells PCs apart by IP address. Two or more PCs below share the same IP, so
+            whichever one the system finds first will keep "winning" — the other PC's lock screen will
+            keep showing the wrong PC ID even after you register it correctly. Give each PC its own
+            unique IP address to fix this.
+          </div>
+          <div style="margin-top:10px; display:flex; flex-direction:column; gap:4px;">
+            {% for pc in duplicate_ip_pcs %}
+              <div style="font-size:12.5px;">
+                <code style="background:var(--ml-bg); padding:1px 6px; border-radius:4px;">{{ pc.ip_address }}</code>
+                — <strong>{{ pc.pc_id }}</strong> ({{ pc.lab.name }})
+                <a href="{% url 'pc_edit' pc.pk %}" class="js-modal-link" style="margin-left:6px;">Edit &rarr;</a>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
 
   <div class="ml-card" style="margin-bottom:16px;">
     <form method="get" class="ml-filter-form">
@@ -202,7 +222,7 @@
 
             <div class="ml-card-actions">
               <a href="{% url 'pc_status' %}?lab={{ c.lab.pk }}" class="ml-btn">View PCs</a>
-              <a href="{% url 'lab_update' c.lab.pk %}" class="ml-btn">Edit Lab</a>
+              <a href="{% url 'lab_update' c.lab.pk %}" class="ml-btn js-modal-link">Edit Lab</a>
               <a href="{% url 'pc_create' %}?lab={{ c.lab.pk }}" class="ml-btn">Add PC</a>
               <form method="post" action="{% url 'lab_delete' c.lab.pk %}" style="display:inline"
                     onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this lab?', text: 'This action cannot be undone. {{ c.lab.name|escapejs }}{% if c.total %} and its {{ c.total }} PC{{ c.total|pluralize }}{% endif %} will be removed.', confirmButtonText: 'Yes, delete lab'}); return false;">
@@ -217,7 +237,7 @@
           <div class="ml-card"><p class="ml-empty">No labs match this filter.</p></div>
         {% endfor %}
 
-        <a href="{% url 'lab_create' %}" class="ml-card ml-add-tile">
+        <a href="{% url 'lab_create' %}" class="ml-card ml-add-tile js-modal-link">
           <div class="plus-circle">
             <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </div>
@@ -243,11 +263,11 @@
 
       <div class="ml-card" style="margin-bottom:16px;">
         <div class="ml-section-title">Quick Actions</div>
-        <a href="{% url 'lab_create' %}" class="ml-quick-action">
+        <a href="{% url 'lab_create' %}" class="ml-quick-action js-modal-link">
           <svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
           Add Laboratory
         </a>
-        <a href="{% url 'pc_create' %}" class="ml-quick-action">
+        <a href="{% url 'pc_create' %}" class="ml-quick-action js-modal-link">
           <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 20h8M12 16v4M12 8v3M10.5 9.5h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           Add Computer
         </a>

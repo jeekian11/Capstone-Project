@@ -114,9 +114,20 @@ if IS_WINDOWS:
         _blocking_enabled = bool(enabled)
 
     def set_task_manager_disabled(disabled):
-        """Writes/removes the DisableTaskMgr policy for the CURRENT user."""
+        """Writes/removes the DisableTaskMgr policy for the CURRENT user.
+
+        Some accounts deny this even though it's only HKEY_CURRENT_USER —
+        e.g. Store/managed Python installs, school/managed-device group
+        policy, some antivirus registry guards. Task Manager blocking is a
+        nice-to-have layered on top of the hotkey block, not a hard
+        requirement, so a denied write here should not crash the whole
+        lock screen — just skip it.
+        """
         key_path = r'Software\Microsoft\Windows\CurrentVersion\Policies\System'
-        key = winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
+        try:
+            key = winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
+        except OSError:
+            return
         try:
             if disabled:
                 winreg.SetValueEx(key, 'DisableTaskMgr', 0, winreg.REG_DWORD, 1)
@@ -125,6 +136,8 @@ if IS_WINDOWS:
                     winreg.DeleteValue(key, 'DisableTaskMgr')
                 except FileNotFoundError:
                     pass
+        except OSError:
+            pass
         finally:
             winreg.CloseKey(key)
 

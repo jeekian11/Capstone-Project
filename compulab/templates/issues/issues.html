@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}Issues{% endblock %}
 
 {% block content %}
@@ -8,7 +8,7 @@
     <h1>Manage issues</h1>
     <div class="sub">{{ open_count }} open · {{ in_progress_count }} in progress · {{ resolved_today }} resolved today</div>
   </div>
-  <a href="{% url 'issue_create' %}" class="action-btn primary">+ Report issue</a>
+  <a href="{% url 'issue_create' %}" class="action-btn primary js-modal-link">+ Report issue</a>
 </div>
 
 <div class="card">
@@ -35,7 +35,7 @@
           <td><span class="status-pill pill-{{ issue.status }}">{{ issue.get_status_display }}</span></td>
           <td>{{ issue.reported_by.get_full_name|default:"—" }}</td>
           <td>{{ issue.created_at|timesince }} ago</td>
-          <td><a href="{% url 'issue_detail' issue.pk %}" class="action-btn small">View</a></td>
+          <td><a href="{% url 'issue_detail' issue.pk %}" class="action-btn small js-modal-link">View</a></td>
         </tr>
       {% empty %}
         <tr><td colspan="8"><p class="empty">No issues logged.</p></td></tr>

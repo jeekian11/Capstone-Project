@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}{% if object %}Edit Lab{% else %}Add Lab{% endif %}{% endblock %}
 
 {% block content %}

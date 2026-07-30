@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}Notification Settings{% endblock %}
 
 {% block content %}
@@ -6,15 +6,39 @@
 <div class="page-header">
   <div>
     <h1>Alert settings</h1>
-    <div class="sub">Configure how you'd like to be notified</div>
+    <div class="sub">Turn categories of automatic notifications on or off</div>
+  </div>
+  <div>
+    <a href="{% url 'alerts' %}" class="action-btn">Back to notifications</a>
   </div>
 </div>
 
-<div class="card" style="max-width:420px">
+<div class="card" style="max-width:560px">
   <p class="helptext" style="margin-top:0;">
-    Notifications currently appear in-app only — check the bell icon in the navbar.
-    There are no additional delivery settings to configure right now.
+    These toggles only affect automatically-generated system notifications. Manual
+    announcements sent via "+ Create Notification" always go out regardless.
   </p>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    {% for field in form %}
+      <div class="form-group" style="display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid var(--border-soft);">
+        <div style="padding-top:2px;">{{ field }}</div>
+        <div>
+          <label class="form-label" for="{{ field.id_for_label }}" style="margin:0; cursor:pointer;">{{ field.label }}</label>
+          {% if field.help_text %}<div class="helptext" style="margin-top:2px;">{{ field.help_text }}</div>{% endif %}
+          {% if field.errors %}<div class="form-errors">{{ field.errors|join:", " }}</div>{% endif %}
+        </div>
+      </div>
+    {% endfor %}
+
+    <div class="form-actions" style="margin-top:16px;">
+      <button type="submit" class="action-btn primary">Save settings</button>
+    </div>
+  </form>
 </div>
 
 {% endblock %}

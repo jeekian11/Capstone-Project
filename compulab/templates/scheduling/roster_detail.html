@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}{{ roster.name }}{% endblock %}
 
 {% block content %}
@@ -8,21 +8,19 @@
 
 <style>
 .cr{
-  --cr-bg:#0a0e12; --cr-card:#12171d; --cr-border:#232b34;
-  --cr-text:#e7ebee; --cr-dim:#8b98a3; --cr-faint:#4d5761;
-  --cr-purple:#a78bfa; --cr-purple-tint:rgba(167,139,250,0.14);
-  --cr-green:#3ed6c4; --cr-green-tint:rgba(62,214,196,0.14);
-  --cr-blue:#5b9dff; --cr-blue-tint:rgba(91,157,255,0.14);
-  --cr-orange:#f2a93b; --cr-orange-tint:rgba(242,169,59,0.14);
-  --cr-red:#ff5d5d; --cr-red-tint:rgba(255,93,93,0.14);
+  --cr-bg:var(--bg); --cr-card:var(--surface); --cr-border:var(--border);
+  --cr-text:var(--text); --cr-dim:var(--text-dim); --cr-faint:var(--text-faint);
+  --cr-purple:var(--purple); --cr-purple-tint:var(--purple-dim);
+  --cr-green:var(--green); --cr-green-tint:var(--green-dim);
+  --cr-blue:var(--blue); --cr-blue-tint:var(--blue-dim);
+  --cr-orange:var(--amber); --cr-orange-tint:var(--amber-dim);
+  --cr-red:var(--red); --cr-red-tint:var(--red-dim);
   font-family:'Inter',sans-serif; background:var(--cr-bg); color:var(--cr-text);
   margin:-20px; padding:20px; min-height:100%;
 }
 .cr h1,.cr h2,.cr h3{font-family:'Space Grotesk',sans-serif;}
 .cr a{color:var(--cr-blue); text-decoration:none;}
 .cr a:hover{text-decoration:underline;}
-.cr-back{display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--cr-dim); margin-bottom:12px;}
-.cr-back:hover{color:var(--cr-text); text-decoration:none;}
 .cr-card{background:var(--cr-card); border:1px solid var(--cr-border); border-radius:14px; padding:18px 20px; box-shadow:0 1px 2px rgba(0,0,0,.2);}
 
 .cr-btn{display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:8px; border:1px solid var(--cr-border); background:var(--cr-card); color:var(--cr-text); font-size:13px; font-weight:500; cursor:pointer; white-space:nowrap;}
@@ -41,6 +39,9 @@
 .cr-badge.completed{background:var(--cr-green-tint); color:var(--cr-green);}
 .cr-badge.scheduled{background:var(--cr-blue-tint); color:var(--cr-blue);}
 .cr-badge.ongoing{background:var(--cr-orange-tint); color:var(--cr-orange);}
+.cr-badge.pending{background:var(--cr-orange-tint); color:var(--cr-orange);}
+.cr-badge.approved{background:var(--cr-green-tint); color:var(--cr-green);}
+.cr-badge.rejected{background:var(--cr-red-tint); color:var(--cr-red);}
 
 .cr-info-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:16px;}
 .cr-info{display:flex; align-items:center; gap:12px;}
@@ -73,6 +74,8 @@
 .cr-result-info{font-size:13px;}
 .cr-result-id{color:var(--cr-faint); font-size:11.5px;}
 .cr-add-btn{padding:4px 12px; font-size:12px; border-radius:6px; background:var(--cr-green); color:#0a0e12; font-weight:600; border:none; cursor:pointer;}
+html[data-theme="light"] .cr-btn.primary,
+html[data-theme="light"] .cr-add-btn{ color:#fff; }
 
 .cr-view-attendance{display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:7px; background:var(--cr-blue-tint); color:var(--cr-blue); font-weight:600; font-size:12px;}
 .cr-view-attendance:hover{text-decoration:none; background:var(--cr-blue); color:#fff;}
@@ -85,19 +88,40 @@
 
 <div class="cr">
 
-  <a href="{% url 'roster_list' %}" class="cr-back">&larr; Back to Rosters</a>
-
   <div class="page-header" style="margin-bottom:16px; align-items:flex-start;">
     <div>
+      <a href="{% url 'roster_list' %}" class="cr-btn" style="padding:6px 12px; font-size:12px; margin-bottom:10px;">&larr; Back to Rosters</a>
       <h1 style="font-size:20px; font-weight:600; margin:0; display:flex; align-items:center; gap:10px;">
         Manage Class Roster
         <span class="cr-badge" style="font-size:12px; background:var(--cr-purple-tint); color:var(--cr-purple);">{{ roster.course_code|default:roster.name }}</span>
+        <span class="cr-badge {{ roster.approval_status }}" style="font-size:12px;">{{ roster.get_approval_status_display }}</span>
         {% if roster.status == 'inactive' %}<span class="cr-badge inactive" style="font-size:12px;">Archived</span>{% endif %}
       </h1>
     </div>
-    <div style="display:flex; gap:10px;">
+    <div style="display:flex; gap:10px; align-items:center;">
+      {% if roster.approval_status == 'pending' and can_review_roster %}
+      <form method="post" action="{% url 'roster_approve' roster.pk %}"
+            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Approve this roster?', text: 'The schedule will be checked once more for conflicts and, if clear, added to the official calendar.', icon: 'question', confirmButtonText: 'Yes, approve', confirmButtonColor: '#3ed6c4'}); return false;"
+            style="display:inline">
+        {% csrf_token %}
+        <button type="submit" class="cr-btn primary">&#10003; Approve</button>
+      </form>
+      <form method="post" action="{% url 'roster_reject' roster.pk %}" id="roster-reject-form" style="display:inline">
+        {% csrf_token %}
+        <input type="hidden" name="reason" id="roster-reject-reason">
+        <button type="button" class="cr-btn danger" onclick="rosterReject()">&#10005; Reject</button>
+      </form>
+      {% endif %}
       <a href="{% url 'roster_import_students' roster.pk %}" class="cr-btn">&#8593; Import Students</a>
-      <a href="{% url 'roster_edit' roster.pk %}" class="cr-btn">&#9998; Edit Roster</a>
+      <a href="{% url 'roster_edit' roster.pk %}" class="cr-btn js-modal-link">&#9998; Edit Roster</a>
+      {% if roster.has_full_schedule %}
+      <form method="post" action="{% url 'roster_generate_sessions' roster.pk %}"
+            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Generate scheduled sessions?', text: 'Creates a reservation-coded session for every date in the validity period that doesn\'t already have one. Safe to run more than once.', icon: 'question', confirmButtonText: 'Yes, generate'}); return false;"
+            style="display:inline">
+        {% csrf_token %}
+        <button type="submit" class="cr-btn">&#128197; Generate Sessions</button>
+      </form>
+      {% endif %}
       <form method="post" action="{% url 'roster_archive' roster.pk %}"
             onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: '{% if roster.status == "active" %}Archive{% else %}Reactivate{% endif %} this roster?', text: '{% if roster.status == "active" %}{{ roster.name|escapejs }} will be marked inactive. You can reactivate it anytime.{% else %}{{ roster.name|escapejs }} will be marked active again.{% endif %}', icon: 'question', confirmButtonText: 'Yes, continue'}); return false;"
             style="display:inline">
@@ -114,6 +138,18 @@
       </form>
     </div>
   </div>
+
+  {% if roster.approval_status == 'pending' %}
+    <div class="cr-card" style="margin-bottom:16px; border-color:var(--cr-orange); background:var(--cr-orange-tint);">
+      <strong style="color:var(--cr-orange);">Pending approval</strong> — this roster's schedule won't
+      appear on the official calendar until an Admin or Lab In-Charge approves it.
+    </div>
+  {% elif roster.approval_status == 'rejected' %}
+    <div class="cr-card" style="margin-bottom:16px; border-color:var(--cr-red); background:var(--cr-red-tint);">
+      <strong style="color:var(--cr-red);">Rejected</strong>{% if roster.rejection_reason %} — {{ roster.rejection_reason }}{% endif %}
+      <div style="margin-top:6px;">Edit this roster to fix the issue — saving will automatically resubmit it for review.</div>
+    </div>
+  {% endif %}
 
   <div class="cr-info-grid">
     <div class="cr-card cr-info">
@@ -247,6 +283,22 @@
 
 <script>
 (function () {
+  window.rosterReject = function () {
+    var reason = window.prompt('Reason for rejecting this roster? (optional — the instructor will see this)', '');
+    if (reason === null) return; // cancelled
+    var form = document.getElementById('roster-reject-form');
+    document.getElementById('roster-reject-reason').value = reason;
+    compulabConfirmSubmit(form, {
+      title: 'Reject this roster?',
+      text: 'The instructor will be notified and can edit and resubmit it.',
+      confirmButtonText: 'Yes, reject',
+    });
+  };
+})();
+</script>
+
+<script>
+(function () {
   const rows = document.querySelectorAll('#cr-students-table tbody tr[data-search]');
   const filterInput = document.getElementById('cr-roster-search');
   if (filterInput) {
@@ -278,7 +330,7 @@
       row.className = 'cr-result-row';
       const info = document.createElement('span');
       info.className = 'cr-result-info';
-      info.innerHTML = s.id_number + ' &nbsp; <span style="color:var(--cr-text);">' + s.full_name + '</span>' + (s.course_year_section ? ' <span class="cr-result-id">(' + s.course_year_section + ')</span>' : '') + (s.department ? ' <span class="cr-result-id">— ' + s.department + '</span>' : '');
+      info.innerHTML = s.id_number + ' &nbsp; <span style="color:var(--cr-text);">' + s.full_name + '</span>' + (s.department ? ' <span class="cr-result-id">— ' + s.department + (s.year_level ? ' ' + s.year_level : '') + '</span>' : '');
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'cr-add-btn';

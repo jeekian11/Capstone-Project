@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}Lab Schedule{% endblock %}
 
 {% block content %}
@@ -15,7 +15,7 @@
   {% if lab %}
     <table class="table">
       <thead>
-        <tr><th>Date</th><th>Time</th><th>Subject</th><th>Instructor</th><th>Students</th></tr>
+        <tr><th>Date</th><th>Time</th><th>Subject</th><th>Instructor</th><th>Students / PCs</th></tr>
       </thead>
       <tbody>
         {% for session in sessions %}
@@ -24,7 +24,7 @@
             <td>{{ session.start_time|time:"H:i" }}–{{ session.end_time|time:"H:i" }}</td>
             <td>{{ session.subject }}</td>
             <td>{{ session.requester_name }}</td>
-            <td>{{ session.student_count }}</td>
+            <td>{% if session.requester_type == 'walk_in' or session.requester_type == 'override' %}{{ session.pcs_requested }} PC{{ session.pcs_requested|pluralize }}{% else %}{{ session.student_count }}{% endif %}</td>
           </tr>
         {% empty %}
           <tr><td colspan="5"><p class="empty">No sessions scheduled for this lab.</p></td></tr>

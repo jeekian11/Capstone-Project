@@ -12,10 +12,10 @@ class PCAdmin(admin.ModelAdmin):
 
 @admin.register(PCActivityLog)
 class PCActivityLogAdmin(admin.ModelAdmin):
-    list_display = ['pc', 'student', 'window_title', 'captured_at']
+    list_display = ['pc', 'student', 'window_title', 'page_url', 'captured_at']
     list_filter = ['pc__lab', 'pc']
-    search_fields = ['window_title', 'student__username', 'student__first_name', 'student__last_name']
-    date_hierarchy = 'captured_at'
+    search_fields = ['window_title', 'page_url', 'student__username', 'student__first_name', 'student__last_name']
+    ordering = ['-captured_at']
 
 @admin.register(InventoryItem)
 class InventoryAdmin(admin.ModelAdmin):

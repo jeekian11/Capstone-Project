@@ -22,4 +22,5 @@ urlpatterns = [
     path('attendance/summary/export/', views.attendance_summary_export, name='attendance_summary_export'),
     path('attendance/session/<int:pk>/mark/', views.session_attendance_mark, name='session_attendance_mark'),
     path('api/search-requesters/', views.search_requesters, name='search_requesters'),
+    path('set-theme/', views.set_theme, name='set_theme'),
 ]

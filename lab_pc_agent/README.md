@@ -100,20 +100,34 @@ server kung saang IP magpapadala ng unlock signal.
    tumatawag sa `unlock_pc()`) — dapat tumakbo yung `unlock_command` sa PC na
    yun.
 
-## Bagong feature: PC activity log (window title tracking)
+## Bagong feature: PC activity log (window title + address bar tracking)
 
 Habang naka-unlock ang isang PC, kada `activity_report_interval_seconds`
 (default 8s, itakda sa `agent_config.json`) kinukuha ng agent ang title bar
 text ng foreground/active window sa oras na iyon at pina-post niya ito sa
 server (`/labs/api/pc-agent-activity/`). Para sa browser, karaniwang ganito
-ang laman: `"Page Title - Browser Name"` — ito na ang pinaka-malapit na
-"anong website" na na-track ng system na ito.
+ang laman: `"Page Title - Browser Name"`.
+
+Kung naka-install ang optional na `uiautomation` package (`pip install
+uiautomation`), kinukuha rin ng agent ang **address bar URL** ng browser
+(Chrome/Edge/Brave/Opera/Firefox) sa parehong oras, para tumpak/specific
+ang pagkakakilanlan ng site — halimbawa, ang ChatGPT ay hindi naglalagay ng
+"ChatGPT" sa title bar (yung pangalan lang ng conversation ang nakikita
+doon), kaya kailangan ang URL para masiguradong "ChatGPT" talaga ang
+nakalabas sa PC Activity Log, hindi "Other site". Kung hindi naka-install
+ang `uiautomation`, gagana pa rin ang agent — babalik lang ito sa
+paghula base sa title text lang, tulad ng dati.
 
 **Mahalagang saklaw:**
-- Window title text lang ang binabasa (isang standard Windows API call) —
-  WALANG keystrokes, screenshots, page HTML, o URL mula sa address bar.
+- Window title text (isang standard Windows API call) at, kung available,
+  ang address bar URL na lang ang binabasa — WALANG keystrokes,
+  screenshots, o page HTML.
 - Nire-record lang kapag naka-unlock/may naka-assign na estudyante sa PC
   (server-side, tine-tsek ang `PC.current_user`/`current_session`).
+- Buong window title AT URL ang naka-store (walang ibinubura) — nakikita
+  ng admin/in-charge lahat ng detalye. May karagdagang "Site" tag na lang
+  na tama at specific (hal. "Chrome — ChatGPT") gamit ang URL, para madali
+  makita kung anong site nang hindi kailangang basahin ang buong title.
 - Makikita ang mga log sa admin/in-charge dashboard: **PC activity log**
   sa sidebar, o `/labs/pc-activity/`.
 - Itakda ang `activity_report_interval_seconds` sa `0` sa

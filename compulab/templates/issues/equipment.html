@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}Equipment{% endblock %}
 
 {% block content %}
@@ -18,7 +18,7 @@
     <tbody>
       {% for issue in issues %}
         <tr>
-          <td><a href="{% url 'issue_detail' issue.pk %}">{{ issue.title }}</a></td>
+          <td><a href="{% url 'issue_detail' issue.pk %}" class="js-modal-link">{{ issue.title }}</a></td>
           <td>{{ issue.pc.pc_id|default:"—" }}</td>
           <td>{{ issue.lab.name }}</td>
           <td><span class="status-pill pill-{{ issue.priority }}">{{ issue.get_priority_display }}</span></td>

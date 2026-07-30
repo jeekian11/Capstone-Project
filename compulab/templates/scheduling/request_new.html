@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}Log a Reservation{% endblock %}
 
 {% block content %}
@@ -33,7 +33,7 @@
              placeholder="Type a name or ID number to find a registered account...">
       <div id="requester-search-results" class="search-results"
            style="display:none; position:absolute; z-index:10; background:#fff; border:1px solid #ddd; border-radius:6px; width:100%; max-height:220px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.08);"></div>
-      <span class="helptext">Pick a registered account to auto-fill the fields below — Full Name, ID, and Course &amp; Year/Section (student) or Department (instructor).</span>
+      <span class="helptext">Pick a registered account to auto-fill the fields below — Full Name, ID, and Department / Year Level.</span>
       <div id="requester-extra-info" class="helptext" style="display:none; font-weight:600; margin-top:4px;"></div>
     </div>
 
@@ -64,32 +64,26 @@
       {% if form.subject.errors %}<div class="form-errors">{{ form.subject.errors|join:", " }}</div>{% endif %}
     </div>
 
-    <div class="form-group">
-      <label class="form-label" for="{{ form.roster.id_for_label }}">Class roster (optional)</label>
-      {{ form.roster }}
-      <span class="helptext">
-        Only relevant for <strong>Instructor</strong> requests — link a roster to let everyone in that
-        class check in with this same reservation code (using their own ID number) and to show real
-        names in attendance reports.
-        For <strong>Group of students</strong>, leave this blank: any ID number will work with the
-        shared code, no roster/names needed.
-        For <strong>Student</strong> (individual), leave this blank too: only that one ID will work.
-        <a href="{% url 'roster_list' %}">Manage rosters</a>.
-      </span>
-      {% if form.roster.errors %}<div class="form-errors">{{ form.roster.errors|join:", " }}</div>{% endif %}
-    </div>
-
     <div class="form-row">
       <div class="form-group">
         <label class="form-label" for="{{ form.date.id_for_label }}">Date</label>
         {{ form.date }}
         {% if form.date.errors %}<div class="form-errors">{{ form.date.errors|join:", " }}</div>{% endif %}
       </div>
-      <div class="form-group">
+      <div class="form-group" id="student-count-group">
         <label class="form-label" for="{{ form.student_count.id_for_label }}">Number of students</label>
         {{ form.student_count }}
-        <span class="helptext">For <strong>Group of students</strong>, this also caps how many distinct IDs can check in with the shared code.</span>
+        <span class="helptext" id="student-count-help">For <strong>Group of students</strong>, this also caps how many distinct IDs can check in with the shared code.</span>
         {% if form.student_count.errors %}<div class="form-errors">{{ form.student_count.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="form-group" id="pcs-requested-group" style="display:none;">
+        <label class="form-label" for="{{ form.pcs_requested.id_for_label }}">Number of PCs needed</label>
+        {{ form.pcs_requested }}
+        <span class="helptext">
+          <strong>Walk-in:</strong> only approved if this many PCs are actually free in that time slot.
+          <strong>Override:</strong> can be approved even if the lab is fully booked, but can't exceed the lab's total PC count.
+        </span>
+        {% if form.pcs_requested.errors %}<div class="form-errors">{{ form.pcs_requested.errors|join:", " }}</div>{% endif %}
       </div>
     </div>
 
@@ -130,14 +124,36 @@
   var nameField = document.getElementById('{{ form.requester_name.id_for_label }}');
   var debounceTimer = null;
 
-  var LABELS = {instructor: 'Search Instructor', student: 'Search Student', group: 'Search Student (group representative)'};
+  var LABELS = {
+    instructor: 'Search Instructor', student: 'Search Student', group: 'Search Student (group representative)',
+    walk_in: 'Search Student / Instructor (walk-in)', override: 'Search Student / Instructor (override)',
+  };
+  // 'group', 'walk_in', and 'override' aren't distinct account roles — they
+  // search across every registered student/instructor account (see the
+  // 'any' branch in accounts.views.search_requesters).
+  var SEARCH_ROLE = {group: 'any', walk_in: 'any', override: 'any'};
 
-  function currentRole() {
+  function rawType() {
     return typeSelect ? typeSelect.value : 'student';
   }
 
+  function currentRole() {
+    return SEARCH_ROLE[rawType()] || rawType();
+  }
+
   function updateLabel() {
-    if (searchLabel) searchLabel.textContent = LABELS[currentRole()] || 'Search Student / Search Instructor';
+    if (searchLabel) searchLabel.textContent = LABELS[rawType()] || 'Search Student / Search Instructor';
+  }
+
+  var studentCountGroup = document.getElementById('student-count-group');
+  var pcsRequestedGroup = document.getElementById('pcs-requested-group');
+  var studentCountInput = document.getElementById('{{ form.student_count.id_for_label }}');
+  var studentCountHelp = document.getElementById('student-count-help');
+
+  function updateFieldVisibility() {
+    var isCapacityType = (rawType() === 'walk_in' || rawType() === 'override');
+    if (studentCountGroup) studentCountGroup.style.display = isCapacityType ? 'none' : '';
+    if (pcsRequestedGroup) pcsRequestedGroup.style.display = isCapacityType ? '' : 'none';
   }
 
   function doSearch(q) {
@@ -155,7 +171,7 @@
     }
     results.forEach(function(r) {
       var item = document.createElement('div');
-      var extra = r.course_year_section || r.department || '';
+      var extra = [r.department, r.year_level].filter(Boolean).join(' — ');
       item.textContent = r.full_name + ' — ' + r.id_number + (extra ? ' (' + extra + ')' : '');
       item.style.cursor = 'pointer';
       item.style.padding = '8px 10px';
@@ -173,11 +189,8 @@
     searchInput.value = r.full_name;
     resultsBox.style.display = 'none';
     resultsBox.innerHTML = '';
-    if (r.course_year_section) {
-      extraInfo.textContent = 'Course & Year/Section: ' + r.course_year_section;
-      extraInfo.style.display = 'block';
-    } else if (r.department) {
-      extraInfo.textContent = 'Department: ' + r.department;
+    if (r.department) {
+      extraInfo.textContent = 'Department: ' + r.department + (r.year_level ? ' — ' + r.year_level : '');
       extraInfo.style.display = 'block';
     } else {
       extraInfo.style.display = 'none';
@@ -204,6 +217,7 @@
   if (typeSelect) {
     typeSelect.addEventListener('change', function() {
       updateLabel();
+      updateFieldVisibility();
       searchInput.value = '';
       resultsBox.style.display = 'none';
       extraInfo.style.display = 'none';
@@ -211,6 +225,7 @@
   }
 
   updateLabel();
+  updateFieldVisibility();
 })();
 </script>
 

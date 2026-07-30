@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}Import Students{% endblock %}
 
 {% block content %}
@@ -14,7 +14,8 @@
 </div>
 
 <div class="card" style="max-width:640px">
-  <form method="post" enctype="multipart/form-data" novalidate>
+  <form method="post" enctype="multipart/form-data" novalidate
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Create accounts from this file?', text: 'A new student account will be created for every valid row in the file, filed under the Department selected above. This cannot be bulk-undone afterward.', icon: 'warning', confirmButtonText: 'Yes, import', confirmButtonColor: '#f2a93b'}); return false;">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div class="form-errors">{{ form.non_field_errors }}</div>

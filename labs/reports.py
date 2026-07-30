@@ -394,7 +394,7 @@ def _attendance_data(request):
             expected = len(roster_by_id)
         else:
             absent = None  # no roster — names aren't knowable, only a count
-            expected = s.student_count or 0
+            expected = s.pcs_requested if s.requester_type in ('walk_in', 'override') else (s.student_count or 0)
 
         # Walk-in / Override transactions: people who used a PC during this
         # session's slot without being the requester, a roster member, or a
@@ -405,6 +405,7 @@ def _attendance_data(request):
             {
                 'id_number': c.id_number,
                 'name': (c.student.get_full_name() or c.student.username) if c.student else c.id_number,
+                'role': c.student.get_role_display() if c.student else '—',
                 'checkin_type': c.get_checkin_type_display(),
                 'pc': c.pc.pc_id if c.pc else '—',
                 'time': c.checked_in_at,
@@ -457,7 +458,7 @@ def export_attendance(request):
         else:
             absent_names = 'No roster attached — estimate only'
         walk_in_text = '; '.join(
-            f"{w['name']} ({w['id_number']}) — {w['checkin_type']} @ {timezone.localtime(w['time']).strftime('%H:%M')}"
+            f"{w['name']} ({w['id_number']}, {w['role']}) — {w['checkin_type']} @ {timezone.localtime(w['time']).strftime('%H:%M')}"
             for w in r['walk_ins']
         ) or '—'
         body.append([

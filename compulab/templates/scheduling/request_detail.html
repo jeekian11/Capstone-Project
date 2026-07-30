@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}Request Details{% endblock %}
 
 {% block content %}
@@ -28,6 +28,13 @@
         Capped at <strong>{{ req.student_count }}</strong> distinct ID{{ req.student_count|pluralize }}
         checking in, based on the number of students on this request.
       </p>
+    {% elif req.requester_type == 'walk_in' or req.requester_type == 'override' %}
+      <p style="font-size:13px; color:#666; margin-top:8px;">
+        This is a <strong>{{ req.get_requester_type_display }}</strong> reservation for
+        <strong>{{ req.pcs_requested }}</strong> PC{{ req.pcs_requested|pluralize }}.
+        No roster is linked, so only {{ req.requester_name }}'s
+        {{ req.get_requester_type_display }} ID (<strong>{{ req.requester_id_number }}</strong>) will work with this code at the lab PC.
+      </p>
     {% else %}
       <p style="font-size:13px; color:#666; margin-top:8px;">
         Give this code to {{ req.requester_name }}. At the lab PC, they'll enter their
@@ -48,7 +55,7 @@
     <tr><td>Subject</td><td>{{ req.subject }}</td></tr>
     <tr><td>Date</td><td>{{ req.date|date:"M d, Y" }}</td></tr>
     <tr><td>Time</td><td>{{ req.start_time|time:"H:i" }}–{{ req.end_time|time:"H:i" }}</td></tr>
-    <tr><td>Students</td><td>{{ req.student_count }}</td></tr>
+    <tr><td>{% if req.requester_type == 'walk_in' or req.requester_type == 'override' %}PCs requested{% else %}Students{% endif %}</td><td>{% if req.requester_type == 'walk_in' or req.requester_type == 'override' %}{{ req.pcs_requested }}{% else %}{{ req.student_count }}{% endif %}</td></tr>
     <tr><td>Status</td><td><span class="status-pill pill-{{ req.status }}">{{ req.get_status_display }}</span></td></tr>
   </table>
 
@@ -69,7 +76,7 @@
         {% csrf_token %}
         <button type="submit" class="action-btn danger">Reject</button>
       </form>
-      <a href="{% url 'request_edit' req.pk %}" class="action-btn icon-only" title="Edit request"><svg><use href="#icon-edit"/></svg></a>
+      <a href="{% url 'request_edit' req.pk %}" class="action-btn icon-only js-modal-link" title="Edit request"><svg><use href="#icon-edit"/></svg></a>
     </div>
   {% else %}
     <div class="form-actions" style="margin-top:20px">

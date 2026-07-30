@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-z$q0s-rr3%osqk_q^tm=*xm$z(k7so(m&e5@li_znp6v-)2(9g
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '192.168.1.96', '0.0.0.0']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '0.0.0.0', '192.168.1.96', '192.168.100.51']
 
 
 # Application definition
@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'scheduling',
     'issues',
     'notifications',
+    'cloud_sync',
 ]
 
 MIDDLEWARE = [
@@ -83,7 +84,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'compulab_db',
         'USER': 'root',
-        'PASSWORD': 'compulab123',
+        'PASSWORD': '',
         'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
@@ -178,6 +179,14 @@ PC_STATUS_CHECK_INTERVAL_SECONDS = 20
 # Change to e.g. 3 to run at 3 AM instead of midnight.
 PC_ACTIVITY_LOG_WIPE_HOUR = 0
 
+# --- Cloud sync (edge server pushes to a remote cloud server when
+# online; everything above keeps working with this left blank) ---
+CLOUD_SERVER_URL = ''  # e.g. 'https://compulab-cloud.example.com' -- blank = sync disabled, edge-only
+CLOUD_SYNC_API_KEY = ''  # shared secret with the cloud server's /api/sync/ endpoint
+CLOUD_SYNC_INTERVAL_SECONDS = 60
+CLOUD_SYNC_TIMEOUT_SECONDS = 5
+
 # How many days' worth of activity_log_backups/*.xlsx files to keep before
 # those are pruned too, so the backup folder doesn't grow forever either.
-PC_ACTIVITY_LOG_BACKUP_KEEP_DAYS = 30
+PC_ACTIVITY_LOG_BACKUP_KEEP_DAYS = 14
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

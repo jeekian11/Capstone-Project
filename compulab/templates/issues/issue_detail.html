@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}{{ issue.title }}{% endblock %}
 
 {% block content %}
@@ -8,7 +8,7 @@
     <h1>{{ issue.title }}</h1>
     <div class="sub">{{ issue.lab.name }} {% if issue.pc %}· {{ issue.pc.pc_id }}{% endif %}</div>
   </div>
-  <a href="{% url 'issue_update' issue.pk %}" class="action-btn">Update issue</a>
+  <a href="{% url 'issue_update' issue.pk %}" class="action-btn js-modal-link">Update issue</a>
 </div>
 
 <div class="two-col">

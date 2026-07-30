@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}Instructor{% endblock %}
 
 {% block content %}
@@ -7,23 +7,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
 <style>
-:root{
-  --bg:#0a0e12; --surface:#12171d; --surface-raised:#171d24;
-  --border:#232b34; --border-soft:#232b3480;
-  --text:#e7ebee; --text-dim:#8b98a3; --text-faint:#4d5761;
-  --green:#3ed6c4; --green-dim:#3ed6c422;
-  --red:#ff5d5d; --red-dim:#ff5d5d22;
-  --amber:#f2a93b; --amber-dim:#f2a93b22;
-  --purple:#b98cf2; --purple-dim:#b98cf222;
-  --blue:#5b9dff; --blue-dim:#5b9dff22;
-  --font-display:'Space Grotesk',sans-serif;
-  --font-body:'Inter',sans-serif;
-  --font-mono:'JetBrains Mono',monospace;
-}
-
 .in-topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; flex-wrap:wrap; gap:16px;}
 .in-brand{display:flex; align-items:center; gap:12px;}
 .in-brand-mark{width:34px; height:34px; border-radius:8px; background:linear-gradient(135deg,var(--purple),var(--blue)); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-weight:600; font-size:14px; color:#0a0e12;}
+html[data-theme="light"] .in-brand-mark,
+html[data-theme="light"] .in-quick-btn.primary{ color:#fff; }
 .in-brand-text h1{font-family:var(--font-display); font-size:19px; margin:0; font-weight:600; letter-spacing:-0.01em; color:var(--text);}
 .in-brand-text span{font-size:12px; color:var(--text-faint); font-family:var(--font-mono);}
 

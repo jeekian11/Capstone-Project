@@ -55,6 +55,22 @@ class PCForm(forms.ModelForm):
                 'server itself, not the lab PC, so status checks would be meaningless. '
                 'Enter the PC\'s real network IP address, or leave this field blank.'
             )
+        # The pc-agent-* endpoints (labs/views.py) resolve "which PC is this?"
+        # with PC.objects.filter(ip_address=...).first() — if two PC records
+        # share one IP, that lookup always returns the SAME one (whichever
+        # sorts first), so every other PC on that IP silently gets treated
+        # as that one PC (e.g. the lock screen keeps showing "PC 01").
+        # Block that at the source instead of letting it happen silently.
+        dupe = PC.objects.filter(ip_address=ip_address)
+        if self.instance and self.instance.pk:
+            dupe = dupe.exclude(pk=self.instance.pk)
+        existing = dupe.select_related('lab').first()
+        if existing:
+            raise forms.ValidationError(
+                f'This IP address is already assigned to "{existing.pc_id}" ({existing.lab.name}). '
+                f'Each PC needs its own unique IP address — the system identifies which PC is talking '
+                f'to it by IP, so two PCs sharing one IP will make the agent show the wrong PC ID.'
+            )
         return ip_address
 
 

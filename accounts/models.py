@@ -59,10 +59,6 @@ class User(AbstractUser):
         max_length=50, blank=True, default='',
         help_text='Student/Instructor ID — used to match this account to reservation requests and lab PC check-ins. Separate from the login username.'
     )
-    course_year_section = models.CharField(
-        max_length=100, blank=True, default='',
-        help_text='Students only — e.g. "BSIS 4A". Shown when this student is picked as a requester.'
-    )
     department = models.CharField(
         max_length=100, blank=True, default='', choices=DEPARTMENT_CHOICES,
         help_text='Instructors and students — which department/college this account belongs to. '
@@ -83,6 +79,14 @@ class User(AbstractUser):
         related_name='assigned_users'
     )
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
+    THEME_CHOICES = [
+        ('dark', 'Dark'),
+        ('light', 'Light'),
+    ]
+    theme = models.CharField(
+        max_length=5, choices=THEME_CHOICES, default='dark',
+        help_text='Dark/Light interface preference — saved per account so it follows the user to any PC they log in on.'
+    )
 
     def __str__(self):
         return f'{self.get_full_name()} ({self.role})'
@@ -99,6 +103,15 @@ class User(AbstractUser):
         if not self.year_level:
             return ''
         return YEAR_LEVEL_LABELS.get(self.year_level, f'Year {self.year_level}')
+
+    @property
+    def program_year_display(self):
+        """Combined 'Department — Year Level' summary (e.g. 'BSIS — 1st
+        Year') used anywhere the old free-text Course & Year/Section field
+        used to be shown, now derived from the two structured fields
+        instead so it always stays in sync with them."""
+        parts = [p for p in [self.department_display, self.year_level_display] if p]
+        return ' — '.join(parts)
 
 
 class ActivityLog(models.Model):

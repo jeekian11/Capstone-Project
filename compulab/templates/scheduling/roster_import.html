@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}Import Students — {{ roster.name }}{% endblock %}
 
 {% block content %}
@@ -8,11 +8,12 @@
     <h1>Import Students (Excel/CSV)</h1>
     <div class="sub">Bulk-add registered students to "{{ roster.name|default:roster.course_code }}", by Department</div>
   </div>
-  <a href="{% url 'roster_detail' roster.pk %}" class="action-btn">&larr; Back to Roster</a>
+  <a href="{% url 'roster_detail' roster.pk %}" class="action-btn js-modal-link">&larr; Back to Roster</a>
 </div>
 
 <div class="card" style="max-width:640px">
-  <form method="post" enctype="multipart/form-data" novalidate>
+  <form method="post" enctype="multipart/form-data" novalidate
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Import students from this file?', text: 'Every matching registered student account in this Department will be added to \'{{ roster.name|default:roster.course_code|escapejs }}\'. This doesn\'t create new accounts, only adds existing ones to the roster.', icon: 'question', confirmButtonText: 'Yes, import', confirmButtonColor: '#3ed6c4'}); return false;">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div class="form-errors">{{ form.non_field_errors }}</div>
@@ -34,7 +35,7 @@
 
     <div class="form-actions">
       <button type="submit" class="action-btn primary">Import Students</button>
-      <a href="{% url 'roster_detail' roster.pk %}" class="action-btn">Cancel</a>
+      <a href="{% url 'roster_detail' roster.pk %}" class="action-btn js-modal-link">Cancel</a>
     </div>
   </form>
 </div>

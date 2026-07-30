@@ -47,6 +47,10 @@ class PC(models.Model):
         related_name='+',
         help_text="The reservation that most recently unlocked this PC. Used to auto re-lock the PC once that reservation's end_time passes, and cleared whenever the PC is locked again (by time running out or a manual lock).",
     )
+    current_guest_name = models.CharField(
+        max_length=150, blank=True, default='',
+        help_text="Full name of the walk-in guest currently using this PC via Manual Unlock, when there is no registered account (current_user stays null for guests). Cleared whenever the PC is locked again.",
+    )
 
     def __str__(self):
         return self.pc_id
@@ -57,10 +61,14 @@ class PCActivityLog(models.Model):
     while a PC is unlocked — the active window's title bar text, captured
     every few seconds (see agent_config.json 'activity_report_interval_seconds').
 
-    For browsers this is normally 'Page Title - Browser Name', which is
-    the closest thing to 'which website' this system tracks — the agent
-    only reads the window title (a standard-library, no-extra-permissions
-    call), never the address bar contents, page HTML, or keystrokes.
+    For browsers this is normally 'Page Title - Browser Name', which used to
+    be the closest thing to 'which website' this system tracked. The agent
+    can now optionally also read the address bar's URL via Windows UI
+    Automation (see lab_pc_agent's uiautomation dependency) for reliable
+    site identification — some single-page apps (e.g. ChatGPT) never put
+    their own name in the title, only the current conversation/document
+    name, so title text alone can't tell them apart from "some other site".
+    Still never reads page HTML, form contents, or keystrokes.
     """
     pc = models.ForeignKey(PC, on_delete=models.CASCADE, related_name='activity_logs')
     student = models.ForeignKey(
@@ -80,6 +88,15 @@ class PCActivityLog(models.Model):
     window_title = models.CharField(
         max_length=500, blank=True,
         help_text="The active/foreground window's title bar text at the moment of capture.",
+    )
+    page_url = models.CharField(
+        max_length=500, blank=True, default='',
+        help_text=(
+            "The browser address bar's URL at the moment of capture, when the "
+            "agent could read it (requires the UI Automation dependency on the "
+            "PC — older/unsupported agents leave this blank and site detection "
+            "falls back to guessing from window_title)."
+        ),
     )
     captured_at = models.DateTimeField(auto_now_add=True)
 

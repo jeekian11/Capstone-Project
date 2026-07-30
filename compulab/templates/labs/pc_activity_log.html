@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% load static %}
 {% block title %}PC Activity Log{% endblock %}
 
@@ -31,6 +31,12 @@
   .pal-activity-pill { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 500; }
   .pal-activity-pill.active { background: var(--green-dim); color: var(--green); }
   .pal-activity-pill.completed { background: var(--amber-dim); color: var(--amber); }
+
+  .pal-role-pill { display: inline-block; padding: 1px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; margin-left: 6px; white-space: nowrap; vertical-align: middle; }
+  .pal-role-pill.admin { background: var(--blue); color: #fff; }
+  .pal-role-pill.incharge { background: var(--purple); color: #fff; }
+  .pal-role-pill.instructor { background: var(--amber); color: #0a0e12; }
+  .pal-role-pill.student { background: var(--gold); color: #0a0e12; }
 
   .pal-detail-row { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border-soft); font-size: 12.5px; }
   .pal-detail-row:last-child { border-bottom: none; }
@@ -94,7 +100,7 @@
     </div>
     <div>
       <div class="pal-stat-val">{{ stats.active_students_now }}</div>
-      <div class="pal-stat-label">Active Students Now</div>
+      <div class="pal-stat-label">Active Users Now</div>
     </div>
   </div>
   <div class="pal-stat">
@@ -156,11 +162,11 @@
       </select>
     </div>
     <div class="form-group" style="margin-bottom:0">
-      <label class="form-label" for="student">Student</label>
+      <label class="form-label" for="student">User</label>
       <select name="student" id="student" class="form-control">
-        <option value="">All Students</option>
+        <option value="">All Users</option>
         {% for s in all_students %}
-          <option value="{{ s.pk }}" {% if selected_student == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.get_full_name|default:s.username }}</option>
+          <option value="{{ s.pk }}" {% if selected_student == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.get_full_name|default:s.username }} ({{ s.get_role_display }})</option>
         {% endfor %}
       </select>
     </div>
@@ -179,7 +185,7 @@
     </div>
     <div class="form-group" style="margin-bottom:0">
       <label class="form-label" for="q">Search</label>
-      <input type="text" name="q" id="q" class="form-control" placeholder="PC ID, student name, application…" value="{{ search_query }}">
+      <input type="text" name="q" id="q" class="form-control" placeholder="PC ID, user name, application…" value="{{ search_query }}">
     </div>
     <div class="pal-filters-actions" style="grid-column: 1 / -1;">
       {% if filtered %}<a href="{% url 'pc_activity_log' %}" class="action-btn">Reset</a>{% endif %}
@@ -221,18 +227,16 @@
         <table class="table">
           <thead>
             <tr>
-              <th>Time</th><th>Student</th><th>PC</th><th>Activity</th>
-              <th>Application / Window</th><th>Duration</th><th>Status</th><th></th>
+              <th>Time</th><th>User</th><th>PC Used</th>
+              <th>Duration</th><th>Status</th><th></th>
             </tr>
           </thead>
           <tbody>
             {% for row in timeline %}
               <tr>
                 <td style="white-space:nowrap;">{{ row.time|date:"g:i A" }}</td>
-                <td>{% if row.student %}{{ row.student.get_full_name|default:row.student.username }}{% else %}—{% endif %}</td>
+                <td>{% if row.student %}{{ row.student.get_full_name|default:row.student.username }}<span class="pal-role-pill {{ row.student.role }}">{{ row.student.get_role_display }}</span>{% else %}—{% endif %}</td>
                 <td>{{ row.pc.pc_id }}</td>
-                <td>{{ row.activity }}</td>
-                <td>{{ row.application|default:"—" }}</td>
                 <td>{{ row.duration_display }}</td>
                 <td><span class="pal-activity-pill {{ row.status }}">{% if row.status == 'active' %}Active{% else %}Completed{% endif %}</span></td>
                 <td style="white-space:nowrap;">
@@ -244,7 +248,7 @@
                 </td>
               </tr>
             {% empty %}
-              <tr><td colspan="8" class="empty">No activity samples{% if filtered %} match this filter{% endif %} yet.</td></tr>
+              <tr><td colspan="6" class="empty">No activity samples{% if filtered %} match this filter{% endif %} yet.</td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -327,11 +331,15 @@
       <div class="section-title">Session Details</div>
       {% if selected_session %}
         <div class="pal-detail-row">
-          <span class="pal-detail-label">Student</span>
+          <span class="pal-detail-label">Name</span>
           <span class="pal-detail-val">{% if selected_session.student %}{{ selected_session.student.get_full_name|default:selected_session.student.username }}{% else %}—{% endif %}</span>
         </div>
         <div class="pal-detail-row">
-          <span class="pal-detail-label">Student ID</span>
+          <span class="pal-detail-label">Role</span>
+          <span class="pal-detail-val">{% if selected_session.student %}<span class="pal-role-pill {{ selected_session.student.role }}">{{ selected_session.student.get_role_display }}</span>{% else %}—{% endif %}</span>
+        </div>
+        <div class="pal-detail-row">
+          <span class="pal-detail-label">ID Number</span>
           <span class="pal-detail-val">{{ selected_session.student.id_number|default:"—" }}</span>
         </div>
         <div class="pal-detail-row">
@@ -370,10 +378,14 @@
         <div class="section-title" style="margin-top:14px;">Window / Application Activity</div>
         <div class="pal-mini-scroll">
           <table class="pal-mini-table">
-            <thead><tr><th>Time</th><th>Application / Window Title</th></tr></thead>
+            <thead><tr><th>Time</th><th>Site</th><th>Window Title</th></tr></thead>
             <tbody>
-              {% for b in selected_session.blocks %}
-                <tr><td style="white-space:nowrap;">{{ b.start|date:"g:i A" }}</td><td>{{ b.title|default:"—" }}</td></tr>
+              {% for b in selected_session_blocks_recent_first %}
+                <tr>
+                  <td style="white-space:nowrap;">{{ b.start|date:"g:i A" }}</td>
+                  <td style="white-space:nowrap;">{{ b.site_label|default:"—" }}</td>
+                  <td>{{ b.title|default:"—" }}</td>
+                </tr>
               {% endfor %}
             </tbody>
           </table>

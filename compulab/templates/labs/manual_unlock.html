@@ -1,0 +1,64 @@
+{% extends base_template|default:"base.html" %}
+{% block title %}Manual Unlock (Guest){% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Manual Unlock (Guest)</h1>
+    <div class="sub">For first-time walk-in guests with no registered account. Enter the guest's Full Name so the access log can identify who used the computer.</div>
+  </div>
+  <a href="{% url 'pc_status' %}" class="action-btn">Back to PC Status</a>
+</div>
+
+<div class="card" style="max-width:640px">
+  <form method="get" class="form-row" style="align-items:end;">
+    <div class="form-group" style="margin-bottom:0; flex:1;">
+      <label class="form-label" for="lab">Laboratory</label>
+      <select name="lab" id="lab" class="form-control" onchange="this.form.submit()">
+        <option value="">Select a laboratory…</option>
+        {% for lab in all_labs %}
+          <option value="{{ lab.pk }}" {% if selected_lab == lab.pk|stringformat:"s" %}selected{% endif %}>{{ lab.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+</div>
+
+{% if selected_lab %}
+<div class="card" style="max-width:640px; margin-top:14px;">
+  {% if available_pcs %}
+    <form method="post"
+          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Unlock for guest?', text: 'This grants a walk-in guest with no account access to this computer right now. Make sure the Full Name below is correct — it becomes the access log entry for this session.', icon: 'warning', confirmButtonText: 'Yes, unlock for this guest', confirmButtonColor: '#f2a93b'});">
+      {% csrf_token %}
+      <input type="hidden" name="lab" value="{{ selected_lab }}">
+
+      <div class="form-group">
+        <label class="form-label" for="pc">Available computer</label>
+        <select name="pc" id="pc" class="form-control" required>
+          <option value="">Select a computer…</option>
+          {% for pc in available_pcs %}
+            <option value="{{ pc.pk }}">{{ pc.pc_id }}</option>
+          {% endfor %}
+        </select>
+        <span class="helptext">Only computers currently online and not already in use are listed.</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="guest_name">Guest Full Name</label>
+        <input type="text" name="guest_name" id="guest_name" class="form-control" required
+               autocomplete="off" placeholder="e.g. Juan Dela Cruz">
+        <span class="helptext">Required. This is not a registered account — it's recorded so there's an accurate record of who used this computer.</span>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="action-btn primary">Unlock for Guest</button>
+      </div>
+    </form>
+  {% else %}
+    <p class="empty">This laboratory has no available computers right now — nothing online and free to unlock. Check <a href="{% url 'pc_status' %}?lab={{ selected_lab }}">PC Status</a> for this lab.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

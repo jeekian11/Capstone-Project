@@ -3,7 +3,7 @@
 
 <style>
   .topbar {
-    padding: 16px 24px;
+    padding: 8px 24px;
     border-bottom: 1px solid var(--shell-line);
     background: var(--shell-ink-1);
     display: grid;
@@ -11,25 +11,43 @@
     align-items: center;
     gap: 16px;
   }
+  .topbar-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
   .topbar-title {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 17px;
-    font-weight: 600;
+    font-size: 20px;
+    font-weight: 900;
     letter-spacing: -0.01em;
-    color: #e7ebee;
+    color: var(--text);
   }
+
+  .sidebar-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    border: 1px solid var(--shell-line);
+    background: var(--shell-ink-0);
+    color: var(--text-dim);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .sidebar-toggle:hover { border-color: var(--topbar-accent); color: var(--topbar-accent); }
+  .sidebar-toggle svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; }
   .topbar-system {
     justify-self: center;
     font-family: 'JetBrains Mono', monospace;
     font-size: 13px;
     font-weight: 600;
     letter-spacing: 0.08em;
-    color: #8b98a3;
+    color: var(--text-dim);
     text-transform: uppercase;
     white-space: nowrap;
   }
   .topbar-system b { color: var(--topbar-accent); font-weight: 600; }
-  .topbar-right { display: flex; align-items: center; justify-content: flex-end; gap: 16px; font-size: 13px; color: #8b98a3; }
+  .topbar-right { display: flex; align-items: center; justify-content: flex-end; gap: 16px; font-size: 13px; color: var(--text-dim); }
 
   .topbar-clock {
     display: flex;
@@ -49,7 +67,7 @@
   .topbar-clock-date {
     font-family: 'JetBrains Mono', monospace;
     font-size: 10px;
-    color: #8b98a3;
+    color: var(--text-dim);
     text-transform: uppercase;
     letter-spacing: 0.06em;
   }
@@ -75,7 +93,7 @@
   .avatar {
     width: 34px; height: 34px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3ed6c4, #5b9dff);
+    background: linear-gradient(135deg, var(--green), var(--blue));
     color: #0a0e12;
     font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
@@ -86,6 +104,7 @@
     flex-shrink: 0;
     overflow: hidden;
   }
+  html[data-theme="light"] .avatar { color: #fff; }
   .avatar img {
     width: 100%; height: 100%;
     object-fit: cover;
@@ -95,24 +114,55 @@
   .user-name {
     font-size: 12.5px;
     font-weight: 600;
-    color: #e7ebee;
+    color: var(--text);
     white-space: nowrap;
   }
   .user-role {
     font-size: 10.5px;
     font-family: 'JetBrains Mono', monospace;
-    color: #8b98a3;
+    color: var(--text-dim);
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
+
+  .theme-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    border: 1px solid var(--shell-line);
+    background: var(--shell-ink-0);
+    color: var(--text-dim);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .theme-toggle:hover { border-color: var(--topbar-accent); color: var(--topbar-accent); }
+  .theme-toggle svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .theme-toggle .icon-sun { display: none; }
+  html[data-theme="light"] .theme-toggle .icon-moon { display: none; }
+  html[data-theme="light"] .theme-toggle .icon-sun { display: block; }
 </style>
 
 <div class="topbar">
-  <div class="topbar-title">{{ page_title|default:"Dashboard" }}</div>
+  <div class="topbar-left">
+    <button type="button" class="sidebar-toggle" id="sidebarToggleBtn" title="Collapse/expand sidebar" aria-label="Collapse/expand sidebar">
+      <svg viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+    </button>
+    <div class="topbar-title">{{ page_title|default:"Dashboard" }}</div>
+  </div>
 
-  <div class="topbar-system">Smart Computer<b> Lab Management System</b></div>
+  <div class="topbar-system">A Smart Computer<b> Laboratory Management System</b></div>
 
   <div class="topbar-right">
+
+    <button type="button" class="theme-toggle" id="themeToggleBtn" title="Switch dark/light theme" aria-label="Switch dark/light theme">
+      <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+      <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+    </button>
+    <form id="themeForm" style="display:none;">{% csrf_token %}<input type="hidden" name="theme" id="themeInput"></form>
 
     <div class="topbar-clock" id="topbarClock">
       <span class="topbar-clock-time" id="topbarClockTime">--:--:--</span>
@@ -156,5 +206,53 @@
 
   tick();
   setInterval(tick, 1000);
+})();
+
+// Dark/Light toggle — flips the icon + html[data-theme] instantly for a
+// snappy feel, then saves the choice to the account in the background so it
+// follows the user to any other PC/browser they log in on.
+(function() {
+  var btn = document.getElementById('themeToggleBtn');
+  var form = document.getElementById('themeForm');
+  var input = document.getElementById('themeInput');
+  if (!btn || !form || !input) return;
+
+  btn.addEventListener('click', function() {
+    var current = document.documentElement.getAttribute('data-theme') || 'dark';
+    var next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    input.value = next;
+    fetch('{% url "set_theme" %}', {
+      method: 'POST',
+      body: new FormData(form),
+    }).catch(function() {
+      // saved locally for this page even if the request fails; worst case
+      // it just reverts to the account's stored theme on next page load
+    });
+  });
+})();
+
+// Sidebar collapse/expand — purely a display preference (no server round
+// trip needed), so it's kept in localStorage and toggled via a class on
+// <html>. An inline script in base.html's <head> applies the saved state
+// before first paint to avoid a flash of the expanded sidebar.
+(function() {
+  var btn = document.getElementById('sidebarToggleBtn');
+  if (!btn) return;
+  var STORAGE_KEY = 'compulabSidebarCollapsed';
+
+  btn.addEventListener('click', function() {
+    var collapsed = !document.documentElement.classList.contains('sidebar-collapsed');
+    document.documentElement.classList.toggle('sidebar-collapsed', collapsed);
+    try { localStorage.setItem(STORAGE_KEY, collapsed ? '1' : '0'); } catch (e) {}
+  });
+
+  // Give every nav item a native tooltip with its label text, so links are
+  // still identifiable by hovering when the sidebar is collapsed to icons.
+  document.querySelectorAll('.nav-item').forEach(function(item) {
+    if (item.title) return;
+    var label = item.querySelector('.nav-label');
+    if (label) item.title = label.textContent.trim();
+  });
 })();
 </script>

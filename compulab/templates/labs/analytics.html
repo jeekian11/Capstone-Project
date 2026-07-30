@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}Reporting & analytics{% endblock %}
 
 {% block content %}
@@ -418,6 +418,10 @@
   var mono = "'JetBrains Mono', monospace";
   var dim = '#8b98a3';
   var gridColor = 'rgba(139,152,163,0.12)';
+  // matches whichever surface color the light/dark toggle currently has
+  // active, so doughnut/pie segment borders blend into the card instead
+  // of showing a leftover dark ring in light mode
+  var surface = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#12171d';
   Chart.defaults.color = dim;
   Chart.defaults.font.family = "'Inter', sans-serif";
   Chart.defaults.font.size = 10.5;
@@ -429,7 +433,7 @@
       datasets: [{
         data: [{{ equipment_status.working }}, {{ equipment_status.maintenance }}, {{ equipment_status.damaged }}],
         backgroundColor: ['#3ed6c4', '#f2a93b', '#ff5d5d'],
-        borderColor: '#12171d',
+        borderColor: surface,
         borderWidth: 2,
       }]
     },

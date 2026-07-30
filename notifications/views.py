@@ -3,32 +3,57 @@ from django.shortcuts import get_object_or_404, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.urls import reverse_lazy
-from accounts.mixins import RoleRequiredMixin
-from notifications.models import Notification
-from notifications.forms import NotificationComposeForm, NotificationSettingsForm
+from accounts.mixins import RoleRequiredMixin, ModalFormMixin
+from notifications.models import Notification, AlertSettings
+from notifications.forms import NotificationComposeForm, AlertSettingsForm
+from notifications.filters import apply_filters, stat_counts, CATEGORY_CHOICES
 
 
-# all notifications for current user
+# all notifications for current user (generic feed — Admin/In-Charge use
+# the richer labs.AlertsView "Notifications & Alerts" page instead, see
+# labs/views.py AlertsView + templates/labs/alerts.html)
 class NotificationsView(LoginRequiredMixin, ListView):
     template_name = 'notifications/notifications.html'
     context_object_name = 'notifications'
 
+    def get_base_queryset(self):
+        return Notification.objects.filter(user=self.request.user)
+
     def get_queryset(self):
-        return Notification.objects.filter(
-            user=self.request.user
-        ).order_by('-pinned', '-created_at')
+        return apply_filters(self.get_base_queryset(), self.request)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['stats'] = stat_counts(self.get_base_queryset())
+        ctx['category_choices'] = CATEGORY_CHOICES
+        ctx['selected_category'] = self.request.GET.get('category', 'all')
+        ctx['q'] = self.request.GET.get('q', '')
+        ctx['sort'] = self.request.GET.get('sort', 'latest')
+        return ctx
 
 
-# instructor-specific notifications
+# instructor-specific notifications — instructors only ever see notifications
+# tied to their own reservations/sessions, since those are the only ones
+# ever addressed to them (see notifications/services.py)
 class InstructorAlertsView(RoleRequiredMixin, ListView):
     allowed_roles = ['instructor']
     template_name = 'notifications/instructor_alerts.html'
     context_object_name = 'notifications'
 
+    def get_base_queryset(self):
+        return Notification.objects.filter(user=self.request.user)
+
     def get_queryset(self):
-        return Notification.objects.filter(
-            user=self.request.user
-        ).order_by('-pinned', '-created_at')[:20]
+        return apply_filters(self.get_base_queryset(), self.request)[:50]
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['stats'] = stat_counts(self.get_base_queryset())
+        ctx['category_choices'] = CATEGORY_CHOICES
+        ctx['selected_category'] = self.request.GET.get('category', 'all')
+        ctx['q'] = self.request.GET.get('q', '')
+        ctx['sort'] = self.request.GET.get('sort', 'latest')
+        return ctx
 
 
 # mark one notification as read
@@ -39,12 +64,20 @@ def mark_read(request, pk):
     return redirect(request.META.get('HTTP_REFERER', 'notifications'))
 
 
+# mark one notification as unread
+def mark_unread(request, pk):
+    notif = get_object_or_404(Notification, pk=pk, user=request.user)
+    notif.read = False
+    notif.save()
+    return redirect(request.META.get('HTTP_REFERER', 'notifications'))
+
+
 # mark all notifications as read
 def mark_all_read(request):
     Notification.objects.filter(
         user=request.user, read=False
     ).update(read=True)
-    return redirect('notifications')
+    return redirect(request.META.get('HTTP_REFERER', 'notifications'))
 
 
 # pin/unpin a notification so it stays at the top of the list
@@ -55,19 +88,28 @@ def toggle_pin(request, pk):
     return redirect(request.META.get('HTTP_REFERER', 'notifications'))
 
 
-# delete a single notification
+# delete a single notification — Admin can delete any notification in the
+# system (moderation); everyone else may only delete their own.
 def delete_notification(request, pk):
-    notif = get_object_or_404(Notification, pk=pk, user=request.user)
+    if request.user.role == 'admin':
+        notif = get_object_or_404(Notification, pk=pk)
+    else:
+        notif = get_object_or_404(Notification, pk=pk, user=request.user)
     notif.delete()
     return redirect(request.META.get('HTTP_REFERER', 'notifications'))
 
 
-# admin/incharge: compose and broadcast a notification to chosen recipients
-class NotificationComposeView(RoleRequiredMixin, FormView):
+# admin/incharge: compose and broadcast a manual notification to chosen
+# recipients (announcements, schedule changes, closure notices, etc.) —
+# manual notifications always send regardless of the Alert Settings
+# toggles, since a human explicitly chose to send them.
+class NotificationComposeView(RoleRequiredMixin, ModalFormMixin, FormView):
     allowed_roles = ['admin', 'incharge']
     template_name = 'notifications/compose.html'
     form_class = NotificationComposeForm
-    success_url = reverse_lazy('notifications')
+
+    def get_success_url(self):
+        return reverse_lazy('alerts') if self.request.user.role in ('admin', 'incharge') else reverse_lazy('notifications')
 
     def form_valid(self, form):
         title, message = form.build_title_and_message()
@@ -93,18 +135,19 @@ class NotificationComposeView(RoleRequiredMixin, FormView):
         return super().form_valid(form)
 
 
-# any logged-in user: configure their own notification preferences
-class NotificationSettingsView(LoginRequiredMixin, FormView):
+# Admin-only: turn categories of auto-generated notifications on/off.
+class NotificationSettingsView(RoleRequiredMixin, ModalFormMixin, FormView):
+    allowed_roles = ['admin']
     template_name = 'notifications/settings.html'
-    form_class = NotificationSettingsForm
+    form_class = AlertSettingsForm
     success_url = reverse_lazy('notification_settings')
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['instance'] = self.request.user
+        kwargs['instance'] = AlertSettings.get_solo()
         return kwargs
 
     def form_valid(self, form):
         form.save()
-        messages.success(self.request, 'Settings Updated.')
+        messages.success(self.request, 'Alert settings updated.')
         return super().form_valid(form)

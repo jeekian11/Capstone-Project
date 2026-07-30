@@ -9,11 +9,18 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
-from django.urls import reverse_lazy
-from accounts.mixins import RoleRequiredMixin
+from django.urls import reverse_lazy, reverse
+from accounts.mixins import RoleRequiredMixin, ModalFormMixin, is_modal_request
 from accounts.models import ActivityLog
-from accounts.forms import AdminUserCreateForm, AdminSetPasswordForm, ProfileUpdateForm, StudentImportForm
+from accounts.forms import AdminUserCreateForm, AdminUserUpdateForm, AdminSetPasswordForm, ProfileUpdateForm, StudentImportForm
 from accounts.constants import DEPARTMENT_CHOICES, department_year_levels_json, year_level_choices_for, department_name
+from django.core.cache import cache
+from notifications import services as notify_service
+
+# How many failed login attempts (for the same username) within the window
+# below trigger a "multiple failed login attempts" alert to all Admins.
+FAILED_LOGIN_THRESHOLD = 3
+FAILED_LOGIN_WINDOW_SECONDS = 15 * 60
 
 
 # custom login view — same as Django's built-in one, but also hands the
@@ -30,7 +37,19 @@ class CompulabLoginView(LoginView):
         if user.role == 'student':
             form.add_error(None, "Student accounts can't sign in here. Please use the login screen on a lab computer instead.")
             return self.form_invalid(form)
+        # successful login clears any failed-attempt counter for this account
+        cache.delete(f'failed_login:{user.username.lower()}')
         return super().form_valid(form)
+
+    def form_invalid(self, form):
+        username = (form.data.get('username') or '').strip().lower()
+        if username:
+            key = f'failed_login:{username}'
+            count = cache.get(key, 0) + 1
+            cache.set(key, count, FAILED_LOGIN_WINDOW_SECONDS)
+            if count == FAILED_LOGIN_THRESHOLD:
+                notify_service.notify_failed_login(username, count)
+        return super().form_invalid(form)
 
     def get_context_data(self, **kwargs):
         from labs.models import PC
@@ -41,7 +60,7 @@ class CompulabLoginView(LoginView):
 User = get_user_model()
 
 
-class ProfileView(LoginRequiredMixin, UpdateView):
+class ProfileView(LoginRequiredMixin, ModalFormMixin, UpdateView):
     """Lets any logged-in user (admin, in-charge, or instructor) update
     their own name, email, and profile picture from the navbar avatar."""
     model = User
@@ -332,7 +351,7 @@ class UsersListView(RoleRequiredMixin, ListView):
 
 
 # admin create new user
-class UserCreateView(RoleRequiredMixin, CreateView):
+class UserCreateView(RoleRequiredMixin, ModalFormMixin, CreateView):
     allowed_roles = ['admin']
     template_name = 'accounts/user_form.html'
     model = User
@@ -358,12 +377,11 @@ class UserCreateView(RoleRequiredMixin, CreateView):
 
 
 # admin edit existing user
-class UserUpdateView(RoleRequiredMixin, UpdateView):
+class UserUpdateView(RoleRequiredMixin, ModalFormMixin, UpdateView):
     allowed_roles = ['admin']
     template_name = 'accounts/user_form.html'
     model = User
-    fields = ['first_name', 'last_name', 'username', 'id_number',
-              'course_year_section', 'department', 'year_level', 'role', 'assigned_lab', 'is_active']
+    form_class = AdminUserUpdateForm
     success_url = reverse_lazy('users')
 
     def get_context_data(self, **kwargs):
@@ -401,7 +419,7 @@ def _pc_detected_attendance(session):
 
     from scheduling.models import SessionCheckIn
     walk_in_ids = set(
-        SessionCheckIn.objects.filter(session=session, checkin_type__in=('walk_in', 'override'))
+        SessionCheckIn.objects.filter(session=session, checkin_type__in=('walk_in', 'override', 'guest'))
         .values_list('id_number', flat=True)
     )
 
@@ -431,12 +449,16 @@ def _pc_detected_attendance(session):
     walk_ins = [
         {
             'id_number': c.id_number,
-            'name': (c.student.get_full_name() or c.student.username) if c.student else c.id_number,
+            'name': (
+                (c.student.get_full_name() or c.student.username) if c.student
+                else c.guest_name if c.checkin_type == 'guest' and c.guest_name
+                else c.id_number
+            ),
             'checkin_type': c.get_checkin_type_display(),
             'pc': c.pc.pc_id if c.pc else '—',
             'time': c.checked_in_at,
         }
-        for c in SessionCheckIn.objects.filter(session=session, checkin_type__in=('walk_in', 'override')).select_related('student', 'pc')
+        for c in SessionCheckIn.objects.filter(session=session, checkin_type__in=('walk_in', 'override', 'guest')).select_related('student', 'pc')
     ]
 
     return {
@@ -712,13 +734,18 @@ class UserDeleteView(RoleRequiredMixin, DeleteView):
 
 
 # admin sets a brand-new password for an existing user (can't show the old one — it's hashed)
-class UserResetPasswordView(RoleRequiredMixin, FormView):
+class UserResetPasswordView(RoleRequiredMixin, ModalFormMixin, FormView):
     allowed_roles = ['admin']
     template_name = 'accounts/user_reset_password.html'
     form_class = AdminSetPasswordForm
 
     def dispatch(self, request, *args, **kwargs):
         self.target_user = get_object_or_404(User, pk=kwargs['pk'])
+        if self.target_user.role == 'student':
+            messages.error(request, "Students don't use a dashboard password — they sign in at the lab PC with their Student ID.")
+            if is_modal_request(request):
+                return JsonResponse({'success': True, 'redirect': reverse('users')})
+            return redirect('users')
         return super().dispatch(request, *args, **kwargs)
 
     def get_form_kwargs(self):
@@ -740,6 +767,8 @@ class UserResetPasswordView(RoleRequiredMixin, FormView):
             details=f"{self.target_user.get_full_name() or self.target_user.username}'s password was reset by an admin."
         )
         messages.success(self.request, f"{self.target_user.username}'s password has been reset.")
+        if self.is_ajax_request():
+            return JsonResponse({'success': True, 'redirect': reverse('users')})
         return redirect('users')
 
 
@@ -880,8 +909,8 @@ def search_requesters(request):
         'full_name': u.get_full_name() or u.username,
         'id_number': u.id_number,
         'role': u.role,
-        'course_year_section': u.course_year_section,
         'department': u.department_display,
+        'year_level': u.year_level_display,
     } for u in results]
     return JsonResponse({'results': results})
 
@@ -954,7 +983,6 @@ class StudentImportView(RoleRequiredMixin, FormView):
         return ctx
 
     def form_valid(self, form):
-        from django.utils.crypto import get_random_string
         from accounts.imports import read_rows, validate_row, parse_year_level
 
         department = form.cleaned_data['department']
@@ -997,11 +1025,7 @@ class StudentImportView(RoleRequiredMixin, FormView):
             seen_usernames.add(username)
             seen_id_numbers.add(id_number)
 
-            section = row.get('section', '')
             year_level = parse_year_level(row.get('year_level'))
-            course_year_section = ' '.join(p for p in [
-                f'Year {year_level}' if year_level else '', section
-            ] if p).strip()
 
             user = User(
                 username=username,
@@ -1011,9 +1035,10 @@ class StudentImportView(RoleRequiredMixin, FormView):
                 role='student',
                 department=department,
                 year_level=year_level,
-                course_year_section=course_year_section,
             )
-            user.set_password(get_random_string(16))
+            # Students authenticate at the lab PC with their Student ID —
+            # they never need (or get) a Django login password.
+            user.set_unusable_password()
             user.save()
 
             ActivityLog.objects.create(
@@ -1046,6 +1071,21 @@ def user_import_template(request):
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="student_import_template.csv"'
     writer = csv_module.writer(response)
-    writer.writerow(['ID Number', 'First Name', 'Last Name', 'Year Level', 'Section', 'Username'])
-    writer.writerow(['2026-00123', 'Juan', 'Dela Cruz', '2', 'A', ''])
+    writer.writerow(['ID Number', 'First Name', 'Last Name', 'Year Level', 'Username'])
+    writer.writerow(['2026-00123', 'Juan', 'Dela Cruz', '2', ''])
     return response
+
+
+@login_required
+def set_theme(request):
+    """AJAX endpoint for the navbar dark/light toggle — saves the choice on
+    the account itself (User.theme) so it follows the user to any PC/browser
+    they log in on, instead of just living in that one browser's storage."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST required'}, status=405)
+    theme = request.POST.get('theme')
+    if theme not in dict(User.THEME_CHOICES):
+        return JsonResponse({'ok': False, 'error': 'Invalid theme'}, status=400)
+    request.user.theme = theme
+    request.user.save(update_fields=['theme'])
+    return JsonResponse({'ok': True, 'theme': theme})

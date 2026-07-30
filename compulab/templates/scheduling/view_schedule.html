@@ -1,18 +1,36 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
+{% load static %}
 {% block title %}View Schedule{% endblock %}
 
 {% block content %}
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.11/index.global.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.11/index.global.min.js"></script>
+<script src="{% static 'vendor/fullcalendar/index.global.min.js' %}"></script>
+<script>
+  // Fall back to the CDN if the vendored copy isn't in place yet (see
+  // static/vendor/fetch_assets.sh), so this still works online either way.
+  // Note: FullCalendar v6's "global" bundle injects its own CSS via JS —
+  // there is no separate .css file to load.
+  if (typeof FullCalendar === 'undefined') {
+    document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.11/index.global.min.js"><\/script>');
+  }
+</script>
 
 <style>
 .cal-wrap{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px;}
-#calendar{--fc-border-color:var(--border); --fc-page-bg-color:var(--surface); --fc-neutral-bg-color:var(--surface-raised);
-  --fc-list-event-hover-bg-color:var(--surface-raised); --fc-today-bg-color:rgba(91,157,255,0.08);
-  --fc-button-bg-color:var(--surface-raised); --fc-button-border-color:var(--border);
-  --fc-button-hover-bg-color:var(--border); --fc-button-active-bg-color:var(--border-soft);
-  font-family:var(--font-body); color:var(--text);}
+#calendar{
+  --fc-border-color:var(--border); 
+  --fc-page-bg-color:var(--surface); 
+  --fc-neutral-bg-color:var(--surface-raised);
+  --fc-list-event-hover-bg-color:var(--surface-raised); 
+  --fc-today-bg-color:rgba(91,157,255,0.08);
+  --fc-button-bg-color:var(--surface-raised); 
+  --fc-button-border-color:var(--border);
+  --fc-button-hover-bg-color:var(--border); 
+  --fc-button-active-bg-color:var(--border-soft);
+  --fc-button-text-color:var(--text);   /* ⬅ ITO ANG KULANG */
+  font-family:var(--font-body); 
+  color:var(--text);
+}
 #calendar .fc-toolbar-title{font-family:var(--font-display); font-size:16px; font-weight:600; color:var(--text);}
 #calendar .fc-col-header-cell-cushion, #calendar .fc-daygrid-day-number{color:var(--text-dim); text-decoration:none; font-size:12px;}
 #calendar .fc-daygrid-day-number{font-family:var(--font-mono);}

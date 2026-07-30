@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}Override Check-in{% endblock %}
 
 {% block content %}
@@ -87,7 +87,7 @@
     }
     results.forEach(function(r) {
       var item = document.createElement('div');
-      var extra = r.course_year_section || r.department || '';
+      var extra = [r.department, r.year_level].filter(Boolean).join(' — ');
       item.textContent = r.full_name + ' — ' + r.id_number + (extra ? ' (' + extra + ')' : '') + ' [' + r.role + ']';
       item.style.cursor = 'pointer';
       item.style.padding = '8px 10px';

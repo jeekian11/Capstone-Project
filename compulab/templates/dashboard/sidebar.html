@@ -1,6 +1,6 @@
 {% load static %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
@@ -25,15 +25,21 @@
 
 <style>
   .nav {
-  --ink-0: #0a0e12;
-  --ink-1: #12171d;
-  --ink-2: #171d24;
-  --line: rgba(255,255,255,0.07);
-  --text-0: #e7ebee;
-  --text-1: #8b98a3;
-  --text-2: #4d5761;
+  /* follow the app-wide theme variables (set in base.html) instead of
+     hardcoded dark colors, so the sidebar re-themes along with the rest
+     of the shell when the light/dark toggle is used */
+  --ink-0: var(--sidebar-bg);
+  --ink-1: var(--sidebar-bg-hover);
+  --ink-2: var(--surface-raised);
+  --line: var(--sidebar-line);
+  --text-0: var(--sidebar-text);
+  --text-1: var(--sidebar-text-dim);
+  --text-2: var(--sidebar-text-faint);
   --mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
   --sans: 'Inter', -apple-system, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
 
   width: 264px;
   height: 100%;
@@ -48,30 +54,37 @@
   overflow-y: auto;
 }
 
-  .nav.role-admin      { --accent: #3ed6c4; --accent-tint: rgba(62,214,196,0.10); }
-  .nav.role-incharge   { --accent: #f2a93b; --accent-tint: rgba(242,169,59,0.10); }
-  .nav.role-instructor { --accent: #b98cf2; --accent-tint: rgba(185,140,242,0.10); }
+  .nav.role-admin      { --accent: var(--green); --accent-tint: var(--green-dim); }
+  .nav.role-incharge   { --accent: var(--amber); --accent-tint: var(--amber-dim); }
+  .nav.role-instructor { --accent: var(--purple); --accent-tint: var(--purple-dim); }
+
+  /* the dim tints above are tuned for white content surfaces; on the dark
+     navy sidebar (light mode) they need more alpha to stay legible */
+  html[data-theme="light"] .nav.role-admin      { --accent-tint: rgba(15,118,110,0.35); }
+  html[data-theme="light"] .nav.role-incharge   { --accent-tint: rgba(245,158,11,0.30); }
+  html[data-theme="light"] .nav.role-instructor { --accent-tint: rgba(109,40,217,0.32); }
 
   .nav-brand {
     display: flex;
     align-items: center;
-    gap: 9px;
+    gap: 10px;
     padding: 6px 8px 18px;
     margin-bottom: 8px;
     border-bottom: 1px solid var(--line);
   }
   .nav-brand-mark {
-    width: 30px; height: 30px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     object-fit: cover;
     background: #fff;
     flex: none;
-  }
+}
   .nav-brand-text {
     font-family: var(--mono);
-    font-weight: 600;
+    font-weight: 700;
     font-size: 13px;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
     color: var(--text-0);
   }
   .nav-brand-text b { color: var(--accent); font-weight: 600; }
@@ -107,7 +120,7 @@
     border-radius: 0 8px 8px 0;
     text-decoration: none;
     color: var(--text-1);
-    transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+    transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease, padding 0.2s ease;
   }
   .nav-item:hover {
     background: var(--ink-1);
@@ -142,17 +155,18 @@
     stroke-width: 1.6;
     stroke-linecap: round;
     stroke-linejoin: round;
-    opacity: 0.85;
+    opacity: 1;
   }
   .nav-item.active .nav-icon { stroke: var(--accent); opacity: 1; }
 
   .nav-label {
     flex: 1;
-    font-size: 13.5px;
-    font-weight: 500;
+    font-size: 14px;
+    font-weight: 500;   /* dati 500 */
     line-height: 1.3;
     white-space: nowrap;
-  }
+    color: inherit;
+}
 
   .nav-badge {
     font-family: var(--mono);
@@ -179,23 +193,43 @@
     text-align: left;
   }
   .nav-item.nav-logout:hover {
-    background: rgba(255, 93, 93, 0.10);
-    color: #ff8080;
-    border-left-color: #ff5d5d;
+    background: var(--red-dim);
+    color: var(--red-soft);
+    border-left-color: var(--red);
   }
   .nav-item.nav-logout:hover .nav-led {
-    border-color: #ff5d5d;
-    background: #ff5d5d;
-    box-shadow: 0 0 5px 0 #ff5d5d;
+    border-color: var(--red);
+    background: var(--red);
+    box-shadow: 0 0 5px 0 var(--red);
   }
-  .nav-item.nav-logout:hover .nav-icon { stroke: #ff8080; opacity: 1; }
+  .nav-item.nav-logout:hover .nav-icon { stroke: var(--red-soft); opacity: 1; }
+
+  /* Collapse/expand — toggled via the hamburger button in the topbar,
+     which adds/removes the "sidebar-collapsed" class on <html>. */
+  .nav { transition: width 0.2s ease; }
+
+  html.sidebar-collapsed .nav { width: 84px; }
+  html.sidebar-collapsed .nav-brand { justify-content: center; padding-left: 0; padding-right: 0; gap: 0; }
+  html.sidebar-collapsed .nav-brand-mark { width: 38px; height: 38px; }
+  html.sidebar-collapsed .nav-brand-text,
+  html.sidebar-collapsed .nav-section,
+  html.sidebar-collapsed .nav-label,
+  html.sidebar-collapsed .nav-badge,
+  html.sidebar-collapsed .nav-led {
+    display: none;
+  }
+  html.sidebar-collapsed .nav-item {
+    justify-content: center;
+    padding: 9px 0;
+    gap: 0;
+  }
 </style>
 
 {% if request.user.role == 'admin' %}
 <nav class="nav role-admin">
   <div class="nav-brand">
     <img src="{% static 'img/logo.jpg' %}" alt="Danao Technological College" class="nav-brand-mark">
-    <span class="nav-brand-text">SC<b>LAMS</b></span>
+    <span class="nav-brand-text"><b>DANAO TECHNOLOGICAL COLLEGE</b></span>
   </div>
 
   <div class="nav-section">Overview</div>
@@ -323,6 +357,15 @@
     <span class="nav-led"></span>
     <svg class="nav-icon"><use href="#icon-chart"/></svg>
     <span class="nav-label">View reports</span>
+  </a>
+  <a class="nav-item {% if request.resolver_match.url_name == 'alerts' %}active{% endif %}"
+     href="{% url 'alerts' %}">
+    <span class="nav-led"></span>
+    <svg class="nav-icon"><use href="#icon-bell"/></svg>
+    <span class="nav-label">Notifications & alerts</span>
+    {% if unread_notifications_count %}
+      <span class="nav-badge">{{ unread_notifications_count }}</span>
+    {% endif %}
   </a>
 
   <div class="nav-section">Operations</div>

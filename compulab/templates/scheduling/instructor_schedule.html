@@ -1,7 +1,12 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}My Schedule{% endblock %}
 
 {% block content %}
+
+<style>
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  @media (max-width: 1000px) { .three-col { grid-template-columns: 1fr; } }
+</style>
 
 <div class="page-header">
   <div>
@@ -11,7 +16,7 @@
   <div class="sub" style="text-align:right; max-width:260px">To reserve a lab, coordinate with the admin or your lab in-charge.</div>
 </div>
 
-<div class="two-col">
+<div class="three-col">
   <div class="card">
     <div class="section-title">My sessions</div>
     {% for session in my_sessions %}
@@ -19,7 +24,7 @@
         <div class="schedule-time">{{ session.date|date:"M d" }}<br>{{ session.start_time|time:"H:i" }}</div>
         <div class="schedule-block">
           <div class="s-title">{{ session.subject }}</div>
-          <div class="s-sub">{{ session.lab.name }} · {{ session.student_count }} students</div>
+          <div class="s-sub">{{ session.lab.name }} · {% if session.requester_type == 'walk_in' or session.requester_type == 'override' %}{{ session.pcs_requested }} PC{{ session.pcs_requested|pluralize }}{% else %}{{ session.student_count }} students{% endif %}</div>
         </div>
       </div>
     {% empty %}
@@ -39,6 +44,30 @@
       </div>
     {% empty %}
       <p class="empty">No requests submitted yet.</p>
+    {% endfor %}
+  </div>
+
+  <div class="card">
+    <div class="section-title">My class rosters</div>
+    {% for roster in my_rosters %}
+      <div class="schedule-row">
+        <div class="schedule-block">
+          <div class="s-title">
+            {{ roster.course_code|default:roster.name }}
+            <span class="status-pill pill-{{ roster.approval_status }}">{{ roster.get_approval_status_display }}</span>
+          </div>
+          <div class="s-sub">
+            {{ roster.subject|default:"—" }}{% if roster.section %} · {{ roster.section }}{% endif %}
+            {% if roster.lab %} · {{ roster.lab.name }}{% endif %}
+          </div>
+          {% if roster.approval_status == 'rejected' and roster.rejection_reason %}
+            <div class="s-sub" style="color:var(--red-soft);">Reason: {{ roster.rejection_reason }} — edit to resubmit.</div>
+          {% endif %}
+        </div>
+        <a href="{% url 'roster_detail' roster.pk %}" class="action-btn icon-only js-modal-link" title="View roster">&#8594;</a>
+      </div>
+    {% empty %}
+      <p class="empty">No class rosters yet.</p>
     {% endfor %}
   </div>
 </div>

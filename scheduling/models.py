@@ -17,6 +17,16 @@ class ClassRoster(models.Model):
         ('active', 'Active'),
         ('inactive', 'Inactive'),
     ]
+    # Approval workflow — separate from `status` (active/inactive archiving)
+    # above. A roster's schedule only ever rolls out into official,
+    # reservation-coded Sessions (see generate_sessions()) once it reaches
+    # 'approved'; 'pending' and 'rejected' rosters never occupy the
+    # official schedule.
+    APPROVAL_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
 
     name = models.CharField(
         max_length=200, blank=True,
@@ -47,11 +57,28 @@ class ClassRoster(models.Model):
     )
     schedule_start_time = models.TimeField(null=True, blank=True)
     schedule_end_time = models.TimeField(null=True, blank=True)
+    schedule_valid_from = models.DateField(
+        null=True, blank=True,
+        help_text='First date this weekly schedule applies from (e.g. the start of the semester).'
+    )
+    schedule_valid_until = models.DateField(
+        null=True, blank=True,
+        help_text='Last date this weekly schedule applies to (e.g. the end of the semester).'
+    )
     schedule = models.CharField(
-        max_length=150, blank=True,
-        help_text='Auto-generated from the selected day(s) and time range.'
+        max_length=200, blank=True,
+        help_text='Auto-generated from the selected day(s), time range, and validity period.'
     )
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
+    approval_status = models.CharField(
+        max_length=10, choices=APPROVAL_CHOICES, default='pending',
+        help_text='Pending until an Admin/Lab In-Charge reviews it. Only an Approved roster\'s '
+                   'schedule can be rolled out into the official (Session) calendar.'
+    )
+    rejection_reason = models.TextField(
+        blank=True, default='',
+        help_text='Shown to the instructor so they know what to fix before resubmitting.'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -66,12 +93,165 @@ class ClassRoster(models.Model):
             start = self.schedule_start_time.strftime('%I:%M %p').lstrip('0')
             end = self.schedule_end_time.strftime('%I:%M %p').lstrip('0')
             self.schedule = f'{", ".join(day_labels)} · {start}–{end}'
+            if self.schedule_valid_from and self.schedule_valid_until:
+                frm = self.schedule_valid_from.strftime('%b %d, %Y')
+                until = self.schedule_valid_until.strftime('%b %d, %Y')
+                self.schedule += f' · {frm} – {until}'
         else:
             self.schedule = ''
         super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
+
+    # Monday=0 ... Sunday=6, matching date.weekday()
+    WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+
+    def has_full_schedule(self):
+        """True once every field generate_sessions() needs is filled in:
+        a lab, the meeting day(s)/time, and a validity period."""
+        return bool(
+            self.lab_id and self.schedule_days and self.schedule_start_time
+            and self.schedule_end_time and self.schedule_valid_from and self.schedule_valid_until
+        )
+
+    def prune_stale_future_sessions(self):
+        """Deletes this roster's auto-generated sessions that no longer
+        match its CURRENT schedule (day/time/validity period) — e.g. after
+        editing the roster from Mon/Wed to Tue/Thu, shortening the validity
+        period, or changing the meeting time. Without this, editing a
+        roster's schedule only ever adds new sessions on top of the old
+        ones (generate_sessions() is additive/idempotent by design), so the
+        stale schedule silently lingers on the official calendar.
+
+        Only ever considers TODAY-OR-LATER sessions, and only ones with no
+        recorded check-in — past dates and anything a student has actually
+        used are never touched, so attendance history is never altered or
+        lost. Returns the number of sessions deleted.
+        """
+        from django.utils import timezone
+        from scheduling.models import Session
+
+        today = timezone.localdate()
+        candidates = Session.objects.filter(roster=self, date__gte=today).prefetch_related('check_ins')
+
+        if self.has_full_schedule():
+            target_weekdays = {
+                self.WEEKDAY_KEYS.index(d) for d in self.schedule_days.split(',')
+                if d in self.WEEKDAY_KEYS
+            }
+
+            def still_matches(s):
+                return (
+                    s.start_time == self.schedule_start_time and s.end_time == self.schedule_end_time
+                    and self.schedule_valid_from <= s.date <= self.schedule_valid_until
+                    and s.date.weekday() in target_weekdays
+                )
+        else:
+            # Schedule was cleared entirely — nothing should remain scheduled.
+            def still_matches(s):
+                return False
+
+        stale_pks = [s.pk for s in candidates if not s.check_ins.exists() and not still_matches(s)]
+        deleted = len(stale_pks)
+        if stale_pks:
+            Session.objects.filter(pk__in=stale_pks).delete()
+        return deleted
+
+    def generate_sessions(self):
+        """Rolls this roster's weekly schedule out into real, individually
+        reservation-coded Session rows on the official schedule — one for
+        every date between schedule_valid_from and schedule_valid_until
+        (inclusive) that falls on one of schedule_days. Students/instructor
+        no longer need to file a request for each meeting; each generated
+        session already carries its own reservation code. The instructor is
+        notified of that code 1 hour before each session starts (see
+        notifications.reminders.check_roster_code_reminders), not the
+        instant it's generated here — this call itself does not notify.
+
+        Safe to call more than once (e.g. after editing the roster's
+        schedule): a date/time that already has a Session generated from
+        this roster is skipped rather than duplicated, and a date/time that
+        conflicts with an unrelated, already-scheduled session is skipped
+        and reported rather than double-booking the lab.
+
+        Returns (created_sessions, skipped) where skipped is a list of
+        (date, reason) tuples for anything that couldn't be auto-scheduled.
+        """
+        from datetime import timedelta
+        from scheduling.models import Session
+        from scheduling.utils import generate_reservation_code
+        from scheduling.views import _slot_error
+
+        created_sessions = []
+        skipped = []
+        if not self.has_full_schedule() or self.approval_status != 'approved':
+            return created_sessions, skipped
+
+        target_weekdays = {
+            self.WEEKDAY_KEYS.index(d) for d in self.schedule_days.split(',')
+            if d in self.WEEKDAY_KEYS
+        }
+        requester_name = self.instructor.get_full_name() if self.instructor else ''
+        requester_id_number = (
+            (getattr(self.instructor, 'id_number', '') or self.instructor.username)
+            if self.instructor else ''
+        )
+        student_count = self.students.count()
+        subject = self.subject or self.name
+
+        current = self.schedule_valid_from
+        while current <= self.schedule_valid_until:
+            if current.weekday() in target_weekdays:
+                already_generated = Session.objects.filter(
+                    roster=self, date=current,
+                    start_time=self.schedule_start_time, end_time=self.schedule_end_time,
+                ).exists()
+                if not already_generated:
+                    error = _slot_error(
+                        'instructor', self.lab, current,
+                        self.schedule_start_time, self.schedule_end_time,
+                        pcs_requested=0, student_count=student_count,
+                    )
+                    if error:
+                        skipped.append((current, error))
+                    else:
+                        code = generate_reservation_code()
+                        session = Session.objects.create(
+                            lab=self.lab, instructor=self.instructor, roster=self,
+                            requester_type='instructor', requester_name=requester_name,
+                            requester_id_number=requester_id_number, reservation_code=code,
+                            subject=subject, date=current,
+                            start_time=self.schedule_start_time, end_time=self.schedule_end_time,
+                            student_count=student_count,
+                        )
+                        created_sessions.append(session)
+            current += timedelta(days=1)
+
+        return created_sessions, skipped
+
+    def delete(self, *args, **kwargs):
+        """Deleting a roster also deletes the still-pending schedule it
+        generated — today-or-later sessions with no recorded check-in —
+        rather than leaving them behind as orphaned, un-attributed
+        bookings on the official calendar. Uses the same "no check-in yet"
+        test as prune_stale_future_sessions().
+
+        Past sessions, and any session (past or future) that already has
+        a check-in, are left alone: Session.roster is SET_NULL, so they
+        keep their attendance history and just lose the name-lookup link
+        — matching what the delete-confirmation page tells the user.
+        """
+        from django.utils import timezone
+        from scheduling.models import Session
+
+        today = timezone.localdate()
+        candidates = Session.objects.filter(roster=self, date__gte=today).prefetch_related('check_ins')
+        stale_pks = [s.pk for s in candidates if not s.check_ins.exists()]
+        if stale_pks:
+            Session.objects.filter(pk__in=stale_pks).delete()
+
+        super().delete(*args, **kwargs)
 
 
 class RosterStudent(models.Model):
@@ -108,6 +288,8 @@ class Session(models.Model):
         ('instructor', 'Instructor'),
         ('student', 'Student'),
         ('group', 'Group of students'),
+        ('walk_in', 'Walk-in'),
+        ('override', 'Override'),
     ]
     lab = models.ForeignKey('labs.Lab', on_delete=models.CASCADE, related_name='sessions')
     instructor = models.ForeignKey(
@@ -130,6 +312,24 @@ class Session(models.Model):
     start_time = models.TimeField()
     end_time = models.TimeField()
     student_count = models.PositiveIntegerField(default=0)
+    pcs_requested = models.PositiveIntegerField(
+        default=0,
+        help_text=(
+            'Required for Walk-in and Override requests — how many PCs are needed. Ignored for '
+            'Instructor/Student/Group requests, which still reserve the whole lab.'
+        ),
+    )
+    reminder_sent = models.BooleanField(
+        default=False,
+        help_text='Set once the "session starting soon" auto-notification has been sent for this session, so it is not sent twice.'
+    )
+    roster_code_reminder_sent = models.BooleanField(
+        default=False,
+        help_text=(
+            'Set once the "here\'s your reservation code" reminder (sent 1 hour before start, for '
+            'sessions auto-generated from a Class Roster schedule) has gone out, so it is not sent twice.'
+        )
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -153,6 +353,7 @@ class SessionCheckIn(models.Model):
         ('group', 'Group Member'),
         ('walk_in', 'Walk-in'),
         ('override', 'Override'),
+        ('guest', 'Guest (Manual Unlock)'),
     ]
     # Nullable: an Admin/In-Charge Override can grant PC access even when
     # no reservation is currently occupying that lab/time slot at all.
@@ -163,6 +364,10 @@ class SessionCheckIn(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='session_checkins',
         help_text='The registered account resolved from id_number, if any.',
+    )
+    guest_name = models.CharField(
+        max_length=150, blank=True, default='',
+        help_text="Full name of a walk-in guest with no registered account, entered by the Lab In-Charge before a Manual Unlock. Only used when checkin_type='guest' (student stays null for these).",
     )
     pc = models.ForeignKey('labs.PC', on_delete=models.SET_NULL, null=True, blank=True, related_name='checkins')
     checked_in_at = models.DateTimeField(auto_now_add=True)
@@ -180,6 +385,8 @@ class SessionRequest(models.Model):
         ('instructor', 'Instructor'),
         ('student', 'Student'),
         ('group', 'Group of students'),
+        ('walk_in', 'Walk-in'),
+        ('override', 'Override'),
     ]
     STATUS = [
         ('pending', 'Pending'),
@@ -211,6 +418,13 @@ class SessionRequest(models.Model):
     start_time = models.TimeField()
     end_time = models.TimeField()
     student_count = models.PositiveIntegerField(default=0)
+    pcs_requested = models.PositiveIntegerField(
+        default=0,
+        help_text=(
+            'Required for Walk-in and Override requests — how many PCs are needed. Ignored for '
+            'Instructor/Student/Group requests, which still reserve the whole lab.'
+        ),
+    )
     notes = models.TextField(blank=True)
     status = models.CharField(max_length=10, choices=STATUS, default='pending')
     reservation_code = models.CharField(max_length=12, unique=True, null=True, blank=True)

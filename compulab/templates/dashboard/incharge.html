@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}Lab In-charge{% endblock %}
 {% block page_title %}Lab In-Charge Dashboard{% endblock %}
 
@@ -9,12 +9,7 @@
 
 <style>
 .ic2{
-  --green:#3ed6c4; --green-dim:rgba(62,214,196,0.14);
-  --red:#ff5d5d; --red-dim:rgba(255,93,93,0.14);
-  --amber:#f2a93b; --amber-dim:rgba(242,169,59,0.14);
-  --blue:#5b9dff; --blue-dim:rgba(91,157,255,0.14);
-  --purple:#a78bfa; --purple-dim:rgba(167,139,250,0.14);
-  --teal:#3ed6c4; --teal-dim:rgba(62,214,196,0.14);
+  --teal:var(--green); --teal-dim:var(--green-dim);
   font-family:'Inter',sans-serif;
 }
 .ic2 h1,.ic2 h2,.ic2 h3{font-family:'Space Grotesk',sans-serif;}

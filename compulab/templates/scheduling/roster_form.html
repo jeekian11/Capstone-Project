@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}{% if object %}Edit Roster{% else %}New Class Roster{% endif %}{% endblock %}
 
 {% block content %}
@@ -91,6 +91,26 @@
       </div>
     </div>
 
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.schedule_valid_from.id_for_label }}">Schedule valid from</label>
+        {{ form.schedule_valid_from }}
+        {% if form.schedule_valid_from.help_text %}<span class="helptext">{{ form.schedule_valid_from.help_text }}</span>{% endif %}
+        {% if form.schedule_valid_from.errors %}<div class="form-errors">{{ form.schedule_valid_from.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.schedule_valid_until.id_for_label }}">Schedule valid until</label>
+        {{ form.schedule_valid_until }}
+        {% if form.schedule_valid_until.errors %}<div class="form-errors">{{ form.schedule_valid_until.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-group" id="roster-availability-wrap" style="display:none;">
+      <label class="form-label">Existing schedule (occupied slots)</label>
+      <div id="roster-availability-panel" style="font-size:12.5px; color:#666; border:1px solid #e2e2e2; border-radius:8px; padding:10px 12px;"></div>
+      <span class="helptext">Shown for the currently selected laboratory, instructor, and section so you can pick a free time before submitting.</span>
+    </div>
+
     <div class="form-group">
       <label class="form-label" for="{{ form.status.id_for_label }}">Status</label>
       {{ form.status }}
@@ -103,5 +123,67 @@
     </div>
   </form>
 </div>
+
+<script>
+(function () {
+  var labSel = document.getElementById('{{ form.lab.id_for_label }}');
+  var instructorSel = document.getElementById('{{ form.instructor.id_for_label }}');
+  var sectionInput = document.getElementById('{{ form.section.id_for_label }}');
+  var wrap = document.getElementById('roster-availability-wrap');
+  var panel = document.getElementById('roster-availability-panel');
+  var excludePk = '{% if object %}{{ object.pk }}{% endif %}';
+  var checkUrl = '{% url "roster_check_availability" %}';
+  var debounceTimer = null;
+
+  function renderGroup(title, items) {
+    if (!items || !items.length) return '';
+    var rows = items.map(function (r) {
+      return '<div style="padding:4px 0; border-top:1px solid #eee;">' +
+        '<strong>' + r.name + '</strong> — ' + r.days.join(', ') + ' · ' + r.start + '–' + r.end +
+        (r.approval_status === 'pending' ? ' <span style="color:#c98a1a;">(pending)</span>' : '') +
+        '</div>';
+    }).join('');
+    return '<div style="margin-bottom:8px;"><div style="font-weight:600; color:#333;">' + title + '</div>' + rows + '</div>';
+  }
+
+  function refresh() {
+    var lab = labSel ? labSel.value : '';
+    var instructor = instructorSel ? instructorSel.value : '';
+    var section = sectionInput ? sectionInput.value.trim() : '';
+    if (!lab && !instructor && !section) { wrap.style.display = 'none'; return; }
+
+    var params = new URLSearchParams();
+    if (lab) params.set('lab', lab);
+    if (instructor) params.set('instructor', instructor);
+    if (section) params.set('section', section);
+    if (excludePk) params.set('exclude', excludePk);
+
+    fetch(checkUrl + '?' + params.toString())
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var html = renderGroup('Laboratory', data.lab_schedule) +
+                    renderGroup('Instructor', data.instructor_schedule) +
+                    renderGroup('Section', data.section_schedule);
+        if (!html) {
+          html = '<span style="color:#2ea36c;">No existing schedule found — this looks free.</span>';
+        }
+        panel.innerHTML = html;
+        wrap.style.display = '';
+      })
+      .catch(function () { wrap.style.display = 'none'; });
+  }
+
+  [labSel, instructorSel].forEach(function (el) {
+    if (el) el.addEventListener('change', refresh);
+  });
+  if (sectionInput) {
+    sectionInput.addEventListener('input', function () {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(refresh, 300);
+    });
+  }
+  refresh();
+})();
+</script>
 
 {% endblock %}

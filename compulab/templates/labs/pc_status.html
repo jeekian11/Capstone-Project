@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% load static %}
 {% block title %}PC Power Status{% endblock %}
 
@@ -10,13 +10,13 @@
 
 <style>
 .ld{
-  --ld-bg:#0a0e12; --ld-card:#12171d; --ld-border:#232b34;
-  --ld-text:#e7ebee; --ld-dim:#8b98a3; --ld-faint:#4d5761;
-  --ld-purple:#a78bfa; --ld-purple-tint:rgba(167,139,250,0.14);
-  --ld-green:#3ed6c4; --ld-green-tint:rgba(62,214,196,0.14);
-  --ld-blue:#5b9dff; --ld-blue-tint:rgba(91,157,255,0.14);
-  --ld-orange:#f2a93b; --ld-orange-tint:rgba(242,169,59,0.14);
-  --ld-red:#ff5d5d; --ld-red-tint:rgba(255,93,93,0.14);
+  --ld-bg:var(--bg); --ld-card:var(--surface); --ld-border:var(--border);
+  --ld-text:var(--text); --ld-dim:var(--text-dim); --ld-faint:var(--text-faint);
+  --ld-purple:var(--purple); --ld-purple-tint:var(--purple-dim);
+  --ld-green:var(--green); --ld-green-tint:var(--green-dim);
+  --ld-blue:var(--blue); --ld-blue-tint:var(--blue-dim);
+  --ld-orange:var(--amber); --ld-orange-tint:var(--amber-dim);
+  --ld-red:var(--red); --ld-red-tint:var(--red-dim);
   font-family:'Inter',sans-serif; background:var(--ld-bg); color:var(--ld-text);
   margin:-20px; padding:20px; min-height:100%;
 }
@@ -104,6 +104,14 @@
 .ld-page-btns{display:flex; gap:6px;}
 .ld-page-btn{width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; border:1px solid var(--ld-border); color:var(--ld-text); font-size:12px;}
 .ld-page-btn.active{background:var(--ld-blue); border-color:var(--ld-blue); color:#0a0e12; font-weight:700;}
+html[data-theme="light"] .ic-green,
+html[data-theme="light"] .ic-orange,
+html[data-theme="light"] .ic-amber,
+html[data-theme="light"] .ld-btn.primary,
+html[data-theme="light"] .ld-pill.online,
+html[data-theme="light"] .ld-pill.in_use,
+html[data-theme="light"] .ld-pill.maintenance,
+html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
 .ld-page-btn.disabled{opacity:.35; pointer-events:none;}
 
 .ld-empty{color:var(--ld-faint); font-size:13px; text-align:center; padding:24px 0;}
@@ -125,8 +133,16 @@
         background check every {{ auto_check_interval_seconds }}s, live view refreshes every 10s
       </div>
     </div>
-    <div style="display:flex; align-items:center; gap:18px;">
-      <a href="{% url 'override_checkin' %}" class="action-btn" style="background:var(--ld-card); border:1px solid var(--ld-border); color:var(--ld-text); padding:8px 14px; border-radius:8px; font-size:13px; text-decoration:none;">Override Check-in</a>
+    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+        <a href="{% url 'override_checkin' %}" class="ld-btn">Override Check-in</a>
+        <a href="{% url 'manual_unlock' %}" class="ld-btn">Manual Unlock (Guest)</a>
+        <form method="post" action="{% url 'pc_status_refresh' %}"
+              onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Check all PC status now?', text: 'This will ping every PC across all labs right away — it may take a few seconds.', icon: 'question', confirmButtonText: 'Yes, check now', confirmButtonColor: '#3ed6c4'}); return false;">
+          {% csrf_token %}
+          <button type="submit" class="ld-btn primary">Check now</button>
+        </form>
+      </div>
       <div class="ld-header-status">
         <span>Last Updated: <span class="lu-val" id="ldLastUpdated">—</span></span>
         <span class="ld-auto-refresh">
@@ -134,11 +150,6 @@
           Auto Refresh Every 10 seconds
         </span>
       </div>
-      <form method="post" action="{% url 'pc_status_refresh' %}"
-            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Check all PC status now?', text: 'This will ping every PC across all labs right away — it may take a few seconds.', icon: 'question', confirmButtonText: 'Yes, check now', confirmButtonColor: '#3ed6c4'}); return false;">
-        {% csrf_token %}
-        <button type="submit" class="ld-btn primary">Check now</button>
-      </form>
     </div>
   </div>
 
@@ -258,7 +269,7 @@
             {% for log in entry.logs %}
               <tr>
                 <td>{{ log.pc.pc_id }}</td>
-                <td>{{ log.actor.get_full_name|default:log.actor.username|default:"—" }}</td>
+                <td>{% firstof log.actor.get_full_name log.actor.username "—" %}</td>
                 <td>{{ log.target_username }}</td>
                 <td>{{ log.created_at|date:"M d, Y H:i" }}</td>
               </tr>
@@ -311,7 +322,7 @@
             <svg viewBox="0 0 24 24" fill="none"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
           <div style="flex:1; min-width:0;">
-            <div class="ld-feed-title">{{ a.pc.pc_id }} unlocked by {{ a.actor.get_full_name|default:a.actor.username|default:a.target_username }}</div>
+            <div class="ld-feed-title">{{ a.pc.pc_id }} unlocked by {% firstof a.actor.get_full_name a.actor.username a.target_username "—" %}</div>
             <div class="ld-feed-sub">{{ a.pc.lab.name }}</div>
           </div>
           <div class="ld-feed-time">{{ a.created_at|timesince }} ago</div>
@@ -333,27 +344,26 @@
         <table class="ld-table">
           <thead>
             <tr>
-              <th>PC ID</th><th>Computer Name</th><th>Lab</th><th>IP Address</th><th>Status</th>
-              <th>Student</th><th>Login Time</th><th>Duration</th><th>Last Active</th><th></th>
+              <th>PC ID</th><th>Laboratory</th><th>Status</th><th>Current User</th>
+              <th>Reservation Type</th><th>Login Time</th><th>Duration</th><th>Last Active</th><th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {% for pc in page_obj.object_list %}
               <tr data-pc="{{ pc.pc_id }}">
                 <td>{{ pc.pc_id }}</td>
-                <td>Computer {{ pc.pc_id|slice:"2:" }}</td>
                 <td>{{ pc.lab.name }}</td>
-                <td>{{ pc.ip_address|default:"—" }}</td>
                 <td><span class="ld-pill {{ pc.status }}" data-role="status-pill">{{ pc.get_status_display }}</span></td>
-                <td data-role="current-user">{% if pc.current_user %}{{ pc.current_user.get_full_name|default:pc.current_user.username }}{% else %}—{% endif %}</td>
+                <td data-role="current-user">{% if pc.current_user %}{{ pc.current_user.get_full_name|default:pc.current_user.username }}{% elif pc.current_guest_name %}{{ pc.current_guest_name }} <span class="helptext">(Guest)</span>{% else %}—{% endif %}</td>
+                <td>{% if pc.current_session %}{{ pc.current_session.get_requester_type_display }}{% else %}—{% endif %}</td>
                 <td>{% if pc.login_time %}{{ pc.login_time|time:"g:i A" }}{% else %}—{% endif %}</td>
                 <td>{% if pc.login_time %}{{ pc.login_time|timesince }}{% else %}—{% endif %}</td>
                 <td>{{ pc.last_active|timesince|default:"—" }}{% if pc.last_active %} ago{% endif %}</td>
                 <td style="white-space:nowrap;">
                   <a href="{% url 'pc_activity_log' %}?pc={{ pc.pk }}" class="ld-btn" style="padding:5px 10px; font-size:11.5px;">View</a>
-                  <a href="{% url 'pc_update' pc.pk %}" class="ld-btn" style="padding:5px 10px; font-size:11.5px;">Update</a>
+                  <a href="{% url 'pc_update' pc.pk %}" class="ld-btn js-modal-link" style="padding:5px 10px; font-size:11.5px;">Update</a>
                   {% if request.user.role == 'admin' %}
-                    <a href="{% url 'pc_edit' pc.pk %}" class="ld-btn" style="padding:5px 10px; font-size:11.5px;">Edit</a>
+                    <a href="{% url 'pc_edit' pc.pk %}" class="ld-btn js-modal-link" style="padding:5px 10px; font-size:11.5px;">Edit</a>
                   {% endif %}
                 </td>
               </tr>

@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
-from accounts.mixins import RoleRequiredMixin
+from accounts.mixins import RoleRequiredMixin, ModalFormMixin, ModalDetailMixin, modal_redirect
 from issues.models import Issue
 
 
@@ -33,7 +33,7 @@ class IssuesView(RoleRequiredMixin, ListView):
 
 
 # view one issue in detail
-class IssueDetailView(RoleRequiredMixin, DetailView):
+class IssueDetailView(RoleRequiredMixin, ModalDetailMixin, DetailView):
     allowed_roles = ['admin', 'incharge']
     model = Issue
     template_name = 'issues/issue_detail.html'
@@ -47,7 +47,7 @@ class IssueDetailView(RoleRequiredMixin, DetailView):
 
 
 # log a new issue
-class IssueCreateView(RoleRequiredMixin, CreateView):
+class IssueCreateView(RoleRequiredMixin, ModalFormMixin, CreateView):
     allowed_roles = ['admin', 'incharge', 'instructor']
     model = Issue
     fields = ['pc', 'lab', 'title', 'description', 'issue_type', 'priority']
@@ -74,7 +74,7 @@ class IssueCreateView(RoleRequiredMixin, CreateView):
 
 
 # update issue status (in progress, resolved)
-class IssueUpdateView(RoleRequiredMixin, UpdateView):
+class IssueUpdateView(RoleRequiredMixin, ModalFormMixin, UpdateView):
     allowed_roles = ['admin', 'incharge']
     model = Issue
     fields = ['status', 'priority', 'notes']
@@ -117,7 +117,7 @@ def issue_assign(request, pk):
             messages.success(request, f'Issue assigned to {technician.get_full_name() or technician.username}.')
         else:
             messages.error(request, 'Please select a valid technician.')
-    return redirect('issue_detail', pk=issue.pk)
+    return modal_redirect(request, 'issue_detail', pk=issue.pk)
 
 
 # mark an issue resolved, with resolution notes
@@ -132,4 +132,4 @@ def issue_resolve(request, pk):
         issue.resolved_at = timezone.now()
         issue.save(update_fields=['resolution_notes', 'status', 'resolved_at'])
         messages.success(request, 'Issue marked as resolved.')
-    return redirect('issue_detail', pk=issue.pk)
+    return modal_redirect(request, 'issue_detail', pk=issue.pk)

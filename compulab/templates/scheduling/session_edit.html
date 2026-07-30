@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}Edit Scheduled Session{% endblock %}
 
 {% block content %}
@@ -13,7 +13,7 @@
 
 <div class="card" style="max-width:640px">
   <form method="post" novalidate
-        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Save changes?', text: 'Details for this session will be updated.', icon: 'question', confirmButtonText: 'Yes, save', confirmButtonColor: '#3ed6c4'}); return false;">
+        onsubmit="event.preventDefault(); submitSessionEdit(this); return false;">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div class="form-errors">{{ form.non_field_errors }}</div>
@@ -34,10 +34,10 @@
              value="{{ session.requester_name }}">
       <div id="requester-search-results" class="search-results"
            style="display:none; position:absolute; z-index:10; background:#fff; border:1px solid #ddd; border-radius:6px; width:100%; max-height:220px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.08);"></div>
-      <span class="helptext">Pick a registered account to auto-fill the fields below — Full Name, ID, and Course &amp; Year/Section (student) or Department (instructor).</span>
+      <span class="helptext">Pick a registered account to auto-fill the fields below — Full Name, ID, and Department / Year Level.</span>
       <div id="requester-extra-info" class="helptext"
-           style="{% if session.instructor.course_year_section or session.instructor.department %}display:block;{% else %}display:none;{% endif %} font-weight:600; margin-top:4px;">
-        {% if session.instructor.course_year_section %}Course & Year/Section: {{ session.instructor.course_year_section }}{% elif session.instructor.department %}Department: {{ session.instructor.department_display }}{% endif %}
+           style="{% if session.instructor.department %}display:block;{% else %}display:none;{% endif %} font-weight:600; margin-top:4px;">
+        {% if session.instructor.department %}Department: {{ session.instructor.department_display }}{% if session.instructor.year_level %} — {{ session.instructor.year_level_display }}{% endif %}{% endif %}
       </div>
     </div>
 
@@ -89,11 +89,20 @@
         {{ form.date }}
         {% if form.date.errors %}<div class="form-errors">{{ form.date.errors|join:", " }}</div>{% endif %}
       </div>
-      <div class="form-group">
+      <div class="form-group" id="student-count-group">
         <label class="form-label" for="{{ form.student_count.id_for_label }}">Number of students</label>
         {{ form.student_count }}
-        <span class="helptext">For <strong>Group of students</strong>, this also caps how many distinct IDs can check in with the shared code.</span>
+        <span class="helptext" id="student-count-help">For <strong>Group of students</strong>, this also caps how many distinct IDs can check in with the shared code.</span>
         {% if form.student_count.errors %}<div class="form-errors">{{ form.student_count.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="form-group" id="pcs-requested-group" style="display:none;">
+        <label class="form-label" for="{{ form.pcs_requested.id_for_label }}">Number of PCs needed</label>
+        {{ form.pcs_requested }}
+        <span class="helptext">
+          <strong>Walk-in:</strong> only approved if this many PCs are actually free in that time slot.
+          <strong>Override:</strong> can be approved even if the lab is fully booked, but can't exceed the lab's total PC count.
+        </span>
+        {% if form.pcs_requested.errors %}<div class="form-errors">{{ form.pcs_requested.errors|join:", " }}</div>{% endif %}
       </div>
     </div>
 
@@ -118,6 +127,48 @@
 </div>
 
 <script>
+// This reservation's check-in cap (student_count for group bookings,
+// pcs_requested for walk_in/override) only matters for these three
+// requester types — see is_shared_code_booking in
+// labs.views.verify_reservation_and_check_in. Lowering it below how many
+// distinct people have ALREADY checked in doesn't remove anyone currently
+// unlocked, but it does block them from checking in again (see the cap
+// check added there) — worth calling out explicitly at edit time instead
+// of only surfacing it as a login error later.
+var SESSION_EDIT_CURRENT_CHECKED_IN = {{ session.check_ins.count|default:0 }};
+
+function submitSessionEdit(form) {
+  var typeSelect = document.getElementById('{{ form.requester_type.id_for_label }}');
+  var studentCountInput = document.getElementById('{{ form.student_count.id_for_label }}');
+  var pcsRequestedInput = document.getElementById('{{ form.pcs_requested.id_for_label }}');
+  var type = typeSelect ? typeSelect.value : '';
+  var isSharedCode = (type === 'group' || type === 'walk_in' || type === 'override');
+  var capInput = (type === 'walk_in' || type === 'override') ? pcsRequestedInput : studentCountInput;
+  var newCap = capInput ? parseInt(capInput.value, 10) : NaN;
+
+  if (isSharedCode && SESSION_EDIT_CURRENT_CHECKED_IN > 0 && !isNaN(newCap) && newCap < SESSION_EDIT_CURRENT_CHECKED_IN) {
+    compulabConfirmSubmit(form, {
+      title: 'Lower the check-in limit below who\'s already checked in?',
+      text: SESSION_EDIT_CURRENT_CHECKED_IN + (SESSION_EDIT_CURRENT_CHECKED_IN === 1 ? ' person has' : ' people have') +
+            ' already checked in to this reservation. Setting the limit to ' + newCap + ' won\'t log anyone\'s current PC session out, ' +
+            'but it WILL stop that many people from being able to check in again (e.g. after a restart) until the limit is raised back up.',
+      icon: 'warning',
+      confirmButtonText: 'Yes, lower it anyway',
+      confirmButtonColor: '#ff5d5d',
+    });
+  } else {
+    compulabConfirmSubmit(form, {
+      title: 'Save changes?',
+      text: 'Details for this session will be updated.',
+      icon: 'question',
+      confirmButtonText: 'Yes, save',
+      confirmButtonColor: '#3ed6c4',
+    });
+  }
+}
+</script>
+
+<script>
 (function() {
   var typeSelect = document.getElementById('{{ form.requester_type.id_for_label }}');
   var searchLabel = document.getElementById('requester-search-label');
@@ -128,14 +179,63 @@
   var nameField = document.getElementById('{{ form.requester_name.id_for_label }}');
   var debounceTimer = null;
 
-  var LABELS = {instructor: 'Search Instructor', student: 'Search Student', group: 'Search Student (group representative)'};
+  var LABELS = {
+    instructor: 'Search Instructor', student: 'Search Student', group: 'Search Student (group representative)',
+    walk_in: 'Search Student / Instructor (walk-in)', override: 'Search Student / Instructor (override)',
+  };
+  // 'group', 'walk_in', and 'override' aren't distinct account roles — they
+  // search across every registered student/instructor account (see the
+  // 'any' branch in accounts.views.search_requesters).
+  var SEARCH_ROLE = {group: 'any', walk_in: 'any', override: 'any'};
 
-  function currentRole() {
+  function rawType() {
     return typeSelect ? typeSelect.value : 'student';
   }
 
+  function currentRole() {
+    return SEARCH_ROLE[rawType()] || rawType();
+  }
+
   function updateLabel() {
-    if (searchLabel) searchLabel.textContent = LABELS[currentRole()] || 'Search Student / Search Instructor';
+    if (searchLabel) searchLabel.textContent = LABELS[rawType()] || 'Search Student / Search Instructor';
+  }
+
+  var studentCountGroup = document.getElementById('student-count-group');
+  var pcsRequestedGroup = document.getElementById('pcs-requested-group');
+  var rosterSelect = document.getElementById('{{ form.roster.id_for_label }}');
+  var rosterGroup = rosterSelect ? rosterSelect.closest('.form-group') : null;
+  var studentCountInput = document.getElementById('{{ form.student_count.id_for_label }}');
+  var studentCountHelp = document.getElementById('student-count-help');
+  var studentCountHelpDefault = studentCountHelp ? studentCountHelp.innerHTML : '';
+
+  function updateFieldVisibility() {
+    var isCapacityType = (rawType() === 'walk_in' || rawType() === 'override');
+    if (studentCountGroup) studentCountGroup.style.display = isCapacityType ? 'none' : '';
+    if (pcsRequestedGroup) pcsRequestedGroup.style.display = isCapacityType ? '' : 'none';
+    if (rosterGroup) rosterGroup.style.display = isCapacityType ? 'none' : '';
+  }
+
+  // When a Class Roster is selected, "Number of students" is no longer
+  // typed by hand — it's taken straight from how many students are
+  // actually enrolled on that roster (stamped onto each <option> as
+  // data-student-count by RosterSelect in scheduling/forms.py), and the
+  // field is locked read-only so it can't drift out of sync. Clearing
+  // the roster (back to "---------") hands manual entry back to the user.
+  // The server re-derives this from the roster independently either way
+  // (RosterStudentCountMixin.clean), so this is a UX convenience, not the
+  // source of truth.
+  function updateStudentCountFromRoster() {
+    if (!rosterSelect || !studentCountInput) return;
+    var selected = rosterSelect.options[rosterSelect.selectedIndex];
+    var count = selected ? selected.getAttribute('data-student-count') : null;
+    if (rosterSelect.value && count !== null) {
+      studentCountInput.value = count;
+      studentCountInput.readOnly = true;
+      if (studentCountHelp) studentCountHelp.textContent = 'Auto-filled from the selected roster\u2019s enrolled students (' + count + ').';
+    } else {
+      studentCountInput.readOnly = false;
+      if (studentCountHelp) studentCountHelp.innerHTML = studentCountHelpDefault;
+    }
   }
 
   function doSearch(q) {
@@ -153,7 +253,7 @@
     }
     results.forEach(function(r) {
       var item = document.createElement('div');
-      var extra = r.course_year_section || r.department || '';
+      var extra = [r.department, r.year_level].filter(Boolean).join(' — ');
       item.textContent = r.full_name + ' — ' + r.id_number + (extra ? ' (' + extra + ')' : '');
       item.style.cursor = 'pointer';
       item.style.padding = '8px 10px';
@@ -171,11 +271,8 @@
     searchInput.value = r.full_name;
     resultsBox.style.display = 'none';
     resultsBox.innerHTML = '';
-    if (r.course_year_section) {
-      extraInfo.textContent = 'Course & Year/Section: ' + r.course_year_section;
-      extraInfo.style.display = 'block';
-    } else if (r.department) {
-      extraInfo.textContent = 'Department: ' + r.department;
+    if (r.department) {
+      extraInfo.textContent = 'Department: ' + r.department + (r.year_level ? ' — ' + r.year_level : '');
       extraInfo.style.display = 'block';
     } else {
       extraInfo.style.display = 'none';
@@ -202,13 +299,20 @@
   if (typeSelect) {
     typeSelect.addEventListener('change', function() {
       updateLabel();
+      updateFieldVisibility();
       searchInput.value = '';
       resultsBox.style.display = 'none';
       extraInfo.style.display = 'none';
     });
   }
 
+  if (rosterSelect) {
+    rosterSelect.addEventListener('change', updateStudentCountFromRoster);
+  }
+
   updateLabel();
+  updateFieldVisibility();
+  updateStudentCountFromRoster();
 })();
 </script>
 

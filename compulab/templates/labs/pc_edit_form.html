@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends base_template|default:"base.html" %}
 {% block title %}{% if object %}Edit PC{% else %}Add PC{% endif %}{% endblock %}
 
 {% block content %}
@@ -11,7 +11,7 @@
 </div>
 
 <div class="card" style="max-width:480px">
-  <form method="post" novalidate
+  <form method="post" novalidate id="pc-form"
         onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: '{% if object %}Save changes?{% else %}Add this PC?{% endif %}', text: '{% if object %}Details for {{ object.pc_id|escapejs }} will be updated.{% else %}A new PC record will be added.{% endif %}', icon: 'question', confirmButtonText: '{% if object %}Yes, save{% else %}Yes, add{% endif %}', confirmButtonColor: '#3ed6c4'}); return false;">
     {% csrf_token %}
     {% if form.non_field_errors %}
@@ -43,13 +43,21 @@
       <span class="helptext">Only used as a fallback for PCs without an IP address on file — otherwise it gets overwritten the next time statuses are checked.</span>
       {% if form.status.errors %}<div class="form-errors">{{ form.status.errors|join:", " }}</div>{% endif %}
     </div>
-
-    <div class="form-actions">
-      <button type="submit" class="action-btn primary">{% if object %}Save changes{% else %}Add PC{% endif %}</button>
-      <a href="{% url 'lab_list' %}" class="action-btn">Cancel</a>
-      {% if object %}<a href="{% url 'pc_delete' object.pk %}" class="action-btn danger" style="margin-left:auto;">Delete PC</a>{% endif %}
-    </div>
   </form>
-</div>
+
+  {% if object %}
+  <form method="post" action="{% url 'pc_delete' object.pk %}" id="pc-delete-form"
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this PC?', text: 'This action cannot be undone. {{ object.pc_id|escapejs }} will be permanently removed. Any issue reports linked to it keep their history.', confirmButtonText: 'Yes, delete PC'}); return false;">
+    {% csrf_token %}
+  </form>
+  {% endif %}
+
+  <div class="form-actions">
+    <button type="submit" form="pc-form" class="action-btn primary">{% if object %}Save changes{% else %}Add PC{% endif %}</button>
+    {% if object %}
+    <button type="submit" form="pc-delete-form" class="action-btn danger">Delete PC</button>
+    {% endif %}
+    <a href="{% url 'lab_list' %}" class="action-btn">Cancel</a>
+  </div>
 
 {% endblock %}
