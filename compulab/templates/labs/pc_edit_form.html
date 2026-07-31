@@ -5,7 +5,7 @@
 
 <div class="page-header">
   <div>
-    <h1>{% if object %}Edit PC{% else %}Add new PC{% endif %}</h1>
+    <h1{% if is_modal %} id="appModalTitle"{% endif %}>{% if object %}Edit PC{% else %}Add new PC{% endif %}</h1>
     {% if object %}<div class="sub">{{ object.pc_id }} · {{ object.lab.name }}</div>{% endif %}
   </div>
 </div>
@@ -15,33 +15,33 @@
         onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: '{% if object %}Save changes?{% else %}Add this PC?{% endif %}', text: '{% if object %}Details for {{ object.pc_id|escapejs }} will be updated.{% else %}A new PC record will be added.{% endif %}', icon: 'question', confirmButtonText: '{% if object %}Yes, save{% else %}Yes, add{% endif %}', confirmButtonColor: '#3ed6c4'}); return false;">
     {% csrf_token %}
     {% if form.non_field_errors %}
-      <div class="form-errors">{{ form.non_field_errors }}</div>
+      <div class="form-errors" role="alert">{{ form.non_field_errors }}</div>
     {% endif %}
 
     <div class="form-group">
       <label class="form-label" for="{{ form.lab.id_for_label }}">Lab</label>
       {{ form.lab }}
-      {% if form.lab.errors %}<div class="form-errors">{{ form.lab.errors|join:", " }}</div>{% endif %}
+      {% if form.lab.errors %}<div class="form-errors" id="{{ form.lab.id_for_label }}_error" role="alert">{{ form.lab.errors|join:", " }}</div>{% endif %}
     </div>
 
     <div class="form-group">
       <label class="form-label" for="{{ form.pc_id.id_for_label }}">PC ID</label>
       {{ form.pc_id }}
-      {% if form.pc_id.errors %}<div class="form-errors">{{ form.pc_id.errors|join:", " }}</div>{% endif %}
+      {% if form.pc_id.errors %}<div class="form-errors" id="{{ form.pc_id.id_for_label }}_error" role="alert">{{ form.pc_id.errors|join:", " }}</div>{% endif %}
     </div>
 
     <div class="form-group">
       <label class="form-label" for="{{ form.ip_address.id_for_label }}">IP address</label>
       {{ form.ip_address }}
-      <span class="helptext">Needed so "Check all PC status now" can actually ping this machine. Leave blank if unknown.</span>
-      {% if form.ip_address.errors %}<div class="form-errors">{{ form.ip_address.errors|join:", " }}</div>{% endif %}
+      <span class="helptext" id="{{ form.ip_address.id_for_label }}_help">Needed so "Check all PC status now" can actually ping this machine. Leave blank if unknown.</span>
+      {% if form.ip_address.errors %}<div class="form-errors" id="{{ form.ip_address.id_for_label }}_error" role="alert">{{ form.ip_address.errors|join:", " }}</div>{% endif %}
     </div>
 
     <div class="form-group">
       <label class="form-label" for="{{ form.status.id_for_label }}">Status</label>
       {{ form.status }}
-      <span class="helptext">Only used as a fallback for PCs without an IP address on file — otherwise it gets overwritten the next time statuses are checked.</span>
-      {% if form.status.errors %}<div class="form-errors">{{ form.status.errors|join:", " }}</div>{% endif %}
+      <span class="helptext" id="{{ form.status.id_for_label }}_help">Only used as a fallback for PCs without an IP address on file — otherwise it gets overwritten the next time statuses are checked.</span>
+      {% if form.status.errors %}<div class="form-errors" id="{{ form.status.id_for_label }}_error" role="alert">{{ form.status.errors|join:", " }}</div>{% endif %}
     </div>
   </form>
 

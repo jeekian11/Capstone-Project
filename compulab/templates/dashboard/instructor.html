@@ -57,7 +57,7 @@ html[data-theme="light"] .in-quick-btn.primary{ color:#fff; }
   <div class="in-brand">
     <div class="in-brand-mark">I</div>
     <div class="in-brand-text">
-      <h1>{{ request.user.get_full_name|default:request.user.username }}</h1>
+      <h1>{{ request.user.display_name }}</h1>
       <span>Instructor Dashboard</span>
     </div>
   </div>

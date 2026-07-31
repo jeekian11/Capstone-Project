@@ -88,7 +88,7 @@ class AdminDashboardView(RoleRequiredMixin, TemplateView):
 
         todays_attendance = ActivityLog.objects.filter(
             action='pc_unlock', created_at__date=today
-        ).values('target_username').distinct().count()
+        ).values('target_identifier').distinct().count()
         ctx['todays_attendance'] = todays_attendance
         ctx['todays_attendance_pct'] = (
             round(todays_attendance / total_students * 100, 1) if total_students else 0
@@ -99,7 +99,7 @@ class AdminDashboardView(RoleRequiredMixin, TemplateView):
         for d in week_days:
             count = ActivityLog.objects.filter(
                 action='pc_unlock', created_at__date=d
-            ).values('target_username').distinct().count()
+            ).values('target_identifier').distinct().count()
             attendance_trend.append(count)
         ctx['attendance_trend_labels'] = json.dumps(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
         ctx['attendance_trend_data'] = json.dumps(attendance_trend)
@@ -146,12 +146,12 @@ class AdminDashboardView(RoleRequiredMixin, TemplateView):
         for log in ActivityLog.objects.select_related('actor', 'pc').order_by('-created_at')[:8]:
             if log.action == 'pc_unlock':
                 activity.append({
-                    'icon': 'login', 'title': f'Student {log.target_username} logged in on {log.pc.pc_id if log.pc else "a PC"}',
+                    'icon': 'login', 'title': f'Student {log.target_identifier} logged in on {log.pc.pc_id if log.pc else "a PC"}',
                     'sub': log.pc.lab.name if log.pc else '', 'time': log.created_at,
                 })
             elif log.action == 'register':
                 activity.append({
-                    'icon': 'user', 'title': f'New user registered: {log.target_username}',
+                    'icon': 'user', 'title': f'New user registered: {log.target_identifier}',
                     'sub': '', 'time': log.created_at,
                 })
         for req in SessionRequest.objects.filter(status='approved').select_related('lab').order_by('-created_at')[:5]:
@@ -391,12 +391,12 @@ def verify_reservation_and_check_in(remote_addr, id_number, code):
         label = 'Walk-in' if session.requester_type == 'walk_in' else 'Override'
         checked_in_name = f'{id_number} — {label} reservation ({session.requester_name})'
     else:
-        checked_in_name = f"{walk_in_account.get_full_name() or walk_in_account.username} — walk-in"
+        checked_in_name = f"{walk_in_account.display_name} — walk-in"
 
     ActivityLog.objects.create(
         actor=checked_in_user,
         action='pc_unlock',
-        target_username=id_number,
+        target_identifier=id_number,
         pc=pc,
         details=(
             f"{checked_in_name} ({id_number}) checked in with reservation {session.reservation_code} — unlocked {pc.pc_id} ({pc.lab.name})."
@@ -657,7 +657,7 @@ def pc_agent_end_session_api(request):
         ActivityLog.objects.create(
             actor=user,
             action='pc_lock',
-            target_username=session.requester_id_number if session else '',
+            target_identifier=session.requester_id_number if session else '',
             pc=pc,
             details=detail_msg,
         )
@@ -710,7 +710,7 @@ def pc_agent_logout_api(request):
     ActivityLog.objects.create(
         actor=previous_user,
         action='pc_lock',
-        target_username=previous_user.username if previous_user else '',
+        target_identifier=previous_user.display_name if previous_user else '',
         pc=pc,
         details=(
             f"{pc.pc_id} ({pc.lab.name}) re-locked — reservation time ended."
@@ -785,7 +785,7 @@ def manual_unlock_log_api(request):
     ActivityLog.objects.create(
         actor=None,
         action='pc_unlock',
-        target_username=guest_id_number,
+        target_identifier=guest_id_number,
         pc=pc,
         details=(
             f'Emergency Manual Unlock (offline tool — used because the CompuLab server could not be reached '
@@ -876,10 +876,10 @@ class PCStatusView(RoleRequiredMixin, TemplateView):
             if q:
                 logs = logs.filter(
                     Q(pc__pc_id__icontains=q) |
-                    Q(target_username__icontains=q) |
+                    Q(target_identifier__icontains=q) |
                     Q(actor__first_name__icontains=q) |
                     Q(actor__last_name__icontains=q) |
-                    Q(actor__username__icontains=q)
+                    Q(actor__email__icontains=q)
                 )
             labs_usage = {}
             for log in logs:
@@ -899,7 +899,8 @@ class PCStatusView(RoleRequiredMixin, TemplateView):
                 Q(pc_id__icontains=q) |
                 Q(current_user__first_name__icontains=q) |
                 Q(current_user__last_name__icontains=q) |
-                Q(current_user__username__icontains=q)
+                Q(current_user__id_number__icontains=q) |
+                Q(current_user__email__icontains=q)
             )
         list_qs = list_qs.order_by('lab__name', 'pc_id')
         ctx['total_filtered'] = list_qs.count()
@@ -1006,7 +1007,7 @@ class OverrideCheckInView(RoleRequiredMixin, TemplateView):
 
         success, detail = unlock_pc(pc)
 
-        id_number = account.id_number or account.username
+        id_number = account.id_number or account.display_name
         SessionCheckIn.objects.update_or_create(
             session=active_session, id_number=id_number,
             defaults={'checkin_type': 'override', 'student': account, 'pc': pc},
@@ -1018,14 +1019,14 @@ class OverrideCheckInView(RoleRequiredMixin, TemplateView):
         pc.current_session = active_session
         pc.save(update_fields=['status', 'last_active', 'current_user', 'current_session'])
 
-        account_name = account.get_full_name() or account.username
+        account_name = account.display_name
         ActivityLog.objects.create(
             actor=request.user,
             action='pc_unlock',
-            target_username=id_number,
+            target_identifier=id_number,
             pc=pc,
             details=(
-                f"Override by {request.user.get_full_name() or request.user.username}: granted {account_name} "
+                f"Override by {request.user.display_name}: granted {account_name} "
                 f"({id_number}) access to {pc.pc_id} ({pc.lab.name})"
                 + (f", overlapping reservation {active_session.reservation_code}" if active_session else ", no active reservation")
                 + ('.' if success else f' — unlock command did not run: {detail}.')
@@ -1115,10 +1116,10 @@ class ManualUnlockView(RoleRequiredMixin, TemplateView):
         ActivityLog.objects.create(
             actor=request.user,
             action='pc_unlock',
-            target_username=guest_id_number,
+            target_identifier=guest_id_number,
             pc=pc,
             details=(
-                f"Manual Unlock by {request.user.get_full_name() or request.user.username}: "
+                f"Manual Unlock by {request.user.display_name}: "
                 f"walk-in guest \"{guest_name}\" (no registered account) granted access to {pc.pc_id} ({pc.lab.name})"
                 + (f", overlapping reservation {active_session.reservation_code}" if active_session else ", no active reservation")
                 + ('.' if success else f' — unlock command did not run: {detail}.')
@@ -1305,7 +1306,7 @@ def _pc_activity_filter_logs(request, base_qs):
             Q(window_title__icontains=q) |
             Q(student__first_name__icontains=q) |
             Q(student__last_name__icontains=q) |
-            Q(student__username__icontains=q) |
+            Q(student__id_number__icontains=q) |
             Q(pc__pc_id__icontains=q)
         )
     filters = {
@@ -1510,7 +1511,7 @@ def export_pc_activity_log(request):
         [
             log.captured_at.strftime('%Y-%m-%d %H:%M:%S'),
             f'{log.pc.lab.name} — {log.pc.pc_id}',
-            log.student.get_full_name() or log.student.username if log.student else '—',
+            log.student.display_name if log.student else '—',
             log.student.get_role_display() if log.student else '—',
             f'{log.session.requester_name} ({log.session.date} {log.session.start_time}-{log.session.end_time})' if log.session else '—',
             log.window_title or '—',
@@ -1530,7 +1531,7 @@ def export_pc_activity_log(request):
 def pc_status_api(request):
     pcs = PC.objects.select_related('current_user').values(
         'pc_id', 'status', 'lab__name', 'last_active',
-        'current_user__username', 'current_user__first_name', 'current_user__last_name',
+        'current_user__id_number', 'current_user__first_name', 'current_user__last_name',
     )
     return JsonResponse({'pcs': list(pcs)})
 

@@ -88,7 +88,7 @@
 {% if not lab %}
   <div class="ic2-hero">
     <div>
-      <div class="ic2-hero-title">Welcome, {{ request.user.get_full_name|default:request.user.username }}!</div>
+      <div class="ic2-hero-title">Welcome, {{ request.user.display_name }}!</div>
       <div class="ic2-hero-sub">Lab In-Charge</div>
     </div>
   </div>
@@ -99,7 +99,7 @@
 
   <div class="ic2-hero">
     <div>
-      <div class="ic2-hero-title"><span id="ic2Greeting">Hello</span>, {{ request.user.get_full_name|default:request.user.username }}! &#128075;</div>
+      <div class="ic2-hero-title"><span id="ic2Greeting">Hello</span>, {{ request.user.display_name }}! &#128075;</div>
       <div class="ic2-hero-sub">Lab In-Charge &bull; {{ lab.name }}</div>
     </div>
   </div>

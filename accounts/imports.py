@@ -18,7 +18,6 @@ _HEADER_ALIASES = {
     'first name': 'first_name', 'first_name': 'first_name', 'firstname': 'first_name',
     'last name': 'last_name', 'last_name': 'last_name', 'lastname': 'last_name',
     'year level': 'year_level', 'year_level': 'year_level', 'yearlevel': 'year_level', 'year': 'year_level',
-    'username': 'username',
 }
 
 
@@ -33,7 +32,7 @@ def _normalize_row(headers, raw_row):
 
 def read_rows(uploaded_file):
     """Yields one dict per data row: {'id_number', 'first_name', 'last_name',
-    'year_level', 'username'} (missing columns simply absent).
+    'year_level'} (missing columns simply absent).
     Raises ValueError with a human-readable message if the file can't be
     read at all."""
     name = (uploaded_file.name or '').lower()

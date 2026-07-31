@@ -85,7 +85,7 @@ class RequiresRegisteredAccountMixin:
             # requester could be a registered student or instructor — so
             # match against either, same as the 'any' option already used
             # by the live Override check-in search.
-            qs = User.objects.filter(Q(id_number__iexact=id_number) | Q(username__iexact=id_number))
+            qs = User.objects.filter(id_number__iexact=id_number)
             if requester_type == 'group':
                 qs = qs.filter(role='student')
             elif requester_type in ('walk_in', 'override'):
@@ -268,7 +268,7 @@ class RosterAddStudentForm(forms.Form):
         except User.DoesNotExist:
             raise forms.ValidationError('That student account was not found — it may have been removed.')
         if not student.is_active:
-            raise forms.ValidationError(f'The account for "{student.get_full_name() or student.username}" is deactivated.')
+            raise forms.ValidationError(f'The account for "{student.display_name}" is deactivated.')
         self.cleaned_data['student'] = student
         return pk
 

@@ -191,16 +191,19 @@
         {% if form.non_field_errors %}
           <div class="lg-error">{{ form.non_field_errors.0 }}</div>
         {% elif form.errors %}
-          <div class="lg-error">Invalid username or password.</div>
+          <div class="lg-error">Invalid email or password.</div>
         {% endif %}
 
-        <label for="id_username">Username</label>
+        <label for="id_username">Email Address</label>
+        <!-- Field is still named "username" — Django's AuthenticationForm
+             always uses that internal name, even though this account model
+             authenticates with Email (Gmail) instead. -->
         <div class="lg-input-wrap">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="12" cy="8" r="3.5" stroke="#8b98a3" stroke-width="1.6"/>
             <path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" stroke="#8b98a3" stroke-width="1.6" stroke-linecap="round"/>
           </svg>
-          <input type="text" name="username" id="id_username" placeholder="Enter username" required autofocus>
+          <input type="email" name="username" id="id_username" placeholder="Enter your email address" required autofocus>
         </div>
 
         <label for="id_password">Password</label>

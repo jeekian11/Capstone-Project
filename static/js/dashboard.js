@@ -16,7 +16,7 @@ function formatUser(pc) {
   const first = pc.current_user__first_name || '';
   const last = pc.current_user__last_name || '';
   const fullName = `${first} ${last}`.trim();
-  return fullName || pc.current_user__username || null;
+  return fullName || pc.current_user__id_number || null;
 }
 
 async function refreshPcStatuses() {

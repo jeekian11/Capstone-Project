@@ -283,7 +283,7 @@ def _instructor_usage_data(request):
         'total_hours': round(v['hours'], 1),
         'num_sessions': v['sessions'],
     } for instr, v in by_instructor.items()]
-    rows.sort(key=lambda r: r['instructor'].get_full_name() or r['instructor'].username)
+    rows.sort(key=lambda r: r['instructor'].display_name)
 
     return {
         'date_from': date_from, 'date_to': date_to, 'selected_instructor': instructor_id,
@@ -310,7 +310,7 @@ def export_instructor_usage(request):
     period = f"{data['date_from']} to {data['date_to']}"
     headers = ['Instructor', 'Laboratories Used', 'Total Hours', 'Number of Sessions']
     body = [[
-        r['instructor'].get_full_name() or r['instructor'].username,
+        r['instructor'].display_name,
         ', '.join(r['labs_used']) or '—',
         r['total_hours'], r['num_sessions'],
     ] for r in data['rows']]
@@ -362,23 +362,23 @@ def _attendance_data(request):
         present = []
         seen_ids = set()
         for log in logs:
-            if log.target_username in seen_ids or log.target_username in walk_in_checkins:
+            if log.target_identifier in seen_ids or log.target_identifier in walk_in_checkins:
                 continue
-            seen_ids.add(log.target_username)
+            seen_ids.add(log.target_identifier)
             # Prefer the roster's own name; if this person isn't on the
             # roster (e.g. a Group booking's members, who aren't named
             # anywhere), fall back to the resolved account from
             # SessionCheckIn rather than the requester's name — this used
             # to show the reservation's requester for every group member,
             # which was wrong.
-            checkin = s.check_ins.filter(id_number=log.target_username).select_related('student').first()
+            checkin = s.check_ins.filter(id_number=log.target_identifier).select_related('student').first()
             name = (
-                roster_by_id.get(log.target_username)
-                or (checkin.student.get_full_name() or checkin.student.username if checkin and checkin.student else None)
+                roster_by_id.get(log.target_identifier)
+                or (checkin.student.display_name if checkin and checkin.student else None)
                 or s.requester_name or '—'
             )
             present.append({
-                'id_number': log.target_username,
+                'id_number': log.target_identifier,
                 'name': name,
                 'pc': log.pc.pc_id if log.pc else '—',
                 'time': log.created_at,
@@ -404,7 +404,7 @@ def _attendance_data(request):
         walk_ins = [
             {
                 'id_number': c.id_number,
-                'name': (c.student.get_full_name() or c.student.username) if c.student else c.id_number,
+                'name': (c.student.display_name) if c.student else c.id_number,
                 'role': c.student.get_role_display() if c.student else '—',
                 'checkin_type': c.get_checkin_type_display(),
                 'pc': c.pc.pc_id if c.pc else '—',
@@ -595,7 +595,8 @@ def export_pc_status_report(request):
             Q(pc_id__icontains=q) |
             Q(current_user__first_name__icontains=q) |
             Q(current_user__last_name__icontains=q) |
-            Q(current_user__username__icontains=q)
+            Q(current_user__id_number__icontains=q) |
+            Q(current_user__email__icontains=q)
         )
     pcs = pcs.order_by('lab__name', 'pc_id')
 
@@ -604,7 +605,7 @@ def export_pc_status_report(request):
     headers = ['PC ID', 'Lab', 'IP Address', 'Status', 'Current User', 'Last Active']
     body = []
     for pc in pcs:
-        user_name = pc.current_user.get_full_name() or pc.current_user.username if pc.current_user else '—'
+        user_name = pc.current_user.display_name if pc.current_user else '—'
         last_active = timezone.localtime(pc.last_active).strftime('%b %d, %Y %H:%M') if pc.last_active else '—'
         body.append([pc.pc_id, pc.lab.name, pc.ip_address or '—', pc.get_status_display(), user_name, last_active])
 

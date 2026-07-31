@@ -13,7 +13,7 @@
 <div class="card" style="max-width:480px">
   <p style="font-size:13px; margin-bottom:20px; line-height:1.6;">
     Are you sure you want to delete
-    <strong>{{ target_user.get_full_name|default:target_user.username }}</strong>
+    <strong>{{ target_user.display_name }}</strong>
     ({{ target_user.get_role_display }})? All of their account data will be permanently removed.
   </p>
   <form method="post">

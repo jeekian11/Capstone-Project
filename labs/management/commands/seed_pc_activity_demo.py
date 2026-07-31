@@ -31,7 +31,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--pc', help="PC ID to use (e.g. PC01). Defaults to any existing PC.")
-        parser.add_argument('--student', help="Student ID number or username to use. Defaults to any existing student.")
+        parser.add_argument('--student', help="Student/Instructor ID number to use. Defaults to any existing student.")
         parser.add_argument('--minutes-ago', type=int, default=25, help="How many minutes ago the session started (default 25).")
 
     def handle(self, *args, **options):
@@ -49,10 +49,9 @@ class Command(BaseCommand):
 
         student = None
         if options['student']:
-            student = User.objects.filter(id_number__iexact=options['student']).first() \
-                or User.objects.filter(username__iexact=options['student']).first()
+            student = User.objects.filter(id_number__iexact=options['student']).first()
             if not student:
-                raise CommandError(f"No user found with ID number or username '{options['student']}'.")
+                raise CommandError(f"No user found with ID number '{options['student']}'.")
         else:
             student = User.objects.filter(role='student').first() or User.objects.filter(role__in=['instructor', 'incharge']).first()
             if not student:
@@ -84,7 +83,7 @@ class Command(BaseCommand):
         pc.save(update_fields=['status', 'current_user', 'last_active'])
 
         self.stdout.write(self.style.SUCCESS(
-            f"Seeded {len(created)} PCActivityLog samples for {student.get_full_name() or student.username} on "
+            f"Seeded {len(created)} PCActivityLog samples for {student.display_name} on "
             f"{pc.pc_id} ({pc.lab.name}), starting {options['minutes_ago']} minute(s) ago. "
             f"Check PC Activity Log — the most recent sample is 'SCLAMS — PC Activity Log - Google Chrome'."
         ))

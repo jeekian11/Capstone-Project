@@ -1012,15 +1012,15 @@ def roster_search_students(request, pk):
         Q(role='student'), Q(is_active=True),
     ).filter(
         Q(first_name__icontains=q) | Q(last_name__icontains=q) |
-        Q(id_number__icontains=q) | Q(username__icontains=q)
+        Q(id_number__icontains=q)
     ).exclude(pk__in=already_on_roster).order_by('first_name', 'last_name')[:15]
 
     return JsonResponse({
         'results': [
             {
                 'id': s.pk,
-                'id_number': s.id_number or s.username,
-                'full_name': s.get_full_name() or s.username,
+                'id_number': s.id_number or s.display_name,
+                'full_name': s.display_name,
                 'department': s.department_display,
                 'year_level': s.year_level_display,
             }
@@ -1042,9 +1042,9 @@ def roster_add_student(request, pk):
             student = form.cleaned_data['student']
             _, created = RosterStudent.objects.get_or_create(roster=roster, student=student)
             if created:
-                messages.success(request, f'Added {student.get_full_name() or student.username} to the roster.')
+                messages.success(request, f'Added {student.display_name} to the roster.')
             else:
-                messages.error(request, f'{student.get_full_name() or student.username} is already on this roster.')
+                messages.error(request, f'{student.display_name} is already on this roster.')
         else:
             messages.error(request, 'Could not add that student — please search and select again.')
     return modal_redirect(request, 'roster_detail', pk=pk)
@@ -1119,7 +1119,7 @@ def roster_import_students(request, pk):
                             continue
                         RosterStudent.objects.create(roster=roster, student=student)
                         already_on_roster.add(student.pk)
-                        added.append({'row': i, 'id_number': id_number, 'name': student.get_full_name() or student.username})
+                        added.append({'row': i, 'id_number': id_number, 'name': student.display_name})
 
                     if added:
                         messages.success(request, f'Added {len(added)} student{"s" if len(added) != 1 else ""} to the roster.')

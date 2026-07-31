@@ -27,7 +27,7 @@
       <select name="technician" class="form-control">
         <option value="">All technicians</option>
         {% for tech in technicians %}
-          <option value="{{ tech.pk }}" {% if selected_technician == tech.pk|stringformat:"s" %}selected{% endif %}>{{ tech.get_full_name|default:tech.username }}</option>
+          <option value="{{ tech.pk }}" {% if selected_technician == tech.pk|stringformat:"s" %}selected{% endif %}>{{ tech.display_name }}</option>
         {% endfor %}
       </select>
     </div>

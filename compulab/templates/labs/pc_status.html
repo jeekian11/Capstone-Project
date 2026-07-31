@@ -269,8 +269,8 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
             {% for log in entry.logs %}
               <tr>
                 <td>{{ log.pc.pc_id }}</td>
-                <td>{% firstof log.actor.get_full_name log.actor.username "—" %}</td>
-                <td>{{ log.target_username }}</td>
+                <td>{{ log.actor_display }}</td>
+                <td>{{ log.target_identifier }}</td>
                 <td>{{ log.created_at|date:"M d, Y H:i" }}</td>
               </tr>
             {% endfor %}
@@ -322,7 +322,7 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
             <svg viewBox="0 0 24 24" fill="none"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
           <div style="flex:1; min-width:0;">
-            <div class="ld-feed-title">{{ a.pc.pc_id }} unlocked by {% firstof a.actor.get_full_name a.actor.username a.target_username "—" %}</div>
+            <div class="ld-feed-title">{{ a.pc.pc_id }} unlocked by {% firstof a.actor.display_name a.target_identifier "—" %}</div>
             <div class="ld-feed-sub">{{ a.pc.lab.name }}</div>
           </div>
           <div class="ld-feed-time">{{ a.created_at|timesince }} ago</div>
@@ -354,7 +354,7 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
                 <td>{{ pc.pc_id }}</td>
                 <td>{{ pc.lab.name }}</td>
                 <td><span class="ld-pill {{ pc.status }}" data-role="status-pill">{{ pc.get_status_display }}</span></td>
-                <td data-role="current-user">{% if pc.current_user %}{{ pc.current_user.get_full_name|default:pc.current_user.username }}{% elif pc.current_guest_name %}{{ pc.current_guest_name }} <span class="helptext">(Guest)</span>{% else %}—{% endif %}</td>
+                <td data-role="current-user">{% if pc.current_user %}{{ pc.current_user.display_name }}{% elif pc.current_guest_name %}{{ pc.current_guest_name }} <span class="helptext">(Guest)</span>{% else %}—{% endif %}</td>
                 <td>{% if pc.current_session %}{{ pc.current_session.get_requester_type_display }}{% else %}—{% endif %}</td>
                 <td>{% if pc.login_time %}{{ pc.login_time|time:"g:i A" }}{% else %}—{% endif %}</td>
                 <td>{% if pc.login_time %}{{ pc.login_time|timesince }}{% else %}—{% endif %}</td>

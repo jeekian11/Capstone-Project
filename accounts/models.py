@@ -1,49 +1,66 @@
-from django.contrib.auth.models import AbstractUser, UserManager as DjangoUserManager
+from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.base_user import BaseUserManager
 from django.conf import settings
 from django.db import models
 from accounts.constants import DEPARTMENT_CHOICES, department_name, YEAR_LEVEL_LABELS
 
 
-class UserManager(DjangoUserManager):
-    """Django's built-in UserManager.create_user()/create_superuser() always
-    pass an `email` kwarg through to the model — which no longer exists here
-    now that email is removed — so `manage.py createsuperuser` and any code
-    calling those methods directly needs this email-free version instead."""
+class UserManager(BaseUserManager):
+    """Custom manager for the email-based User model (no username field).
 
-    def _create_user(self, username, password, **extra_fields):
-        extra_fields.pop('email', None)
-        if not username:
-            raise ValueError('The given username must be set')
-        user = self.model(username=username, **extra_fields)
+    Admin, Lab In-Charge, and Instructor accounts are created with an
+    email — that's their login credential. Student accounts are created
+    with email=None — they never log into the web dashboard at all, so
+    they don't need (and can't be required to have) one. See
+    accounts/forms.py for the role-based rules enforced at the form level.
+    """
+    use_in_migrations = True
+
+    def _create_user(self, email, password, **extra_fields):
+        email = self.normalize_email(email) if email else None
+        user = self.model(email=email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_user(self, username, password=None, **extra_fields):
+    def create_user(self, email=None, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', False)
         extra_fields.setdefault('is_superuser', False)
-        extra_fields.pop('email', None)
-        return self._create_user(username, password, **extra_fields)
+        return self._create_user(email, password, **extra_fields)
 
-    def create_superuser(self, username, password=None, **extra_fields):
+    def create_superuser(self, email=None, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        extra_fields.pop('email', None)
+        extra_fields.setdefault('role', 'admin')
+        if not email:
+            raise ValueError('Superuser must have an email address.')
         if extra_fields.get('is_staff') is not True:
             raise ValueError('Superuser must have is_staff=True.')
         if extra_fields.get('is_superuser') is not True:
             raise ValueError('Superuser must have is_superuser=True.')
-        return self._create_user(username, password, **extra_fields)
+        return self._create_user(email, password, **extra_fields)
 
 
 class User(AbstractUser):
-    # CompuLab doesn't collect/use email (Gmail) addresses anywhere in the
-    # system — accounts are matched by username/ID number instead — so the
-    # inherited AbstractUser.email field is dropped entirely.
-    email = None
-    # AbstractUser defaults REQUIRED_FIELDS to ['email'] (used by
-    # `manage.py createsuperuser`) — with no email field that would break
-    # the command, so it's cleared here.
+    # No username field anywhere in the system — Email (Gmail) is the login
+    # credential for Admin/Lab In-Charge/Instructor accounts instead.
+    # Students don't authenticate here at all (they sign in at the lab PC
+    # with their Student ID Number + a reservation code — see
+    # labs.views.ReservationPCLoginView), so email is optional for them:
+    # null=True/blank=True lets a Student's email stay empty without
+    # tripping the unique constraint (multiple NULLs are allowed; multiple
+    # empty strings would collide, so accounts/forms.py always stores None,
+    # never '', for Students).
+    username = None
+    email = models.EmailField(
+        'email address', max_length=254, unique=True, null=True, blank=True,
+        error_messages={'unique': 'A user with that email address already exists.'},
+        help_text='Login credential for Admin, Lab In-Charge, and Instructor accounts. '
+                   'Required and must be unique for those roles. Not used by Students — '
+                   'they sign in at the lab PC with their Student ID Number and a '
+                   'reservation code instead.'
+    )
+    USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
     objects = UserManager()
@@ -57,7 +74,7 @@ class User(AbstractUser):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='instructor')
     id_number = models.CharField(
         max_length=50, blank=True, default='',
-        help_text='Student/Instructor ID — used to match this account to reservation requests and lab PC check-ins. Separate from the login username.'
+        help_text='Student/Instructor ID — used to match this account to reservation requests and lab PC check-ins. For Students, this doubles as their login credential at the lab PC (paired with a reservation code).'
     )
     department = models.CharField(
         max_length=100, blank=True, default='', choices=DEPARTMENT_CHOICES,
@@ -89,7 +106,27 @@ class User(AbstractUser):
     )
 
     def __str__(self):
-        return f'{self.get_full_name()} ({self.role})'
+        return f'{self.display_name} ({self.role})'
+
+    def clean(self):
+        # Deliberately does NOT call super().clean(): AbstractUser.clean()
+        # unconditionally runs self.email through
+        # UserManager.normalize_email(), which coerces a blank/None email
+        # into '' — that would silently undo the None (never '') this
+        # model relies on for Student accounts (see the email field's
+        # help text above): multiple '' values collide against the
+        # unique constraint, multiple None values don't. Only normalize
+        # when there's an actual email to normalize.
+        if self.email:
+            self.email = self.__class__.objects.normalize_email(self.email)
+
+    @property
+    def display_name(self):
+        """Best available human-readable identifier for this account, used
+        everywhere the system used to fall back to `username`. Full name
+        first; if that's blank, fall back to Email, then Student/Instructor
+        ID, then a generic placeholder — there's always something to show."""
+        return self.get_full_name() or self.email or self.id_number or f'Account #{self.pk}'
 
     @property
     def department_display(self):
@@ -130,7 +167,13 @@ class ActivityLog(models.Model):
         related_name='actions_performed'
     )
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
-    target_username = models.CharField(max_length=150)
+    target_identifier = models.CharField(
+        max_length=150,
+        help_text='Email (Admin/Lab In-Charge/Instructor) or Student/Instructor ID '
+                   '(Student) of the account this log entry is about — kept as plain '
+                   'text so the log entry survives even if the account is later '
+                   'edited or deleted.'
+    )
     details = models.TextField(blank=True)
     pc = models.ForeignKey(
         'labs.PC',
@@ -145,15 +188,15 @@ class ActivityLog(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f'{self.get_action_display()} — {self.target_username}'
+        return f'{self.get_action_display()} — {self.target_identifier}'
 
     @property
     def actor_display(self):
         """Safe display name for `actor` — templates should use this instead
-        of chaining `log.actor.get_full_name|default:log.actor.username`,
+        of chaining `log.actor.get_full_name|default:log.actor.email`,
         since actor is null=True/SET_NULL (the account may have since been
         deleted) and that chained lookup blows up with
         VariableDoesNotExist when actor is None."""
         if not self.actor:
             return '—'
-        return self.actor.get_full_name() or self.actor.username
+        return self.actor.display_name

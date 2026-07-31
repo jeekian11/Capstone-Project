@@ -17,7 +17,7 @@ from accounts.constants import DEPARTMENT_CHOICES, department_year_levels_json, 
 from django.core.cache import cache
 from notifications import services as notify_service
 
-# How many failed login attempts (for the same username) within the window
+# How many failed login attempts (for the same email) within the window
 # below trigger a "multiple failed login attempts" alert to all Admins.
 FAILED_LOGIN_THRESHOLD = 3
 FAILED_LOGIN_WINDOW_SECONDS = 15 * 60
@@ -30,25 +30,32 @@ class CompulabLoginView(LoginView):
     template_name = 'registration/login.html'
 
     def form_valid(self, form):
-        # Students authenticate at the lab computer (see labs.ReservationPCLoginView),
-        # never here — this is the web management system, which is off-limits
-        # to student accounts per the system's access rules.
+        # Students authenticate at the lab computer with their Student ID
+        # Number + a reservation code (see labs.ReservationPCLoginView),
+        # never here — this is the web management system, which signs in
+        # with Email + Password and is off-limits to student accounts.
         user = form.get_user()
         if user.role == 'student':
             form.add_error(None, "Student accounts can't sign in here. Please use the login screen on a lab computer instead.")
             return self.form_invalid(form)
         # successful login clears any failed-attempt counter for this account
-        cache.delete(f'failed_login:{user.username.lower()}')
+        cache.delete(f'failed_login:{user.email.lower()}')
         return super().form_valid(form)
 
     def form_invalid(self, form):
-        username = (form.data.get('username') or '').strip().lower()
-        if username:
-            key = f'failed_login:{username}'
+        # Django's AuthenticationForm always names its identity field
+        # "username" internally (a historical quirk), regardless of what
+        # USERNAME_FIELD is set to on the User model — so even though this
+        # form now authenticates by Email, the posted value is still read
+        # from form.data['username']. The login template's input is named
+        # accordingly; nothing else needs to change here.
+        email = (form.data.get('username') or '').strip().lower()
+        if email:
+            key = f'failed_login:{email}'
             count = cache.get(key, 0) + 1
             cache.set(key, count, FAILED_LOGIN_WINDOW_SECONDS)
             if count == FAILED_LOGIN_THRESHOLD:
-                notify_service.notify_failed_login(username, count)
+                notify_service.notify_failed_login(email, count)
         return super().form_invalid(form)
 
     def get_context_data(self, **kwargs):
@@ -297,7 +304,7 @@ class UsersListView(RoleRequiredMixin, ListView):
         if q:
             qs = qs.filter(
                 Q(first_name__icontains=q) | Q(last_name__icontains=q) |
-                Q(username__icontains=q) | Q(id_number__icontains=q)
+                Q(email__icontains=q) | Q(id_number__icontains=q)
             )
         return qs
 
@@ -369,8 +376,8 @@ class UserCreateView(RoleRequiredMixin, ModalFormMixin, CreateView):
         ActivityLog.objects.create(
             actor=self.request.user,
             action='register',
-            target_username=self.object.username,
-            details=f'{self.object.get_full_name() or self.object.username} registered as {self.object.get_role_display()}.'
+            target_identifier=self.object.email or self.object.id_number,
+            details=f'{self.object.display_name} registered as {self.object.get_role_display()}.'
         )
         messages.success(self.request, 'User Registered Successfully.')
         return response
@@ -425,17 +432,17 @@ def _pc_detected_attendance(session):
 
     present, seen_ids = [], set()
     for log in logs:
-        if log.target_username in seen_ids or log.target_username in walk_in_ids:
+        if log.target_identifier in seen_ids or log.target_identifier in walk_in_ids:
             continue
-        seen_ids.add(log.target_username)
-        checkin = SessionCheckIn.objects.filter(session=session, id_number=log.target_username).select_related('student').first()
+        seen_ids.add(log.target_identifier)
+        checkin = SessionCheckIn.objects.filter(session=session, id_number=log.target_identifier).select_related('student').first()
         name = (
-            roster_by_id.get(log.target_username)
-            or (checkin.student.get_full_name() or checkin.student.username if checkin and checkin.student else None)
+            roster_by_id.get(log.target_identifier)
+            or (checkin.student.display_name if checkin and checkin.student else None)
             or session.requester_name or '—'
         )
         present.append({
-            'id_number': log.target_username, 'name': name,
+            'id_number': log.target_identifier, 'name': name,
             'pc': log.pc.pc_id if log.pc else '—', 'time': log.created_at,
         })
 
@@ -450,7 +457,7 @@ def _pc_detected_attendance(session):
         {
             'id_number': c.id_number,
             'name': (
-                (c.student.get_full_name() or c.student.username) if c.student
+                (c.student.display_name) if c.student
                 else c.guest_name if c.checkin_type == 'guest' and c.guest_name
                 else c.id_number
             ),
@@ -686,10 +693,10 @@ def user_activate(request, pk):
         ActivityLog.objects.create(
             actor=request.user,
             action='activate',
-            target_username=target.username,
-            details=f'{target.get_full_name() or target.username} was activated.'
+            target_identifier=target.email or target.id_number,
+            details=f'{target.display_name} was activated.'
         )
-        messages.success(request, f'{target.username} has been activated.')
+        messages.success(request, f'{target.display_name} has been activated.')
     return redirect('users')
 
 
@@ -704,10 +711,10 @@ def user_deactivate(request, pk):
         ActivityLog.objects.create(
             actor=request.user,
             action='deactivate',
-            target_username=target.username,
-            details=f'{target.get_full_name() or target.username} was deactivated.'
+            target_identifier=target.email or target.id_number,
+            details=f'{target.display_name} was deactivated.'
         )
-        messages.warning(request, f'{target.username} has been deactivated.')
+        messages.warning(request, f'{target.display_name} has been deactivated.')
     return redirect('users')
 
 
@@ -720,16 +727,23 @@ class UserDeleteView(RoleRequiredMixin, DeleteView):
     context_object_name = 'target_user'
 
     def form_valid(self, form):
-        username = self.object.username
-        display_name = self.object.get_full_name() or username
+        # Deleting the account you're currently logged in as would remove
+        # the very row the ActivityLog entry below needs to reference as
+        # `actor` (and would also silently log you out mid-request) — so
+        # this is blocked outright rather than allowed to fail.
+        if self.object.pk == self.request.user.pk:
+            messages.error(self.request, "You can't delete your own account while logged into it.")
+            return redirect('users')
+        target_identifier = self.object.email or self.object.id_number
+        display_name = self.object.display_name
         response = super().form_valid(form)
         ActivityLog.objects.create(
             actor=self.request.user,
             action='delete',
-            target_username=username,
+            target_identifier=target_identifier,
             details=f'{display_name} was deleted.'
         )
-        messages.success(self.request, f'{username} has been deleted.')
+        messages.success(self.request, f'{display_name} has been deleted.')
         return response
 
 
@@ -763,11 +777,11 @@ class UserResetPasswordView(RoleRequiredMixin, ModalFormMixin, FormView):
         ActivityLog.objects.create(
             actor=self.request.user,
             action='reset_password',
-            target_username=self.target_user.username,
-            details=f"{self.target_user.get_full_name() or self.target_user.username}'s password was reset by an admin."
+            target_identifier=self.target_user.email or self.target_user.id_number,
+            details=f"{self.target_user.display_name}'s password was reset by an admin."
         )
-        messages.success(self.request, f"{self.target_user.username}'s password has been reset.")
-        if self.is_ajax_request():
+        messages.success(self.request, f"{self.target_user.display_name}'s password has been reset.")
+        if is_modal_request(self.request):
             return JsonResponse({'success': True, 'redirect': reverse('users')})
         return redirect('users')
 
@@ -834,9 +848,9 @@ def export_logs_pdf(request):
     rows = [
         [
             log.created_at.strftime('%Y-%m-%d %H:%M'),
-            log.actor.username if log.actor else '—',
+            log.actor_display,
             log.get_action_display(),
-            log.target_username,
+            log.target_identifier,
             log.details[:80],
         ]
         for log in logs
@@ -883,7 +897,7 @@ def search_requesters(request):
             Q(first_name__icontains=query) |
             Q(last_name__icontains=query) |
             Q(id_number__icontains=query) |
-            Q(username__icontains=query) |
+            Q(email__icontains=query) |
             Q(full_name_concat__icontains=query) |
             Q(full_name_concat_rev__icontains=query)
         )
@@ -898,7 +912,7 @@ def search_requesters(request):
             return 0
         if u.id_number.lower() == q:
             return 0
-        full_name = (u.get_full_name() or u.username).lower()
+        full_name = (u.display_name).lower()
         if full_name.startswith(q) or u.last_name.lower().startswith(q):
             return 1
         return 2
@@ -906,7 +920,7 @@ def search_requesters(request):
     results = sorted(qs, key=_rank)[:15]
     results = [{
         'id': u.pk,
-        'full_name': u.get_full_name() or u.username,
+        'full_name': u.display_name,
         'id_number': u.id_number,
         'role': u.role,
         'department': u.department_display,
@@ -942,14 +956,14 @@ def export_users(request):
     if q:
         qs = qs.filter(
             Q(first_name__icontains=q) | Q(last_name__icontains=q) |
-            Q(username__icontains=q) | Q(id_number__icontains=q)
+            Q(email__icontains=q) | Q(id_number__icontains=q)
         )
 
-    headers = ['Name', 'Username', 'ID Number', 'Department', 'Year Level', 'Role', 'Assigned Lab', 'Status']
+    headers = ['Name', 'Email', 'ID Number', 'Department', 'Year Level', 'Role', 'Assigned Lab', 'Status']
     rows = [
         [
-            u.get_full_name() or u.username,
-            u.username,
+            u.display_name,
+            u.email or '—',
             u.id_number or '—',
             u.department_display or '—',
             u.year_level_display or '—',
@@ -1002,7 +1016,6 @@ class StudentImportView(RoleRequiredMixin, FormView):
         seen_id_numbers = set(
             User.objects.filter(role='student').values_list('id_number', flat=True)
         )
-        seen_usernames = set(User.objects.values_list('username', flat=True))
 
         for i, row in enumerate(rows, start=2):  # row 1 is the header
             errors = validate_row(row, department)
@@ -1016,19 +1029,14 @@ class StudentImportView(RoleRequiredMixin, FormView):
                 skipped.append({'row': i, 'id_number': id_number or '—', 'errors': errors})
                 continue
 
-            username = row.get('username') or id_number
-            base_username = username
-            n = 1
-            while username in seen_usernames:
-                n += 1
-                username = f'{base_username}{n}'
-            seen_usernames.add(username)
             seen_id_numbers.add(id_number)
 
             year_level = parse_year_level(row.get('year_level'))
 
+            # No email and no username for imported Student accounts —
+            # they authenticate at the lab PC with their Student ID Number
+            # and a reservation code, never through the web dashboard.
             user = User(
-                username=username,
                 first_name=row.get('first_name', ''),
                 last_name=row.get('last_name', ''),
                 id_number=id_number,
@@ -1044,11 +1052,11 @@ class StudentImportView(RoleRequiredMixin, FormView):
             ActivityLog.objects.create(
                 actor=self.request.user,
                 action='register',
-                target_username=user.username,
-                details=f'{user.get_full_name() or user.username} imported as Student '
+                target_identifier=user.id_number,
+                details=f'{user.display_name} imported as Student '
                         f'(Department: {department_name(department)}) via Excel/CSV import.'
             )
-            created.append({'row': i, 'id_number': id_number, 'name': user.get_full_name() or user.username})
+            created.append({'row': i, 'id_number': id_number, 'name': user.display_name})
 
         if created:
             messages.success(self.request, f'Imported {len(created)} student{"s" if len(created) != 1 else ""}.')
@@ -1071,8 +1079,8 @@ def user_import_template(request):
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="student_import_template.csv"'
     writer = csv_module.writer(response)
-    writer.writerow(['ID Number', 'First Name', 'Last Name', 'Year Level', 'Username'])
-    writer.writerow(['2026-00123', 'Juan', 'Dela Cruz', '2', ''])
+    writer.writerow(['ID Number', 'First Name', 'Last Name', 'Year Level'])
+    writer.writerow(['2026-00123', 'Juan', 'Dela Cruz', '2'])
     return response
 
 

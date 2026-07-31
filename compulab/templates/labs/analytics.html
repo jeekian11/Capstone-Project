@@ -155,7 +155,7 @@
       <select name="instructor" class="form-control">
         <option value="">All Instructors</option>
         {% for instr in instructors %}
-          <option value="{{ instr.pk }}" {% if selected_instructor == instr.pk|stringformat:"s" %}selected{% endif %}>{{ instr.get_full_name|default:instr.username }}</option>
+          <option value="{{ instr.pk }}" {% if selected_instructor == instr.pk|stringformat:"s" %}selected{% endif %}>{{ instr.display_name }}</option>
         {% endfor %}
       </select>
     </div>
@@ -355,7 +355,7 @@
           {% endif %}
           <div class="ra-instr-avatar"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21v-1a8 8 0 0 1 16 0v1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
           <div style="flex:1">
-            <div class="ra-instr-name">{{ row.instructor.get_full_name|default:row.instructor.username }}</div>
+            <div class="ra-instr-name">{{ row.instructor.display_name }}</div>
             <div class="ra-instr-count">{{ row.sessions }} Reservation{{ row.sessions|pluralize }}</div>
             <div class="ra-instr-bar"><div class="ra-instr-bar-fill" style="width:{{ row.bar_pct }}%;"></div></div>
           </div>

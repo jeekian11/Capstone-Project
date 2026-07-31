@@ -301,10 +301,10 @@ def notify_equipment_issue_resolved(issue):
 # Security
 # ---------------------------------------------------------------- #
 
-def notify_failed_login(username, attempt_count):
+def notify_failed_login(identifier, attempt_count):
     notify(
         admins(),
         'Multiple failed login attempts',
-        f'{attempt_count} failed login attempts were detected for account "{username}".',
+        f'{attempt_count} failed login attempts were detected for account "{identifier}".',
         'login_security_alert',
     )

@@ -42,7 +42,7 @@ def _backup_then_wipe():
             ws.append([
                 timezone.localtime(log.captured_at).strftime('%Y-%m-%d %H:%M:%S'),
                 f'{log.pc.lab.name} — {log.pc.pc_id}',
-                (log.student.get_full_name() or log.student.username) if log.student else '—',
+                (log.student.display_name) if log.student else '—',
                 f'{log.session.requester_name} ({log.session.date} {log.session.start_time}-{log.session.end_time})' if log.session else '—',
                 log.window_title or '—',
             ])

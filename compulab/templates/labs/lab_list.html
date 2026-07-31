@@ -198,7 +198,7 @@ html[data-theme="light"] .ic-orange{ color:#fff; }
                 {% endif %}
                 <div class="ml-lab-meta">
                   <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-                  In-charge: {% if c.incharge %}{{ c.incharge.get_full_name|default:c.incharge.username }}{% else %}Unassigned{% endif %}
+                  In-charge: {% if c.incharge %}{{ c.incharge.display_name }}{% else %}Unassigned{% endif %}
                 </div>
                 <div class="ml-lab-meta">
                   <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 20h8M12 16v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -223,7 +223,7 @@ html[data-theme="light"] .ic-orange{ color:#fff; }
             <div class="ml-card-actions">
               <a href="{% url 'pc_status' %}?lab={{ c.lab.pk }}" class="ml-btn">View PCs</a>
               <a href="{% url 'lab_update' c.lab.pk %}" class="ml-btn js-modal-link">Edit Lab</a>
-              <a href="{% url 'pc_create' %}?lab={{ c.lab.pk }}" class="ml-btn">Add PC</a>
+              <a href="{% url 'pc_create' %}?lab={{ c.lab.pk }}" class="ml-btn js-modal-link">Add PC</a>
               <form method="post" action="{% url 'lab_delete' c.lab.pk %}" style="display:inline"
                     onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this lab?', text: 'This action cannot be undone. {{ c.lab.name|escapejs }}{% if c.total %} and its {{ c.total }} PC{{ c.total|pluralize }}{% endif %} will be removed.', confirmButtonText: 'Yes, delete lab'}); return false;">
                 {% csrf_token %}

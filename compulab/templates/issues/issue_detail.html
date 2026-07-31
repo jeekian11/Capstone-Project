@@ -54,7 +54,7 @@
         <select name="assigned_technician" id="assigned_technician" class="form-control" required>
           <option value="">Select technician</option>
           {% for tech in technicians %}
-            <option value="{{ tech.pk }}" {% if issue.assigned_technician_id == tech.pk %}selected{% endif %}>{{ tech.get_full_name|default:tech.username }} ({{ tech.get_role_display }})</option>
+            <option value="{{ tech.pk }}" {% if issue.assigned_technician_id == tech.pk %}selected{% endif %}>{{ tech.display_name }} ({{ tech.get_role_display }})</option>
           {% endfor %}
         </select>
       </div>

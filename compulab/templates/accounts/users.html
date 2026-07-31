@@ -227,7 +227,7 @@ html[data-theme="light"] .um-pill.student{ color:#fff; }
       </div>
       <div>
         <label class="um-label" for="q">Search</label>
-        <input type="text" name="q" id="q" class="um-input" placeholder="Search name, username, or ID..." value="{{ search_query }}">
+        <input type="text" name="q" id="q" class="um-input" placeholder="Search name, email, or ID..." value="{{ search_query }}">
       </div>
       <div>
         <a href="{% url 'user_export' %}?role={{ selected_role }}&lab={{ selected_lab }}&status={{ selected_status }}&department={{ selected_department }}&q={{ search_query }}&format=pdf" class="um-btn">
@@ -263,7 +263,7 @@ html[data-theme="light"] .um-pill.student{ color:#fff; }
               <th><input type="checkbox" class="um-checkbox" onclick="document.querySelectorAll('.um-row-check').forEach(c=>c.checked=this.checked)"></th>
               <th>#</th>
               <th>Name</th>
-              <th>Username</th>
+              <th>Email</th>
               <th>ID Number</th>
               <th>Department</th>
               <th>Role</th>
@@ -280,15 +280,15 @@ html[data-theme="light"] .um-pill.student{ color:#fff; }
                 <td>
                   <div class="um-name-cell">
                     <div class="um-avatar ic-{% if u.role == 'admin' %}blue{% elif u.role == 'incharge' %}purple{% elif u.role == 'instructor' %}orange{% else %}gold{% endif %}">
-                      {{ u.first_name|first|default:u.username|first|upper }}
+                      {{ u.first_name|first|default:u.display_name|first|upper }}
                     </div>
                     <div>
-                      <div class="um-name-main">{{ u.get_full_name|default:u.username }}</div>
+                      <div class="um-name-main">{{ u.display_name }}</div>
                       <div class="um-name-sub">{{ u.get_role_display }}</div>
                     </div>
                   </div>
                 </td>
-                <td>{{ u.username }}</td>
+                <td>{{ u.email|default:"—" }}</td>
                 <td>{{ u.id_number|default:"—" }}</td>
                 <td>{{ u.department_display|default:"—" }}</td>
                 <td><span class="um-pill {{ u.role }}">{{ u.get_role_display }}</span></td>
@@ -312,7 +312,7 @@ html[data-theme="light"] .um-pill.student{ color:#fff; }
                     {% endif %}
                     {% if u.is_active %}
                       <form method="post" action="{% url 'user_deactivate' u.pk %}" style="display:inline"
-                            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Deactivate this account?', text: '{{ u.get_full_name|default:u.username|escapejs }} won\'t be able to log in or hold a reservation until reactivated.', confirmButtonText: 'Yes, deactivate'}); return false;">
+                            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Deactivate this account?', text: '{{ u.display_name|escapejs }} won\'t be able to log in or hold a reservation until reactivated.', confirmButtonText: 'Yes, deactivate'}); return false;">
                         {% csrf_token %}
                         <button type="submit" class="um-icon-btn" title="Deactivate">
                           <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M6 6l12 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -320,7 +320,7 @@ html[data-theme="light"] .um-pill.student{ color:#fff; }
                       </form>
                     {% else %}
                       <form method="post" action="{% url 'user_activate' u.pk %}" style="display:inline"
-                            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Activate this account?', text: '{{ u.get_full_name|default:u.username|escapejs }} will be able to log in again.', icon: 'question', confirmButtonText: 'Yes, activate', confirmButtonColor: '#3ed6c4'}); return false;">
+                            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Activate this account?', text: '{{ u.display_name|escapejs }} will be able to log in again.', icon: 'question', confirmButtonText: 'Yes, activate', confirmButtonColor: '#3ed6c4'}); return false;">
                         {% csrf_token %}
                         <button type="submit" class="um-icon-btn" title="Activate">
                           <svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -328,7 +328,7 @@ html[data-theme="light"] .um-pill.student{ color:#fff; }
                       </form>
                     {% endif %}
                     <form method="post" action="{% url 'user_delete' u.pk %}" style="display:inline"
-                          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this user?', text: 'This action cannot be undone. {{ u.get_full_name|default:u.username|escapejs }} and all of their account data will be permanently removed.', confirmButtonText: 'Yes, delete user'}); return false;">
+                          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this user?', text: 'This action cannot be undone. {{ u.display_name|escapejs }} and all of their account data will be permanently removed.', confirmButtonText: 'Yes, delete user'}); return false;">
                       {% csrf_token %}
                       <button type="submit" class="um-icon-btn danger" title="Delete user">
                         <svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>

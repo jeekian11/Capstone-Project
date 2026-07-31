@@ -27,7 +27,7 @@
         {% endif %}
       </div>
       <div>
-        <div style="font-family:var(--font-display); font-size:15px; font-weight:600; color:var(--text);">{{ object.get_full_name|default:object.username }}</div>
+        <div style="font-family:var(--font-display); font-size:15px; font-weight:600; color:var(--text);">{{ object.display_name }}</div>
         <div style="font-size:12px; color:var(--text-dim); text-transform:capitalize;">{{ object.role }}</div>
       </div>
     </div>

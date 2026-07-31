@@ -41,6 +41,24 @@ class PCForm(forms.ModelForm):
         model = PC
         fields = ['lab', 'pc_id', 'ip_address', 'status']
 
+    # Accessibility: wire each widget's aria-describedby to its helptext /
+    # error message ids (see labs/pc_edit_form.html, which renders those
+    # ids as "id_<field>_help" / "id_<field>_error"), and flag aria-invalid
+    # on fields that failed validation, so the "Add PC" modal announces
+    # errors properly to screen readers instead of relying on color alone.
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        help_ids = {'ip_address': 'id_ip_address_help', 'status': 'id_status_help'}
+        for name, field in self.fields.items():
+            described_by = []
+            if name in help_ids:
+                described_by.append(help_ids[name])
+            if self.is_bound and self.errors.get(name):
+                field.widget.attrs['aria-invalid'] = 'true'
+                described_by.append(f'id_{name}_error')
+            if described_by:
+                field.widget.attrs['aria-describedby'] = ' '.join(described_by)
+
     def clean_ip_address(self):
         ip_address = self.cleaned_data.get('ip_address')
         if not ip_address:

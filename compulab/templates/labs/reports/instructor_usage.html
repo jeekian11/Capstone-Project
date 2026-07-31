@@ -21,7 +21,7 @@
       <select name="instructor" class="form-control">
         <option value="">All instructors</option>
         {% for i in instructors %}
-          <option value="{{ i.pk }}" {% if selected_instructor == i.pk|stringformat:"s" %}selected{% endif %}>{{ i.get_full_name|default:i.username }}</option>
+          <option value="{{ i.pk }}" {% if selected_instructor == i.pk|stringformat:"s" %}selected{% endif %}>{{ i.display_name }}</option>
         {% endfor %}
       </select>
     </div>
@@ -47,7 +47,7 @@
     <tbody>
       {% for row in rows %}
         <tr>
-          <td>{{ row.instructor.get_full_name|default:row.instructor.username }}</td>
+          <td>{{ row.instructor.display_name }}</td>
           <td>{{ row.labs_used|join:", " }}</td>
           <td>{{ row.total_hours }} hrs</td>
           <td>{{ row.num_sessions }}</td>

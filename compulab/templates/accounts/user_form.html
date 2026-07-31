@@ -6,13 +6,13 @@
 <div class="page-header">
   <div>
     <h1>{% if object %}Edit user{% else %}Add new user{% endif %}</h1>
-    <div class="sub">{% if object %}{{ object.get_full_name|default:object.username }}{% else %}Create an account for an instructor, lab in-charge, admin, or student{% endif %}</div>
+    <div class="sub">{% if object %}{{ object.display_name }}{% else %}Create an account for an instructor, lab in-charge, admin, or student{% endif %}</div>
   </div>
 </div>
 
 <div class="card" style="max-width:640px">
   <form method="post" novalidate
-        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: '{% if object %}Save changes?{% else %}Create this user?{% endif %}', text: '{% if object %}Account details for {{ object.get_full_name|default:object.username|escapejs }} will be updated.{% else %}A new account will be created with the details you entered.{% endif %}', icon: 'question', confirmButtonText: '{% if object %}Yes, save{% else %}Yes, create{% endif %}', confirmButtonColor: '#3ed6c4'}); return false;">
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: '{% if object %}Save changes?{% else %}Create this user?{% endif %}', text: '{% if object %}Account details for {{ object.display_name|escapejs }} will be updated.{% else %}A new account will be created with the details you entered.{% endif %}', icon: 'question', confirmButtonText: '{% if object %}Yes, save{% else %}Yes, create{% endif %}', confirmButtonColor: '#3ed6c4'}); return false;">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div class="form-errors">{{ form.non_field_errors }}</div>
@@ -31,37 +31,33 @@
       </div>
     </div>
 
-    {% if form.username %}
-    <div class="form-group" data-hide-for-role="student">
-      <label class="form-label" for="{{ form.username.id_for_label }}">Username</label>
-      {{ form.username }}
-      <span class="helptext">Used to log into SCLAMS (the dashboard). Not the same as ID Number below. Not needed for Students — their Student ID is used to sign in at the lab PC instead.</span>
-      {% if form.username.errors %}<div class="form-errors">{{ form.username.errors|join:", " }}</div>{% endif %}
+    {% if form.email %}
+    <div class="form-group" data-show-for-roles="admin incharge instructor">
+      <label class="form-label" for="{{ form.email.id_for_label }}">Email (Gmail)</label>
+      {{ form.email }}
+      {% if form.email.errors %}<div class="form-errors">{{ form.email.errors|join:", " }}</div>{% endif %}
     </div>
     {% endif %}
 
     {% if form.id_number %}
-    <div class="form-group">
+    <div class="form-group" data-show-for-roles="student instructor">
       <label class="form-label" for="{{ form.id_number.id_for_label }}">ID Number</label>
       {{ form.id_number }}
-      <span class="helptext">Student/Instructor ID — this is what they present at the lab PC and what reservation requests are matched against. Required for Students — it's their only login credential for PC access — and links the account to a reservation.</span>
       {% if form.id_number.errors %}<div class="form-errors">{{ form.id_number.errors|join:", " }}</div>{% endif %}
     </div>
     {% endif %}
 
     {% if form.department %}
-    <div class="form-row">
+    <div class="form-row" data-show-for-roles="student instructor">
       <div class="form-group">
         <label class="form-label" for="{{ form.department.id_for_label }}">Department</label>
         {{ form.department }}
-        <span class="helptext">Which department/college this account belongs to. Shown wherever this user's details are displayed.</span>
         {% if form.department.errors %}<div class="form-errors">{{ form.department.errors|join:", " }}</div>{% endif %}
       </div>
       {% if form.year_level %}
-      <div class="form-group" data-role-field="student">
+      <div class="form-group" data-show-for-roles="student">
         <label class="form-label" for="{{ form.year_level.id_for_label }}">Year Level</label>
         {{ form.year_level }}
-        <span class="helptext">Students only — options depend on the Department selected above.</span>
         {% if form.year_level.errors %}<div class="form-errors">{{ form.year_level.errors|join:", " }}</div>{% endif %}
       </div>
       {% endif %}
@@ -69,13 +65,21 @@
     {% endif %}
 
     <div class="form-row">
+      {% if object %}
+      <div class="form-group">
+        <label class="form-label">Role</label>
+        <div class="static-value">{{ object.get_role_display }}</div>
+        <input type="hidden" id="id_role_fixed" value="{{ object.role }}">
+       
+      </div>
+      {% else %}
       <div class="form-group">
         <label class="form-label" for="{{ form.role.id_for_label }}">Role</label>
         {{ form.role }}
-        <span class="helptext">Admin, Lab In-Charge, and Instructor accounts need a password. Students sign in at the lab PC with their Student ID instead — no password required.</span>
         {% if form.role.errors %}<div class="form-errors">{{ form.role.errors|join:", " }}</div>{% endif %}
       </div>
-      <div class="form-group">
+      {% endif %}
+      <div class="form-group" data-show-for-roles="student incharge">
         <label class="form-label" for="{{ form.assigned_lab.id_for_label }}">Assigned lab</label>
         {{ form.assigned_lab }}
         {% if form.assigned_lab.errors %}<div class="form-errors">{{ form.assigned_lab.errors|join:", " }}</div>{% endif %}
@@ -91,9 +95,9 @@
     {% endif %}
 
     {% if form.password1 %}
-    <div class="form-row" data-hide-for-role="student">
+    <div class="form-row" data-show-for-roles="admin incharge instructor">
       <div class="form-group">
-        <label class="form-label" for="{{ form.password1.id_for_label }}">Password</label>
+        <label class="form-label" for="{{ form.password1.id_for_label }}">{% if object %}New password{% else %}Password{% endif %}</label>
         {{ form.password1 }}
         <span class="helptext">{{ form.password1.help_text }}</span>
         {% if form.password1.errors %}<div class="form-errors">{{ form.password1.errors|join:", " }}</div>{% endif %}
@@ -116,19 +120,31 @@
 <script>
 (function() {
   var roleSelect = document.getElementById('{{ form.role.id_for_label }}');
+  var fixedRoleInput = document.getElementById('id_role_fixed');
   var deptSelect = document.getElementById('{{ form.department.id_for_label }}');
   var yearSelect = document.getElementById('{{ form.year_level.id_for_label }}');
   var deptYearLevels = {{ department_year_levels_json|default:"{}"|safe }};
   var initialYearLevel = "{{ form.year_level.value|default_if_none:'' }}";
 
+  function currentRole() {
+    // Create form: a live, changeable <select>. Edit form: no select at
+    // all (role is permanent once created) — read the fixed hidden value
+    // rendered from the account's existing role instead.
+    if (roleSelect) return roleSelect.value;
+    if (fixedRoleInput) return fixedRoleInput.value;
+    return '';
+  }
+
   function updateVisibility() {
-    if (!roleSelect) return;
-    var role = roleSelect.value;
-    document.querySelectorAll('[data-role-field]').forEach(function(el) {
-      el.style.display = (el.dataset.roleField === role) ? '' : 'none';
-    });
-    document.querySelectorAll('[data-hide-for-role]').forEach(function(el) {
-      el.style.display = (el.dataset.hideForRole === role) ? 'none' : '';
+    var role = currentRole();
+    if (!role) return;
+    // Any element carrying data-show-for-roles is only visible when the
+    // currently selected role is in its (space-separated) allow-list.
+    // Fields with no such attribute (Role itself, First/Last name, Active)
+    // are always shown, so they're simply left untouched here.
+    document.querySelectorAll('[data-show-for-roles]').forEach(function(el) {
+      var allowed = el.dataset.showForRoles.split(/\s+/);
+      el.style.display = (allowed.indexOf(role) !== -1) ? '' : 'none';
     });
   }
 
@@ -152,8 +168,8 @@
 
   if (roleSelect) {
     roleSelect.addEventListener('change', updateVisibility);
-    updateVisibility();
   }
+  updateVisibility();
   if (deptSelect) {
     deptSelect.addEventListener('change', function() { updateYearLevelOptions(); });
     updateYearLevelOptions(initialYearLevel);

@@ -194,7 +194,7 @@ class ClassRoster(models.Model):
         }
         requester_name = self.instructor.get_full_name() if self.instructor else ''
         requester_id_number = (
-            (getattr(self.instructor, 'id_number', '') or self.instructor.username)
+            (getattr(self.instructor, 'id_number', '') or self.instructor.display_name)
             if self.instructor else ''
         )
         student_count = self.students.count()
@@ -275,8 +275,8 @@ class RosterStudent(models.Model):
 
     def save(self, *args, **kwargs):
         if self.student_id and (not self.id_number or not self.full_name):
-            self.id_number = self.id_number or self.student.id_number or self.student.username
-            self.full_name = self.full_name or self.student.get_full_name() or self.student.username
+            self.id_number = self.id_number or self.student.id_number or self.student.display_name
+            self.full_name = self.full_name or self.student.get_full_name() or self.student.display_name
         super().save(*args, **kwargs)
 
     def __str__(self):

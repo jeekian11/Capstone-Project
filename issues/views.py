@@ -114,7 +114,7 @@ def issue_assign(request, pk):
             issue.assigned_technician = technician
             issue.status = 'assigned'
             issue.save(update_fields=['assigned_technician', 'status'])
-            messages.success(request, f'Issue assigned to {technician.get_full_name() or technician.username}.')
+            messages.success(request, f'Issue assigned to {technician.display_name}.')
         else:
             messages.error(request, 'Please select a valid technician.')
     return modal_redirect(request, 'issue_detail', pk=issue.pk)

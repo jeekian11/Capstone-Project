@@ -205,6 +205,8 @@
     .form-label { display: block; font-size: 12px; font-weight: 500; color: var(--text-dim); margin-bottom: 6px; }
     .form-control { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-family: inherit; background: var(--surface-raised); color: var(--text); }
     .form-control:focus { outline: none; border-color: var(--topbar-accent); box-shadow: 0 0 0 3px rgba(62,214,196,0.15); }
+    /* read-only display of a value that can't be edited on this form (e.g. Role after account creation) */
+    .static-value { padding: 9px 12px; border: 1px dashed var(--border); border-radius: 8px; font-size: 13px; color: var(--text-dim); background: transparent; }
     /* fallback: Django's auto-generated widgets don't carry the form-control class */
     .card form input[type="text"], .card form input[type="email"], .card form input[type="password"],
     .card form input[type="number"], .card form input[type="date"], .card form input[type="time"],
@@ -293,10 +295,10 @@
 </div>
 
 <div class="app-modal-backdrop" id="appModalBackdrop">
-  <div class="app-modal" id="appModal">
-    <button type="button" class="app-modal-close" onclick="closeAppModal()" aria-label="Close">&times;</button>
+  <div class="app-modal" id="appModal" role="dialog" aria-modal="true" aria-labelledby="appModalTitle" tabindex="-1">
+    
     <div class="app-modal-body" id="appModalBody">
-      <div class="app-modal-loading">Loading…</div>
+      <div class="app-modal-loading" id="appModalTitle">Loading…</div>
     </div>
   </div>
 </div>
@@ -309,10 +311,20 @@
    behind it. Force it above our modal so it's actually visible/clickable. */
 div.swal2-container{z-index:2100 !important;}
 .app-modal-backdrop.open{display:flex;}
-.app-modal{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:22px; width:560px; max-width:100%; position:relative; margin:auto;}
-.app-modal-close{position:absolute; top:12px; right:14px; background:none; border:none; color:var(--text-faint); font-size:20px; cursor:pointer; line-height:1; z-index:1;}
+.app-modal{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:22px; width:560px; max-width:100%; max-height:calc(100vh - 80px); overflow-y:auto; position:relative; margin:auto;}
+.app-modal:focus{outline:none;}
+.app-modal-close{position:absolute; top:12px; right:14px; background:none; border:none; color:var(--text-faint); font-size:20px; cursor:pointer; line-height:1; z-index:1; width:28px; height:28px; border-radius:6px;}
+.app-modal-close:hover{color:var(--text); background:var(--border-soft);}
+.app-modal-close:focus-visible, .app-modal a:focus-visible, .app-modal button:focus-visible,
+.app-modal input:focus-visible, .app-modal select:focus-visible, .app-modal textarea:focus-visible{
+  outline:2px solid var(--blue); outline-offset:2px;
+}
 .app-modal-body .page-header{margin-top:0;}
 .app-modal-loading{padding:40px 0; text-align:center; color:var(--text-dim); font-size:13px;}
+@media (max-width:640px){
+  .app-modal-backdrop{padding:16px 10px; align-items:flex-start;}
+  .app-modal{padding:18px; max-height:calc(100vh - 32px); border-radius:10px;}
+}
 </style>
 
 <script src="{% static 'vendor/sweetalert2/sweetalert2.all.min.js' %}"></script>
@@ -431,6 +443,45 @@ var appModalBody = document.getElementById('appModalBody');
 // the add/edit endpoint) — so we remember the fetch URL here and use that
 // as the submit target whenever the form itself has no action="".
 var appModalSourceUrl = null;
+// Remembers whatever had focus before the modal opened (e.g. the "Add PC"
+// link) so we can restore it on close, and used to build a simple focus
+// trap while the modal is open — both expected of an accessible dialog.
+var appModalPreviouslyFocused = null;
+
+function appModalFocusableEls() {
+  return Array.prototype.slice.call(
+    appModal.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')
+  ).filter(function (el) { return el.offsetParent !== null; });
+}
+
+// Point aria-labelledby at whatever heading the loaded form actually has
+// (e.g. "Add new PC") instead of the generic "Loading…" placeholder, so
+// screen readers announce a meaningful dialog title.
+function appModalSyncLabel() {
+  var heading = appModalBody.querySelector('h1, h2, .page-header h1');
+  if (heading) {
+    heading.id = 'appModalTitle';
+    appModal.setAttribute('aria-labelledby', 'appModalTitle');
+  }
+}
+
+function appModalTrapFocus(e) {
+  if (e.key !== 'Tab') return;
+  var focusable = appModalFocusableEls();
+  if (!focusable.length) {
+    e.preventDefault();
+    return;
+  }
+  var first = focusable[0];
+  var last = focusable[focusable.length - 1];
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
 
 // <script> tags inserted via innerHTML never auto-execute — the browser
 // parses them but won't run them. Form pages like roster_form.html,
@@ -451,19 +502,28 @@ function runAppModalScripts() {
   });
 }
 
-function openAppModal(url) {
-  appModalBody.innerHTML = '<div class="app-modal-loading">Loading…</div>';
+function openAppModal(url, triggerEl) {
+  appModalPreviouslyFocused = triggerEl || document.activeElement;
+  appModalBody.innerHTML = '<div class="app-modal-loading" id="appModalTitle">Loading…</div>';
+  appModal.setAttribute('aria-labelledby', 'appModalTitle');
   appModalBackdrop.classList.add('open');
   appModalSourceUrl = url;
+  document.body.style.overflow = 'hidden';
   fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
     .then(function (r) { return r.text(); })
     .then(function (html) {
       appModalBody.innerHTML = html;
       bindAppModalForm();
       runAppModalScripts();
+      appModalSyncLabel();
+      // Move focus into the dialog once its real content has rendered —
+      // the first field if there is one, otherwise the dialog itself.
+      var focusable = appModalFocusableEls();
+      (focusable[0] || appModal).focus();
     })
     .catch(function () {
       appModalBody.innerHTML = '<div class="app-modal-loading">Could not load this. Please try again.</div>';
+      appModal.focus();
     });
 }
 
@@ -471,10 +531,40 @@ function closeAppModal() {
   appModalBackdrop.classList.remove('open');
   appModalBody.innerHTML = '<div class="app-modal-loading">Loading…</div>';
   appModalSourceUrl = null;
+  document.body.style.overflow = '';
+  if (appModalPreviouslyFocused && typeof appModalPreviouslyFocused.focus === 'function') {
+    appModalPreviouslyFocused.focus();
+  }
+  appModalPreviouslyFocused = null;
+}
+
+function appModalShowSubmitError(message) {
+  if (typeof Swal === 'undefined') {
+    alert(message);
+    return;
+  }
+  var theme = compulabSwalTheme();
+  Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon: 'error',
+    title: message,
+    showConfirmButton: false,
+    timer: 5000,
+    timerProgressBar: true,
+    background: theme.background,
+    color: theme.color,
+  });
 }
 
 function submitAppModalForm(form) {
   var fd = new FormData(form);
+  // Disable the submit button(s) while in flight so a slow request can't
+  // be double-submitted by an extra click/tap.
+  var submitBtns = form.querySelectorAll('button[type="submit"]');
+  submitBtns.forEach(function (b) { b.disabled = true; });
+  var reEnable = function () { submitBtns.forEach(function (b) { b.disabled = false; }); };
+
   fetch(form.getAttribute('action') || appModalSourceUrl || window.location.href, {
     method: 'POST',
     headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -483,20 +573,45 @@ function submitAppModalForm(form) {
     .then(function (r) {
       var ct = r.headers.get('content-type') || '';
       if (ct.indexOf('application/json') !== -1) {
-        return r.json().then(function (data) { return { json: data }; });
+        return r.json().then(function (data) { return { json: data, ok: r.ok }; });
       }
-      return r.text().then(function (html) { return { html: html }; });
+      if (!r.ok) {
+        // Something failed server-side (500, etc.) without returning our
+        // expected JSON — don't dump a raw error page into the modal;
+        // keep the form + whatever the user typed intact and just report it.
+        throw new Error('server error');
+      }
+      return r.text().then(function (html) { return { html: html, ok: r.ok }; });
     })
     .then(function (result) {
+      reEnable();
       if (result.json && result.json.success) {
         closeAppModal();
         window.location.reload();
+      } else if (result.json && !result.json.success) {
+        appModalShowSubmitError(result.json.error || 'Something went wrong. Please try again.');
       } else if (result.html) {
-        // Re-render form with validation errors
+        // Re-render form with validation errors — the modal itself stays
+        // open (per spec: failed/invalid submissions never close it), we
+        // just swap in the error state and move focus to the first
+        // invalid field so screen reader / keyboard users land on it.
         appModalBody.innerHTML = result.html;
         bindAppModalForm();
         runAppModalScripts();
+        appModalSyncLabel();
+        var firstErrorGroup = appModalBody.querySelector('.form-errors');
+        var firstField = firstErrorGroup && firstErrorGroup.closest('.form-group')
+          ? firstErrorGroup.closest('.form-group').querySelector('input, select, textarea')
+          : appModalBody.querySelector('.is-invalid, [aria-invalid="true"]');
+        (firstField || appModalFocusableEls()[0] || appModal).focus();
       }
+    })
+    .catch(function () {
+      // Network failure or unexpected server error — the spec calls for
+      // the modal to stay open (and the form's contents intact) so the
+      // user can just retry instead of losing what they typed.
+      reEnable();
+      appModalShowSubmitError('Could not save — check your connection and try again.');
     });
 }
 
@@ -526,7 +641,7 @@ document.addEventListener('click', function (e) {
   var trigger = e.target.closest('.js-modal-link');
   if (trigger) {
     e.preventDefault();
-    openAppModal(trigger.getAttribute('href'));
+    openAppModal(trigger.getAttribute('href'), trigger);
   }
 });
 
@@ -534,7 +649,9 @@ appModalBackdrop.addEventListener('click', function (e) {
   if (e.target === appModalBackdrop) closeAppModal();
 });
 document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape' && appModalBackdrop.classList.contains('open')) closeAppModal();
+  if (!appModalBackdrop.classList.contains('open')) return;
+  if (e.key === 'Escape') closeAppModal();
+  appModalTrapFocus(e);
 });
 
 </script>

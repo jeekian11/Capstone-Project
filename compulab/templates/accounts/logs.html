@@ -30,7 +30,7 @@
       <select name="actor" class="form-control">
         <option value="">All users</option>
         {% for a in actors %}
-          <option value="{{ a.pk }}" {% if selected_actor == a.pk|stringformat:"s" %}selected{% endif %}>{{ a.get_full_name|default:a.username }}</option>
+          <option value="{{ a.pk }}" {% if selected_actor == a.pk|stringformat:"s" %}selected{% endif %}>{{ a.display_name }}</option>
         {% endfor %}
       </select>
     </div>
@@ -59,7 +59,7 @@
           <td>{{ log.created_at|date:"M d, Y H:i" }}</td>
           <td>{{ log.actor_display }}</td>
           <td><span class="status-pill pill-{{ log.action }}">{{ log.get_action_display }}</span></td>
-          <td>{{ log.target_username }}</td>
+          <td>{{ log.target_identifier }}</td>
           <td style="color:#666">{{ log.details }}</td>
         </tr>
       {% empty %}
