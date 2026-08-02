@@ -14,6 +14,8 @@ calling Notification.objects.create() directly, so that:
 """
 from django.contrib.auth import get_user_model
 from notifications.models import Notification, AlertSettings
+from django.core.mail import send_mail
+from django.conf import settings
 
 User = get_user_model()
 
@@ -56,9 +58,6 @@ def incharge_for_lab(lab):
 
 
 def notify(users, title, message, notification_type, lab=None):
-    """Create one Notification per user in `users` for an auto-generated
-    event, skipping entirely (for everyone) if the Admin has turned that
-    event category off in Alert Settings. De-duplicates the recipient list."""
     if not _event_enabled(notification_type):
         return []
     seen = set()
@@ -82,7 +81,23 @@ def notify(users, title, message, notification_type, lab=None):
             'lab_id': notification.lab_id,
             'created_at': notification.created_at.isoformat(),
         })
+
+        # --- BAGONG PARTE: magpadala rin ng totoong email ---
+        if user.email:
+            try:
+                send_mail(
+                    subject=title,
+                    message=message,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                    fail_silently=True,
+                )
+            except Exception:
+                pass  # huwag hayaang mapatigil ang notification kung mag-fail ang email
+        # -----------------------------------------------------
+
     return created
+
 
 
 def _lab_recipients(lab, include_admins=True):

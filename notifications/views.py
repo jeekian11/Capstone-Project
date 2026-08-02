@@ -131,7 +131,7 @@ class NotificationComposeView(RoleRequiredMixin, ModalFormMixin, FormView):
             )
             count += 1
 
-        messages.success(self.request, f'Notification Sent to {count} recipient{"s" if count != 1 else ""}.')
+        messages.success(self.request, f'Notification sent to {count} recipient{"s" if count != 1 else ""}.')
         return super().form_valid(form)
 
 

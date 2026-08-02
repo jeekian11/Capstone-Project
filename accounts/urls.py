@@ -23,4 +23,5 @@ urlpatterns = [
     path('attendance/session/<int:pk>/mark/', views.session_attendance_mark, name='session_attendance_mark'),
     path('api/search-requesters/', views.search_requesters, name='search_requesters'),
     path('set-theme/', views.set_theme, name='set_theme'),
+    path('verify-email/<uidb64>/<token>/', views.verify_email, name='verify_email'),
 ]

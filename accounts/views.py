@@ -1,3 +1,9 @@
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.template.loader import render_to_string
 from django.shortcuts import redirect, get_object_or_404, render
 from django.http import JsonResponse
 from django.db.models import Q, Value
@@ -29,6 +35,12 @@ FAILED_LOGIN_WINDOW_SECONDS = 15 * 60
 class CompulabLoginView(LoginView):
     template_name = 'registration/login.html'
 
+    def get_success_url(self):
+        # Ignore ?next=... completely — always route through role_redirect
+        # so each role always lands on their own dashboard, never on a
+        # page they might not have permission to view.
+        return reverse('role_redirect')
+
     def form_valid(self, form):
         # Students authenticate at the lab computer with their Student ID
         # Number + a reservation code (see labs.ReservationPCLoginView),
@@ -37,6 +49,47 @@ class CompulabLoginView(LoginView):
         user = form.get_user()
         if user.role == 'student':
             form.add_error(None, "Student accounts can't sign in here. Please use the login screen on a lab computer instead.")
+            return self.form_invalid(form)
+        if not user.email_verified:
+            form.add_error(None, 'Please verify your email first. Check your Gmail inbox for the verification link.')
+            return self.form_invalid(form)
+        # successful login clears any failed-attempt counter for this account
+        cache.delete(f'failed_login:{user.email.lower()}')
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        # Django's AuthenticationForm always names its identity field
+        # "username" internally (a historical quirk), regardless of what
+        # USERNAME_FIELD is set to on the User model — so even though this
+        # form now authenticates by Email, the posted value is still read
+        # from form.data['username']. The login template's input is named
+        # accordingly; nothing else needs to change here.
+        email = (form.data.get('username') or '').strip().lower()
+        if email:
+            key = f'failed_login:{email}'
+            count = cache.get(key, 0) + 1
+            cache.set(key, count, FAILED_LOGIN_WINDOW_SECONDS)
+            if count == FAILED_LOGIN_THRESHOLD:
+                notify_service.notify_failed_login(email, count)
+        return super().form_invalid(form)
+
+    def get_context_data(self, **kwargs):
+        from labs.models import PC
+        ctx = super().get_context_data(**kwargs)
+        ctx['pc_count'] = PC.objects.count()
+        return ctx
+    
+    def form_valid(self, form):
+        # Students authenticate at the lab computer with their Student ID
+        # Number + a reservation code (see labs.ReservationPCLoginView),
+        # never here — this is the web management system, which signs in
+        # with Email + Password and is off-limits to student accounts.
+        user = form.get_user()
+        if user.role == 'student':
+            form.add_error(None, "Student accounts can't sign in here. Please use the login screen on a lab computer instead.")
+            return self.form_invalid(form)
+        if not user.email_verified:
+            form.add_error(None, 'Please verify your email first. Check your Gmail inbox for the verification link.')
             return self.form_invalid(form)
         # successful login clears any failed-attempt counter for this account
         cache.delete(f'failed_login:{user.email.lower()}')
@@ -245,15 +298,27 @@ class InstructorDashboardView(RoleRequiredMixin, TemplateView):
     template_name = 'dashboard/instructor.html'
 
     def get_context_data(self, **kwargs):
+        import calendar as cal_module
+        import json
+        from datetime import date, timedelta
         from notifications.models import Notification
         from scheduling.models import Session, SessionRequest
         from django.utils import timezone
         ctx = super().get_context_data(**kwargs)
-        today = timezone.now().date()
+        now = timezone.localtime()
+        today = now.date()
+        ctx['today'] = today
+
+        ctx['greeting'] = (
+            'Good Morning' if now.hour < 12 else
+            'Good Afternoon' if now.hour < 18 else
+            'Good Evening'
+        )
 
         ctx['upcoming_sessions'] = Session.objects.filter(
             instructor=self.request.user, date__gte=today
         ).select_related('lab').order_by('date', 'start_time')[:8]
+        ctx['next_class'] = ctx['upcoming_sessions'][0] if ctx['upcoming_sessions'] else None
         ctx['todays_sessions_count'] = Session.objects.filter(
             instructor=self.request.user, date=today
         ).count()
@@ -262,12 +327,113 @@ class InstructorDashboardView(RoleRequiredMixin, TemplateView):
             instructor=self.request.user, status='pending'
         ).count()
 
+        week_start = today - timedelta(days=today.weekday())
+        week_end = week_start + timedelta(days=6)
+        ctx['reserved_labs_week_count'] = Session.objects.filter(
+            instructor=self.request.user, date__range=[week_start, week_end]
+        ).values('lab_id').distinct().count()
+
         ctx['notifications'] = Notification.objects.filter(
             user=self.request.user
         ).order_by('-created_at')[:6]
         ctx['unread_count'] = Notification.objects.filter(
             user=self.request.user, read=False
         ).count()
+
+        # ---- today's attendance % — same pc_unlock-vs-roster logic as the
+        # real Attendance Report (labs/reports.py:_attendance_data), just
+        # collapsed to a single percentage across all of today's rostered
+        # sessions instead of a per-session breakdown. Sessions without a
+        # roster attached aren't counted — there's no reliable "expected"
+        # headcount for those. ----
+        from datetime import datetime as _dt
+        from accounts.models import ActivityLog
+        todays_sessions = Session.objects.filter(
+            instructor=self.request.user, date=today, roster__isnull=False
+        ).select_related('roster', 'lab')
+        total_expected = total_present = 0
+        for s in todays_sessions:
+            roster_ids = set(s.roster.students.values_list('id_number', flat=True))
+            if not roster_ids:
+                continue
+            start_dt = timezone.make_aware(_dt.combine(today, s.start_time))
+            end_dt = timezone.make_aware(_dt.combine(today, s.end_time))
+            present_ids = set(ActivityLog.objects.filter(
+                action='pc_unlock', pc__lab_id=s.lab_id,
+                created_at__gte=start_dt, created_at__lte=end_dt,
+                target_identifier__in=roster_ids,
+            ).values_list('target_identifier', flat=True))
+            total_expected += len(roster_ids)
+            total_present += len(present_ids)
+        ctx['todays_attendance_pct'] = round(total_present / total_expected * 100) if total_expected else None
+
+        # ---- weekly overview chart: classes/reservations/requests per day
+        # this week (Sun–Sat) ----
+        week_days = [week_start + timedelta(days=i) for i in range(7)]
+        classes_by_day = {d: Session.objects.filter(instructor=self.request.user, date=d).count() for d in week_days}
+        requests_by_day = {d: SessionRequest.objects.filter(instructor=self.request.user, date=d).count() for d in week_days}
+        ctx['weekly_chart_labels'] = json.dumps([f'{d.strftime("%a")}\n{d.strftime("%b")} {d.day}' for d in week_days])
+        ctx['weekly_chart_classes'] = json.dumps([classes_by_day[d] for d in week_days])
+        ctx['weekly_chart_requests'] = json.dumps([requests_by_day[d] for d in week_days])
+
+        # ---- recent activity — this instructor's own request/session
+        # history (there's no dedicated per-user activity-log model, so this
+        # is built from SessionRequest/Session timestamps directly rather
+        # than a separate log table). ----
+        activity = []
+        for r in SessionRequest.objects.filter(instructor=self.request.user).order_by('-created_at')[:6]:
+            activity.append({
+                'icon': 'clipboard', 'title': 'Reservation requested',
+                'sub': f'{r.subject} · {r.lab.name} · {r.date.strftime("%b")} {r.date.day}, {r.date.year}',
+                'when': r.created_at,
+            })
+        for s in Session.objects.filter(instructor=self.request.user).select_related('lab').order_by('-created_at')[:6]:
+            activity.append({
+                'icon': 'check', 'title': 'Reservation approved',
+                'sub': f'{s.subject} · {s.lab.name} · {s.date.strftime("%b")} {s.date.day}, {s.date.year}',
+                'when': s.created_at,
+            })
+        activity.sort(key=lambda a: a['when'], reverse=True)
+        ctx['recent_activity'] = activity[:5]
+
+        # ---- mini calendar (current month by default; ?month=YYYY-MM to navigate) ----
+        month_param = self.request.GET.get('month', '')
+        try:
+            cal_year, cal_month = (int(p) for p in month_param.split('-'))
+            cal_first = date(cal_year, cal_month, 1)
+        except (ValueError, TypeError):
+            cal_first = today.replace(day=1)
+
+        session_dates = set(Session.objects.filter(
+            instructor=self.request.user,
+            date__year=cal_first.year, date__month=cal_first.month,
+        ).values_list('date', flat=True))
+        pending_dates = set(SessionRequest.objects.filter(
+            instructor=self.request.user, status='pending',
+            date__year=cal_first.year, date__month=cal_first.month,
+        ).values_list('date', flat=True))
+
+        cal_module.setfirstweekday(cal_module.SUNDAY)
+        weeks = []
+        for week in cal_module.monthcalendar(cal_first.year, cal_first.month):
+            row = []
+            for day_num in week:
+                if day_num == 0:
+                    row.append(None)
+                    continue
+                d = date(cal_first.year, cal_first.month, day_num)
+                status = 'today' if d == today else 'reserved' if d in session_dates else 'pending' if d in pending_dates else ''
+                row.append({'day': day_num, 'status': status})
+            weeks.append(row)
+
+        prev_month = (cal_first - timedelta(days=1)).replace(day=1)
+        next_month = (cal_first.replace(day=28) + timedelta(days=4)).replace(day=1)
+        ctx['cal_weeks'] = weeks
+        ctx['cal_label'] = cal_first.strftime('%B %Y')
+        ctx['cal_prev'] = prev_month.strftime('%Y-%m')
+        ctx['cal_next'] = next_month.strftime('%Y-%m')
+        ctx['cal_weekday_labels'] = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+
         return ctx
 
 
@@ -342,19 +508,40 @@ class UsersListView(RoleRequiredMixin, ListView):
             for role_key, role_label in User.ROLE_CHOICES
         ]
 
-        def pct(part):
-            return round(part / total_count * 100, 1) if total_count else 0
-
-        ctx['role_distribution'] = [
-            {'key': key, 'label': label, 'count': role_counts.get(key, 0), 'pct': pct(role_counts.get(key, 0))}
-            for key, label in User.ROLE_CHOICES
-        ]
-
         ctx['recent_activities'] = ActivityLog.objects.filter(
             action__in=['register', 'activate', 'deactivate', 'delete', 'reset_password']
         ).select_related('actor').order_by('-created_at')[:6]
 
         return ctx
+
+
+# emails a one-click verification link to a newly created (or re-sent)
+# Admin/Lab In-Charge/Instructor account
+def send_verification_email(request, user):
+    """Emails a one-click verification link to a newly created (or
+    re-sent) Admin/Lab In-Charge/Instructor account. Uses Django's
+    built-in token generator (same one password reset uses) so no extra
+    database field is needed for the token itself — it self-invalidates
+    once used, since the token is derived partly from the account's
+    current password hash."""
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
+    verify_url = request.build_absolute_uri(
+        reverse('verify_email', kwargs={'uidb64': uid, 'token': token})
+    )
+    send_mail(
+        subject='Verify your CompuLab account email',
+        message=(
+            f'Hi {user.display_name},\n\n'
+            f'An account was created for you on CompuLab as {user.get_role_display()}.\n'
+            f'Please confirm this is your real email address by clicking the link below:\n\n'
+            f'{verify_url}\n\n'
+            f'You won\'t be able to log in until this is confirmed.\n'
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=True,
+    )
 
 
 # admin create new user
@@ -379,8 +566,27 @@ class UserCreateView(RoleRequiredMixin, ModalFormMixin, CreateView):
             target_identifier=self.object.email or self.object.id_number,
             details=f'{self.object.display_name} registered as {self.object.get_role_display()}.'
         )
-        messages.success(self.request, 'User Registered Successfully.')
+        if self.object.email:
+            send_verification_email(self.request, self.object)
+            messages.success(self.request, 'User registered. A verification email was sent to their Gmail.')
+        else:
+            messages.success(self.request, 'User registered.')
         return response
+
+
+# handles the link clicked from the verification email
+def verify_email(request, uidb64, token):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        user.email_verified = True
+        user.save(update_fields=['email_verified'])
+        return render(request, 'accounts/verify_email_result.html', {'success': True})
+    return render(request, 'accounts/verify_email_result.html', {'success': False})
 
 
 # admin edit existing user

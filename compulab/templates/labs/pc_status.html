@@ -116,10 +116,28 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
 
 .ld-empty{color:var(--ld-faint); font-size:13px; text-align:center; padding:24px 0;}
 
-@media (max-width:1200px){
+@media (max-width:1200px) and (min-width:861px){
   .ld-row-3{grid-template-columns:1fr;}
   .ld-row-main{grid-template-columns:1fr;}
   .ld-filter-form{grid-template-columns:1fr 1fr;}
+}
+/* Shrink sizing on tablets; below that there's no room for 3 side-by-side
+   columns or a fixed-width donut next to its legend, so stack instead. */
+@media (max-width:860px){
+  .ld{ margin:-14px; padding:14px; }
+  .ld-card{ padding:12px 14px; border-radius:12px; }
+  .ld-metrics{ grid-template-columns:repeat(2,1fr); gap:8px; }
+  .ld-metric-icon{ width:28px; height:28px; }
+  .ld-metric-icon svg{ width:14px; height:14px; }
+  .ld-metric-label{ font-size:9.5px; }
+  .ld-metric-val{ font-size:16px; }
+  .ld-metric-sub{ font-size:9px; }
+  .ld-filter-form{ grid-template-columns:1fr 1fr; gap:8px; }
+  .ld-row-3{ grid-template-columns:1fr; gap:10px; }
+  .ld-row-main{ grid-template-columns:1fr; gap:8px; }
+  .ld-donut-wrap{ flex-direction:column; align-items:stretch; }
+  .ld-section-title{ font-size:11px; }
+  .ld-table{ font-size:10.5px; }
 }
 </style>
 
@@ -135,8 +153,8 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
     </div>
     <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
       <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
-        <a href="{% url 'override_checkin' %}" class="ld-btn">Override Check-in</a>
-        <a href="{% url 'manual_unlock' %}" class="ld-btn">Manual Unlock (Guest)</a>
+        <a href="{% url 'override_checkin' %}" class="ld-btn js-modal-link">Override Check-in</a>
+        <a href="{% url 'manual_unlock' %}" class="ld-btn js-modal-link">Manual Unlock (Guest)</a>
         <form method="post" action="{% url 'pc_status_refresh' %}"
               onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Check all PC status now?', text: 'This will ping every PC across all labs right away — it may take a few seconds.', icon: 'question', confirmButtonText: 'Yes, check now', confirmButtonColor: '#3ed6c4'}); return false;">
           {% csrf_token %}

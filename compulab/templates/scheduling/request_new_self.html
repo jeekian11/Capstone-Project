@@ -1,0 +1,74 @@
+{% extends base_template|default:"base.html" %}
+{% block title %}Reserve Laboratory{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Reserve a laboratory</h1>
+    <div class="sub">Submit a reservation request for one of your classes — an Admin or Lab In-Charge will review and approve it.</div>
+  </div>
+  <a href="{% url 'inst_schedule' %}" class="action-btn">Back</a>
+</div>
+
+<div class="card" style="max-width:640px">
+  <form method="post" novalidate
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Submit this reservation request?', text: 'An Admin or Lab In-Charge will need to approve it before it appears on the official schedule.', icon: 'question', confirmButtonText: 'Yes, submit', confirmButtonColor: '#3ed6c4'}); return false;">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="form-errors">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.lab.id_for_label }}">Laboratory</label>
+      {{ form.lab }}
+      {% if form.lab.errors %}<div class="form-errors">{{ form.lab.errors|join:", " }}</div>{% endif %}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.subject.id_for_label }}">Subject</label>
+      {{ form.subject }}
+      {% if form.subject.errors %}<div class="form-errors">{{ form.subject.errors|join:", " }}</div>{% endif %}
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.date.id_for_label }}">Date</label>
+        {{ form.date }}
+        {% if form.date.errors %}<div class="form-errors">{{ form.date.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.student_count.id_for_label }}">Number of students</label>
+        {{ form.student_count }}
+        <span class="helptext">If your class is bigger than the lab's PC count, students are auto-assigned however many PCs are actually available.</span>
+        {% if form.student_count.errors %}<div class="form-errors">{{ form.student_count.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="{{ form.start_time.id_for_label }}">Start time</label>
+        {{ form.start_time }}
+        {% if form.start_time.errors %}<div class="form-errors">{{ form.start_time.errors|join:", " }}</div>{% endif %}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="{{ form.end_time.id_for_label }}">End time</label>
+        {{ form.end_time }}
+        {% if form.end_time.errors %}<div class="form-errors">{{ form.end_time.errors|join:", " }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="{{ form.notes.id_for_label }}">Notes (optional)</label>
+      {{ form.notes }}
+      {% if form.notes.errors %}<div class="form-errors">{{ form.notes.errors|join:", " }}</div>{% endif %}
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="action-btn primary">Submit request</button>
+      <a href="{% url 'inst_schedule' %}" class="action-btn">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

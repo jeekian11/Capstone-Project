@@ -6,7 +6,6 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 
 <style>
 .um{
@@ -22,7 +21,8 @@
 .um a:hover{text-decoration:underline;}
 .um-card{background:var(--um-card); border:1px solid var(--um-border); border-radius:14px; padding:18px 20px; box-shadow:0 1px 2px rgba(0,0,0,.2);}
 
-.um-metrics{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; margin-bottom:20px;}
+.um-metrics{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; margin-bottom:20px; min-width:0;}
+.um-metrics > *{min-width:0;}
 .um-metric{display:flex; align-items:center; gap:12px;}
 .um-metric-icon{width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 8px rgba(0,0,0,.25);}
 .um-metric-icon svg{width:20px; height:20px;}
@@ -35,7 +35,8 @@
 .ic-orange{background:var(--um-orange); color:#0a0e12;}
 .ic-gold{background:var(--um-gold); color:#0a0e12;}
 
-.um-filter-form{display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1.4fr auto auto; gap:14px; align-items:end;}
+.um-filter-form{display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1.4fr auto auto; gap:14px; align-items:end; min-width:0;}
+.um-filter-form > *{min-width:0;}
 .um-label{font-size:12px; font-weight:500; color:var(--um-dim); margin-bottom:6px; display:block;}
 .um-input, .um-select{width:100%; padding:9px 12px; border:1px solid var(--um-border); border-radius:8px; font-size:13px; background:var(--um-bg); color:var(--um-text); font-family:inherit;}
 .um-btn{display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:8px; border:1px solid var(--um-border); background:var(--um-card); color:var(--um-text); font-size:13px; font-weight:500; cursor:pointer; white-space:nowrap;}
@@ -50,7 +51,8 @@
 .um-tab .count{color:var(--um-faint); font-weight:500;}
 .um-tab.active .count{color:var(--um-blue);}
 
-.um-row-main{display:grid; grid-template-columns:1fr 300px; gap:16px; margin-bottom:16px; align-items:start;}
+.um-row-main{display:grid; grid-template-columns:1fr; gap:16px; margin-bottom:16px; align-items:start; min-width:0;}
+.um-row-main > .um-card{min-width:0;}
 .um-section-title{font-size:13px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--um-text); margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;}
 .um-section-title a{font-size:12px; font-weight:500; text-transform:none; letter-spacing:0;}
 
@@ -85,17 +87,6 @@ html[data-theme="light"] .um-pill.student{ color:#fff; }
 .um-icon-btn.danger:hover{border-color:var(--um-red); color:var(--um-red);}
 .um-checkbox{width:15px; height:15px; accent-color:var(--um-blue); cursor:pointer;}
 
-.um-donut-wrap{display:flex; align-items:center; gap:20px;}
-.um-donut-legend{flex:1; display:flex; flex-direction:column; gap:10px;}
-.um-donut-legend-item{display:flex; align-items:center; gap:8px; font-size:12px;}
-.um-donut-dot{width:9px; height:9px; border-radius:50%; flex-shrink:0;}
-.um-donut-legend-item .lbl{flex:1; color:var(--um-dim);}
-.um-donut-legend-item .val{font-weight:600; color:var(--um-text);}
-
-.um-quick-action{display:flex; align-items:center; gap:10px; padding:10px 0; font-size:13px; color:var(--um-text); border-bottom:1px solid var(--um-border);}
-.um-quick-action:last-child{border-bottom:none;}
-.um-quick-action svg{width:16px; height:16px; flex-shrink:0; color:var(--um-dim);}
-
 .um-feed-item{display:flex; align-items:flex-start; gap:10px; padding:9px 0; border-bottom:1px solid var(--um-border);}
 .um-feed-item:first-child{padding-top:0;}
 .um-feed-item:last-child{border-bottom:none; padding-bottom:0;}
@@ -114,8 +105,11 @@ html[data-theme="light"] .um-pill.student{ color:#fff; }
 .um-empty{color:var(--um-faint); font-size:13px; text-align:center; padding:24px 0;}
 
 @media (max-width:1200px){
-  .um-row-main{grid-template-columns:1fr;}
   .um-filter-form{grid-template-columns:1fr 1fr;}
+}
+@media (max-width:640px){
+  .um-filter-form{grid-template-columns:1fr; gap:10px;}
+  .um-table{display:block; overflow-x:auto; -webkit-overflow-scrolling:touch;}
 }
 </style>
 
@@ -381,61 +375,8 @@ html[data-theme="light"] .um-pill.student{ color:#fff; }
         <p class="um-empty">No users match this filter.</p>
       {% endif %}
     </div>
-
-    <div>
-      <div class="um-card" style="margin-bottom:16px;">
-        <div class="um-section-title">Role Distribution</div>
-        <div class="um-donut-wrap">
-          <div style="width:110px; height:110px; flex-shrink:0;"><canvas id="roleDonut"></canvas></div>
-          <div class="um-donut-legend">
-            {% for entry in role_distribution %}
-              <div class="um-donut-legend-item">
-                <span class="um-donut-dot" style="background:{% if entry.key == 'admin' %}#5b9dff{% elif entry.key == 'incharge' %}#a78bfa{% elif entry.key == 'instructor' %}#f2a93b{% else %}#facc15{% endif %}"></span>
-                <span class="lbl">{{ entry.label }}</span>
-                <span class="val">{{ entry.count }} ({{ entry.pct }}%)</span>
-              </div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-
-      <div class="um-card" style="margin-bottom:16px;">
-        <div class="um-section-title">Quick Actions</div>
-        <a href="{% url 'user_create' %}" class="um-quick-action js-modal-link">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M19 8v6M22 11h-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-          Add New User
-        </a>
-        <a href="{% url 'log_history' %}" class="um-quick-action">
-          <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.8"/></svg>
-          View Log History
-        </a>
-        <a href="{% url 'user_export' %}?role={{ selected_role }}&lab={{ selected_lab }}&status={{ selected_status }}&department={{ selected_department }}&q={{ search_query }}&format=excel" class="um-quick-action">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Download Report (Excel)
-        </a>
-      </div>
-    </div>
   </div>
 
 </div>
-
-<script>
-(function () {
-  Chart.defaults.font.family = 'Inter, sans-serif';
-  Chart.defaults.color = '#8b98a3';
-  new Chart(document.getElementById('roleDonut'), {
-    type: 'doughnut',
-    data: {
-      labels: [{% for entry in role_distribution %}'{{ entry.label|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
-      datasets: [{
-        data: [{% for entry in role_distribution %}{{ entry.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
-        backgroundColor: ['#5b9dff', '#a78bfa', '#f2a93b', '#facc15'],
-        borderWidth: 0,
-      }]
-    },
-    options: { cutout: '68%', plugins: { legend: { display: false }, tooltip: { enabled: true } }, responsive: true, maintainAspectRatio: false }
-  });
-})();
-</script>
 
 {% endblock %}

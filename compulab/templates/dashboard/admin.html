@@ -102,10 +102,27 @@
 .ld-empty{color:var(--ld-faint); font-size:13px; text-align:center; padding:24px 0;}
 .ld-footer{text-align:center; font-size:12px; color:var(--ld-faint); padding:24px 0 4px;}
 
-@media (max-width:1100px){
-  .ld-row-2{grid-template-columns:1fr;}
-  .ld-row-3{grid-template-columns:1fr;}
-  .ld-overview-grid{grid-template-columns:repeat(2,1fr); gap:20px;}
+/* Keep the same grid layout as desktop on smaller screens — shrink
+   sizing/spacing instead of stacking into single columns. */
+@media (max-width:860px){
+  .ld{ margin:-14px; padding:14px; }
+  .ld-card{ padding:12px 14px; border-radius:12px; }
+  .ld-metrics{ grid-template-columns:repeat(2,1fr); gap:8px; }
+  .ld-metric-icon{ width:32px; height:32px; }
+  .ld-metric-icon svg{ width:16px; height:16px; }
+  .ld-metric-label{ font-size:10.5px; }
+  .ld-metric-val{ font-size:17px; }
+  .ld-metric-sub{ font-size:10px; }
+  .ld-row-2{ grid-template-columns:1fr; gap:10px; }
+  .ld-row-3{ grid-template-columns:1fr; gap:10px; }
+  .ld-overview-grid{ grid-template-columns:1fr 1fr; gap:8px; }
+  .ld-donut-wrap{ flex-direction:column; align-items:stretch; }
+  .ld-overview-icon{ width:32px; height:32px; margin-bottom:6px; }
+  .ld-overview-icon svg{ width:15px; height:15px; }
+  .ld-overview-val{ font-size:17px; }
+  .ld-overview-label{ font-size:10.5px; }
+  .ld-section-title{ font-size:11.5px; }
+  .ld-chart-canvas-wrap{ height:140px; }
 }
 </style>
 

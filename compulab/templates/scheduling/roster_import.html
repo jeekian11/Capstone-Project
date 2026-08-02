@@ -48,6 +48,7 @@
 
   {% if results.added %}
     <h4>Added</h4>
+    <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
     <table style="width:100%; border-collapse:collapse; font-size:13px;">
       <thead><tr><th style="text-align:left; padding:6px;">Row</th><th style="text-align:left; padding:6px;">ID Number</th><th style="text-align:left; padding:6px;">Name</th></tr></thead>
       <tbody>
@@ -56,10 +57,12 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   {% endif %}
 
   {% if results.skipped %}
     <h4 style="margin-top:16px;">Skipped</h4>
+    <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
     <table style="width:100%; border-collapse:collapse; font-size:13px;">
       <thead><tr><th style="text-align:left; padding:6px;">Row</th><th style="text-align:left; padding:6px;">ID Number</th><th style="text-align:left; padding:6px;">Reason</th></tr></thead>
       <tbody>
@@ -68,6 +71,7 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   {% endif %}
 </div>
 {% endif %}

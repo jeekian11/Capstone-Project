@@ -27,6 +27,20 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '0.0.0.0', '192.168.1.96', '192.168.100.51']
 
+# Django 4+ requires the exact scheme+host of any origin that will submit
+# POST requests to be listed here separately from ALLOWED_HOSTS, or every
+# form submission (including the confirm/edit modals) from that origin
+# fails with "403 Forbidden (CSRF verification failed)". This is required
+# whenever the site is opened from something other than 127.0.0.1/localhost
+# — e.g. testing on a phone over the LAN — since the browser's Origin/
+# Referer header won't match unless it's explicitly trusted.
+CSRF_TRUSTED_ORIGINS = [
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+    'http://192.168.1.96:8000',
+    'http://192.168.100.51:8000',
+]
+
 
 # Application definition
 
@@ -140,8 +154,14 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # Swap this for 'django.core.mail.backends.smtp.EmailBackend' plus
 # EMAIL_HOST / EMAIL_PORT / EMAIL_HOST_USER / EMAIL_HOST_PASSWORD once you
 # have real email credentials for production.
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-DEFAULT_FROM_EMAIL = 'noreply@compulab.local'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'iandivinenniepes11@gmail.com'
+EMAIL_HOST_PASSWORD = 'mwsubgzezuxfxocx'
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
 AUTH_USER_MODEL = 'accounts.User'
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'

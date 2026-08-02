@@ -104,6 +104,12 @@ class User(AbstractUser):
         max_length=5, choices=THEME_CHOICES, default='dark',
         help_text='Dark/Light interface preference — saved per account so it follows the user to any PC they log in on.'
     )
+    email_verified = models.BooleanField(
+        default=False,
+        help_text='True once this account has clicked the verification link sent to its email. '
+                   'Admin, Lab In-Charge, and Instructor accounts cannot log in until this is True. '
+                   'Not used by Students (they never have an email or log in here).'
+    )
 
     def __str__(self):
         return f'{self.display_name} ({self.role})'

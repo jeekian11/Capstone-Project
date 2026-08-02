@@ -41,7 +41,10 @@
 
 .cal-modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.55); display:none; align-items:center; justify-content:center; z-index:1000;}
 .cal-modal-backdrop.open{display:flex;}
-.cal-modal{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:22px; width:340px; max-width:90vw;}
+.cal-modal{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:22px; width:340px; max-width:90vw; max-height:calc(100dvh - 48px); overflow-y:auto; box-sizing:border-box;}
+@media (max-width:480px){
+  .cal-modal{padding:16px; max-width:calc(100vw - 24px);}
+}
 .cal-modal h3{font-family:var(--font-display); font-size:16px; margin:0 0 4px; color:var(--text);}
 .cal-modal .cal-modal-lab{font-size:12px; color:var(--text-dim); margin-bottom:14px;}
 .cal-modal-row{display:flex; justify-content:space-between; font-size:12.5px; padding:6px 0; border-bottom:1px solid var(--border-soft); color:var(--text);}
@@ -49,6 +52,16 @@
 .cal-modal-actions{display:flex; gap:8px; margin-top:16px;}
 .cal-modal-close{position:absolute; top:14px; right:16px; background:none; border:none; color:var(--text-faint); font-size:18px; cursor:pointer;}
 .cal-modal{position:relative;}
+
+.vs-filter-form{display:grid; grid-template-columns:1fr 1fr auto auto; align-items:end; gap:14px;}
+@media (max-width:640px){
+  .vs-filter-form{grid-template-columns:1fr 1fr; gap:10px;}
+  .vs-filter-form .action-btn{width:100%; justify-content:center;}
+}
+@media (max-width:600px){
+  #calendar .fc-toolbar{flex-wrap:wrap; gap:8px; row-gap:8px;}
+  #calendar .fc-toolbar-chunk{display:flex; justify-content:center; flex-wrap:wrap; gap:6px;}
+}
 </style>
 
 <div class="page-header">
@@ -60,7 +73,7 @@
 </div>
 
 <div class="card">
-  <form method="get" class="form-row" style="grid-template-columns: 1fr 1fr auto auto; align-items:end; gap:14px;">
+  <form method="get" class="vs-filter-form">
     <div class="form-group" style="margin-bottom:0">
       <label class="form-label" for="lab">Lab</label>
       <select name="lab" id="lab" class="form-control">
@@ -92,6 +105,7 @@
 
 <div class="cal-wrap">
   {% if schedule_found %}
+    <p style="font-size:11.5px; color:var(--text-faint); margin:0 0 10px;">Colored dates already have at least one session for the shown lab(s). Click any date to log a reservation for it.</p>
     <div id="calendar"></div>
   {% else %}
     <p class="empty">
@@ -126,12 +140,60 @@ document.addEventListener('DOMContentLoaded', function () {
   var events = {{ calendar_events_json|safe }};
   var modal = document.getElementById('calModal');
 
+  // Per-date color map built from the events themselves, so a date that
+  // already has a session gets its day CELL tinted (not just the event
+  // block inside it) — busy days are visible at a glance across the
+  // whole month instead of only after scanning individual event titles.
+  var dayColors = {};
+  events.forEach(function (e) {
+    var dateKey = (e.start || '').slice(0, 10);
+    if (dateKey && !dayColors[dateKey]) dayColors[dateKey] = e.color;
+  });
+  function localDateKey(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
   var calendar = new FullCalendar.Calendar(calEl, {
     initialView: 'dayGridMonth',
     initialDate: '{{ initial_date }}',
     height: 'auto',
+    dayMaxEvents: false,
     headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listMonth' },
     events: events,
+    dayCellDidMount: function (arg) {
+      var today = new Date(); today.setHours(0, 0, 0, 0);
+      if (arg.date < today) {
+        arg.el.style.cursor = 'default';
+        var numEl0 = arg.el.querySelector('.fc-daygrid-day-number');
+        if (numEl0) { numEl0.style.opacity = '0.55'; }
+        var frameEl = arg.el.querySelector('.fc-daygrid-day-frame');
+        if (frameEl) { frameEl.style.background = 'rgba(255,255,255,0.02)'; }
+      } else {
+        arg.el.style.cursor = 'pointer';
+      }
+      var key = localDateKey(arg.date);
+      if (dayColors[key]) {
+        arg.el.style.backgroundColor = dayColors[key] + '66';
+        var numEl = arg.el.querySelector('.fc-daygrid-day-number');
+        if (numEl) { numEl.style.fontWeight = '700'; }
+      }
+    },
+    dateClick: function (info) {
+      var today = new Date(); today.setHours(0, 0, 0, 0);
+      if (info.date < today) {
+        if (typeof Swal !== 'undefined') {
+          var theme = compulabSwalTheme();
+          Swal.fire({
+            toast: true, position: 'top-end', icon: 'warning',
+            title: 'Nakalipas na ang petsang ito — pumili ng petsang darating.',
+            showConfirmButton: false, timer: 3000, timerProgressBar: true,
+            background: theme.background, color: theme.color,
+          });
+        }
+        return;
+      }
+      openAppModal('{% url "request_new" %}?date=' + info.dateStr, info.dayEl);
+    },
     eventClick: function (info) {
       var p = info.event.extendedProps;
       document.getElementById('cmSubject').textContent = p.subject;

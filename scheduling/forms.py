@@ -1,6 +1,8 @@
+import datetime
 from django import forms
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.utils import timezone
 from scheduling.models import ClassRoster, RosterStudent, Session, SessionRequest
 from accounts.constants import DEPARTMENT_CHOICES
 
@@ -63,6 +65,26 @@ class RosterStudentCountMixin:
         roster = cleaned_data.get('roster')
         if roster is not None:
             cleaned_data['student_count'] = roster.students.count()
+        return cleaned_data
+
+
+class NoPastDateTimeMixin:
+    """Rejects a request whose date + start time has already passed —
+    logging (or editing) a reservation for a slot that's already over
+    isn't useful to anyone; it would just sit there for an Admin/Lab
+    In-Charge to approve into a slot that can no longer actually be
+    used. Only checked when both fields parsed cleanly (a missing/
+    invalid date or time is already reported by the field itself)."""
+
+    def clean(self):
+        cleaned_data = super().clean()
+        date = cleaned_data.get('date')
+        start_time = cleaned_data.get('start_time')
+        if date and start_time:
+            naive = datetime.datetime.combine(date, start_time)
+            aware = timezone.make_aware(naive, timezone.get_current_timezone())
+            if aware < timezone.localtime():
+                self.add_error('date', "This date and time have already passed — pick one that hasn't started yet.")
         return cleaned_data
 
 
@@ -144,7 +166,7 @@ class SessionForm(RequiresRegisteredAccountMixin, PcsRequestedRequiredMixin, Ros
         self.fields['pcs_requested'].required = False
 
 
-class SessionRequestForm(RequiresRegisteredAccountMixin, PcsRequestedRequiredMixin, RosterStudentCountMixin, forms.ModelForm):
+class SessionRequestForm(NoPastDateTimeMixin, RequiresRegisteredAccountMixin, PcsRequestedRequiredMixin, RosterStudentCountMixin, forms.ModelForm):
     """Used by RequestCreateView/RequestUpdateView to log or edit a pending request."""
     class Meta:
         model = SessionRequest
@@ -156,6 +178,23 @@ class SessionRequestForm(RequiresRegisteredAccountMixin, PcsRequestedRequiredMix
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['pcs_requested'].required = False
+        self.fields['date'].widget.attrs['min'] = timezone.localdate().isoformat()
+
+
+class InstructorSessionRequestForm(NoPastDateTimeMixin, forms.ModelForm):
+    """Self-service version of SessionRequestForm for an Instructor booking
+    their own class — skips RequiresRegisteredAccountMixin's requester-
+    name/ID matching entirely, since the logged-in account IS the
+    requester (InstructorRequestCreateView sets requester_type/name/ID and
+    .instructor straight from request.user)."""
+    class Meta:
+        model = SessionRequest
+        fields = ['lab', 'subject', 'date', 'start_time', 'end_time', 'student_count', 'notes']
+        widgets = {**_DATE_TIME_WIDGETS}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['date'].widget.attrs['min'] = timezone.localdate().isoformat()
 
 
 class ClassRosterForm(forms.ModelForm):

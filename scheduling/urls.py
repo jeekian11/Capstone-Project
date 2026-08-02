@@ -21,6 +21,7 @@ urlpatterns = [
     # Manage request flow
     path('requests/', views.ManageRequestsView.as_view(), name='manage_requests'),
     path('requests/new/', views.RequestCreateView.as_view(), name='request_new'),
+    path('requests/new/mine/', views.InstructorRequestCreateView.as_view(), name='instructor_request_new'),
     path('requests/<int:pk>/', views.RequestDetailView.as_view(), name='request_detail'),
     path('requests/<int:pk>/edit/', views.RequestUpdateView.as_view(), name='request_edit'),
     path('requests/<int:pk>/export/', views.export_request_pdf, name='request_export_pdf'),

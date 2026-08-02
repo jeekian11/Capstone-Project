@@ -9,8 +9,8 @@ from django.urls import reverse_lazy, reverse
 from accounts.mixins import RoleRequiredMixin, ModalFormMixin, ModalDetailMixin, is_modal_request, modal_redirect
 from django.http import JsonResponse
 from scheduling.models import Session, SessionRequest
-from scheduling.forms import SessionForm, SessionRequestForm
-from scheduling.utils import generate_reservation_code, capacity_error, student_count_error
+from scheduling.forms import SessionForm, SessionRequestForm, InstructorSessionRequestForm
+from scheduling.utils import generate_reservation_code, capacity_error, cap_student_count
 from labs.models import Lab
 from notifications import services as notify_service
 
@@ -36,18 +36,16 @@ def _slot_error(requester_type, lab, date, start_time, end_time, pcs_requested, 
     needs checking: Instructor/Student/Group (including Class Roster
     reservations, which are just an Instructor request with a roster
     attached) keep the original all-or-nothing exclusive rule (any
-    overlapping approved session blocks it) — but are now also validated
-    against the lab's total PC count via scheduling.utils.student_count_error,
-    since a class of more students than the lab has PCs for can't actually
-    be seated. Walk-in/Override instead go through the PC-count capacity
-    check (see scheduling.utils.capacity_error) so they can share a slot
-    based on how many PCs are actually free. Returns an error message, or
-    None if the slot/request is fine."""
+    overlapping approved session blocks it). A class with more students
+    than the lab has PCs for is no longer rejected here — see
+    scheduling.utils.cap_student_count, which the callers use to
+    auto-assign however many PCs are actually available instead. Walk-in/
+    Override instead go through the PC-count capacity check (see
+    scheduling.utils.capacity_error) so they can share a slot based on how
+    many PCs are actually free. Returns an error message, or None if the
+    slot/request is fine."""
     if requester_type in ('walk_in', 'override'):
         return capacity_error(requester_type, lab, date, start_time, end_time, pcs_requested, exclude_pk=exclude_pk)
-    error = student_count_error(lab, student_count)
-    if error:
-        return error
     if _official_schedule_conflict(lab, date, start_time, end_time, exclude_pk=exclude_pk):
         return 'Time slot conflict — this laboratory is already booked for an overlapping time on that date. Choose a different laboratory or schedule.'
     return None
@@ -154,10 +152,16 @@ class SessionUpdateView(RoleRequiredMixin, ModalFormMixin, UpdateView):
             form.add_error(None, error)
             return self.form_invalid(form)
 
+        cap_note = None
+        if form.instance.requester_type not in ('walk_in', 'override'):
+            form.instance.student_count, cap_note = cap_student_count(form.instance.lab, form.instance.student_count)
+
         # Form validation (RequiresRegisteredAccountMixin) guarantees this
         # matches an active, admin-registered account before we ever get here.
         form.instance.instructor = form.cleaned_data['_matched_account']
         response = super().form_valid(form)
+        if cap_note:
+            messages.warning(self.request, cap_note)
         messages.success(self.request, 'Schedule updated.')
         return response
 
@@ -331,10 +335,16 @@ class RequestUpdateView(RoleRequiredMixin, ModalFormMixin, UpdateView):
             form.add_error(None, error)
             return self.form_invalid(form)
 
+        cap_note = None
+        if form.instance.requester_type not in ('walk_in', 'override'):
+            form.instance.student_count, cap_note = cap_student_count(form.instance.lab, form.instance.student_count)
+
         # Form validation (RequiresRegisteredAccountMixin) guarantees this
         # matches an active, admin-registered account before we ever get here.
         form.instance.instructor = form.cleaned_data['_matched_account']
         response = super().form_valid(form)
+        if cap_note:
+            messages.warning(self.request, cap_note)
         messages.success(self.request, 'Request updated.')
         return response
 
@@ -365,6 +375,16 @@ def approve_request(request, pk):
         code = generate_reservation_code()
         req.reservation_code = code
         req.status = 'approved'
+
+        # Re-check the assignable count against current lab capacity at
+        # approval time (it may have changed since the request was logged —
+        # e.g. PCs taken offline) rather than trusting the value stored on
+        # the request.
+        cap_note = None
+        session_student_count = req.student_count
+        if req.requester_type not in ('walk_in', 'override'):
+            session_student_count, cap_note = cap_student_count(req.lab, req.student_count)
+            req.student_count = session_student_count
         req.save()
 
         # create the actual session — adds it to the official schedule,
@@ -381,7 +401,7 @@ def approve_request(request, pk):
             date=req.date,
             start_time=req.start_time,
             end_time=req.end_time,
-            student_count=req.student_count,
+            student_count=session_student_count,
             pcs_requested=req.pcs_requested,
         )
 
@@ -391,6 +411,8 @@ def approve_request(request, pk):
         notify_service.notify_reservation_approved(req, code)
         if req.requester_type in ('walk_in', 'override'):
             notify_service.notify_walkin_override_approved(req, code)
+        if cap_note:
+            messages.warning(request, cap_note)
         messages.success(
             request,
             f'Request approved and added to the official schedule. Reservation code: {code} — give this to {req.requester_name}.'
@@ -489,19 +511,173 @@ class InstructorScheduleView(RoleRequiredMixin, TemplateView):
     allowed_roles = ['instructor']
     template_name = 'scheduling/instructor_schedule.html'
 
+    STATUS_COLORS = {'reserved': '#5b9dff', 'pending': '#f2a93b', 'cancelled': '#8b98a3'}
+
     def get_context_data(self, **kwargs):
+        import calendar as cal_module
+        import json as json_module
+        from datetime import date, timedelta
         from scheduling.models import ClassRoster
         ctx = super().get_context_data(**kwargs)
-        ctx['my_sessions'] = Session.objects.filter(
-            instructor=self.request.user
-        ).order_by('date', 'start_time')
-        ctx['my_requests'] = SessionRequest.objects.filter(
-            instructor=self.request.user
-        ).order_by('-created_at')
-        ctx['my_rosters'] = ClassRoster.objects.filter(
-            instructor=self.request.user
-        ).order_by('-created_at')
+        today = timezone.localdate()
+
+        labs = list(Lab.objects.order_by('name'))
+        ctx['labs'] = labs
+        lab_id = self.request.GET.get('lab', '')
+        ctx['selected_lab'] = lab_id
+
+        sessions = Session.objects.filter(instructor=self.request.user).select_related('lab')
+        requests_qs = SessionRequest.objects.filter(
+            instructor=self.request.user, status__in=['pending', 'declined']
+        ).select_related('lab')
+        if lab_id:
+            sessions = sessions.filter(lab_id=lab_id)
+            requests_qs = requests_qs.filter(lab_id=lab_id)
+        sessions = sessions.order_by('date', 'start_time')
+        requests_qs = requests_qs.order_by('date', 'start_time')
+
+        ctx['todays_sessions_count'] = sessions.filter(date=today).count()
+        ctx['pending_requests_count'] = SessionRequest.objects.filter(
+            instructor=self.request.user, status='pending'
+        ).count()
+        week_start = today - timedelta(days=today.weekday())
+        week_end = week_start + timedelta(days=6)
+        ctx['reservations_week_count'] = Session.objects.filter(
+            instructor=self.request.user, date__range=[week_start, week_end]
+        ).count()
+        ctx['total_classes_count'] = sessions.count()
+
+        # ---- FullCalendar events: confirmed sessions (blue "Reserved") +
+        # this instructor's own still-pending/declined requests, so they can
+        # see everything about their own bookings in one place. An approved
+        # SessionRequest becomes its own Session record (see approve_request)
+        # so it's deliberately excluded here to avoid showing the same
+        # reservation twice. ----
+        events = []
+        for s in sessions:
+            events.append({
+                'id': f's{s.pk}', 'title': f'{s.subject} — {s.lab.name}',
+                'start': f'{s.date.isoformat()}T{s.start_time.isoformat(timespec="minutes")}',
+                'end': f'{s.date.isoformat()}T{s.end_time.isoformat(timespec="minutes")}',
+                'color': self.STATUS_COLORS['reserved'],
+                'extendedProps': {
+                    'lab': s.lab.name, 'subject': s.subject, 'status': 'Reserved',
+                    'time': f'{s.start_time.strftime("%I:%M %p").lstrip("0")}–{s.end_time.strftime("%I:%M %p").lstrip("0")}',
+                    'code': s.reservation_code or '',
+                },
+            })
+        for r in requests_qs:
+            status_key = 'cancelled' if r.status == 'declined' else 'pending'
+            events.append({
+                'id': f'r{r.pk}', 'title': f'{r.subject} — {r.lab.name}',
+                'start': f'{r.date.isoformat()}T{r.start_time.isoformat(timespec="minutes")}',
+                'end': f'{r.date.isoformat()}T{r.end_time.isoformat(timespec="minutes")}',
+                'color': self.STATUS_COLORS[status_key],
+                'extendedProps': {
+                    'lab': r.lab.name, 'subject': r.subject,
+                    'status': 'Cancelled' if status_key == 'cancelled' else 'Pending approval',
+                    'time': f'{r.start_time.strftime("%I:%M %p").lstrip("0")}–{r.end_time.strftime("%I:%M %p").lstrip("0")}',
+                    'code': '',
+                },
+            })
+        ctx['calendar_events_json'] = json_module.dumps(events)
+        ctx['initial_date'] = today.isoformat()
+
+        # ---- upcoming (next 7 days) ----
+        week_ahead = today + timedelta(days=7)
+        ctx['upcoming'] = list(sessions.filter(date__gte=today, date__lte=week_ahead)[:8])
+
+        # ---- mini calendar (current month by default; ?month=YYYY-MM to navigate) ----
+        month_param = self.request.GET.get('month', '')
+        try:
+            cal_year, cal_month = (int(p) for p in month_param.split('-'))
+            cal_first = date(cal_year, cal_month, 1)
+        except (ValueError, TypeError):
+            cal_first = today.replace(day=1)
+
+        month_session_dates = set(sessions.filter(
+            date__year=cal_first.year, date__month=cal_first.month
+        ).values_list('date', flat=True))
+        month_pending_dates = set(requests_qs.filter(
+            status='pending', date__year=cal_first.year, date__month=cal_first.month
+        ).values_list('date', flat=True))
+
+        cal_module.setfirstweekday(cal_module.SUNDAY)
+        weeks = []
+        for week in cal_module.monthcalendar(cal_first.year, cal_first.month):
+            row = []
+            for day_num in week:
+                if day_num == 0:
+                    row.append(None)
+                    continue
+                d = date(cal_first.year, cal_first.month, day_num)
+                status = 'today' if d == today else 'reserved' if d in month_session_dates else 'pending' if d in month_pending_dates else ''
+                row.append({'day': day_num, 'status': status})
+            weeks.append(row)
+
+        prev_month = (cal_first - timedelta(days=1)).replace(day=1)
+        next_month = (cal_first.replace(day=28) + timedelta(days=4)).replace(day=1)
+        ctx['cal_weeks'] = weeks
+        ctx['cal_label'] = cal_first.strftime('%B %Y')
+        ctx['cal_prev'] = prev_month.strftime('%Y-%m')
+        ctx['cal_next'] = next_month.strftime('%Y-%m')
+        ctx['cal_weekday_labels'] = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+
+        ctx['my_rosters'] = ClassRoster.objects.filter(instructor=self.request.user).order_by('-created_at')
         return ctx
+
+
+class InstructorRequestCreateView(RoleRequiredMixin, ModalFormMixin, CreateView):
+    """Self-service version of RequestCreateView — an Instructor booking
+    their own class directly, instead of an Admin/In-Charge logging a
+    walk-in/phone request on someone else's behalf. Skips the requester-
+    name/ID/type fields entirely since request.user already IS the
+    requester; still goes through the same _slot_error conflict check and
+    lands in the same 'pending' queue for an Admin/In-Charge to approve."""
+    allowed_roles = ['instructor']
+    model = SessionRequest
+    form_class = InstructorSessionRequestForm
+    template_name = 'scheduling/request_new_self.html'
+
+    def get_initial(self):
+        initial = super().get_initial()
+        date_param = self.request.GET.get('date')
+        if date_param:
+            initial['date'] = date_param
+        return initial
+
+    def form_valid(self, form):
+        error = _slot_error(
+            'instructor', form.instance.lab, form.instance.date,
+            form.instance.start_time, form.instance.end_time, 0,
+            student_count=form.instance.student_count,
+        )
+        if error:
+            if 'conflict' in error.lower():
+                notify_service.notify_reservation_conflict(
+                    form.instance.lab,
+                    f'A new request for "{form.instance.subject}" ({form.instance.date} '
+                    f'{form.instance.start_time.strftime("%H:%M")}–{form.instance.end_time.strftime("%H:%M")}) '
+                    f'in {form.instance.lab.name} conflicts with an existing booking.',
+                )
+            form.add_error(None, error)
+            return self.form_invalid(form)
+
+        form.instance.student_count, cap_note = cap_student_count(form.instance.lab, form.instance.student_count)
+        form.instance.requester_type = 'instructor'
+        form.instance.requester_name = self.request.user.display_name
+        form.instance.requester_id_number = self.request.user.id_number
+        form.instance.instructor = self.request.user
+        form.instance.status = 'pending'
+        response = super().form_valid(form)
+        notify_service.notify_reservation_submitted(self.object)
+        if cap_note:
+            messages.warning(self.request, cap_note)
+        messages.success(self.request, 'Your reservation request has been submitted for approval.')
+        return response
+
+    def get_success_url(self):
+        return reverse_lazy('inst_schedule')
 
 
 # Admin/incharge logs a reservation on behalf of an instructor or student
@@ -512,6 +688,16 @@ class RequestCreateView(RoleRequiredMixin, ModalFormMixin, CreateView):
     model = SessionRequest
     form_class = SessionRequestForm
     template_name = 'scheduling/request_new.html'
+
+    def get_initial(self):
+        # Lets the View Schedule calendar (see view_schedule.html's
+        # dateClick handler) open this form pre-filled with whichever
+        # date the person clicked, instead of them having to re-type it.
+        initial = super().get_initial()
+        date_param = self.request.GET.get('date')
+        if date_param:
+            initial['date'] = date_param
+        return initial
 
     def form_valid(self, form):
         # Per the reservation workflow: check the lab's availability for
@@ -539,6 +725,10 @@ class RequestCreateView(RoleRequiredMixin, ModalFormMixin, CreateView):
             form.add_error(None, error)
             return self.form_invalid(form)
 
+        cap_note = None
+        if form.instance.requester_type not in ('walk_in', 'override'):
+            form.instance.student_count, cap_note = cap_student_count(form.instance.lab, form.instance.student_count)
+
         form.instance.status = 'pending'
         # Only accounts registered by an Admin/Lab In-Charge (under Users)
         # may hold a reservation — SessionRequestForm's
@@ -547,6 +737,8 @@ class RequestCreateView(RoleRequiredMixin, ModalFormMixin, CreateView):
         form.instance.instructor = form.cleaned_data['_matched_account']
         response = super().form_valid(form)
         notify_service.notify_reservation_submitted(self.object)
+        if cap_note:
+            messages.warning(self.request, cap_note)
         messages.success(self.request, 'Reservation logged. Review the details and approve or reject it.')
         return response
 
@@ -653,7 +845,7 @@ class RosterCreateView(RoleRequiredMixin, ModalFormMixin, CreateView):
                 f'In-Charge. Its schedule will be added to the official calendar once approved.'
             )
         elif self.object.has_full_schedule():
-            created, skipped = self.object.generate_sessions()
+            created, skipped, capped = self.object.generate_sessions()
             if created:
                 messages.success(
                     self.request,
@@ -673,6 +865,14 @@ class RosterCreateView(RoleRequiredMixin, ModalFormMixin, CreateView):
                     f'{len(skipped)} date(s) in the range could not be auto-scheduled (lab already booked) '
                     f'and were skipped — add those manually if still needed.'
                 )
+            if capped:
+                messages.warning(self.request, capped[0][1])
+                if len(capped) > 1:
+                    messages.warning(
+                        self.request,
+                        f'{len(capped)} scheduled session(s) had fewer students assigned than the roster\'s '
+                        f'headcount because the lab didn\'t have enough PCs — see the schedule for details.'
+                    )
         else:
             messages.success(self.request, f'Roster "{self.object.name}" created. Add students on the next page.')
         return response
@@ -741,7 +941,7 @@ def roster_generate_sessions(request, pk):
                 'roster before generating sessions.'
             )
         else:
-            created, skipped = roster.generate_sessions()
+            created, skipped, capped = roster.generate_sessions()
             if created:
                 messages.success(
                     request,
@@ -756,6 +956,14 @@ def roster_generate_sessions(request, pk):
                     request,
                     f'{len(skipped)} date(s) could not be auto-scheduled (lab already booked) and were skipped.'
                 )
+            if capped:
+                messages.warning(request, capped[0][1])
+                if len(capped) > 1:
+                    messages.warning(
+                        request,
+                        f'{len(capped)} scheduled session(s) had fewer students assigned than the roster\'s '
+                        f'headcount because the lab didn\'t have enough PCs — see the schedule for details.'
+                    )
     return modal_redirect(request, 'roster_detail', pk=roster.pk)
 
 
@@ -819,7 +1027,7 @@ def roster_approve(request, pk):
         notify_service.notify_roster_approved(roster)
 
         if roster.has_full_schedule():
-            created, skipped = roster.generate_sessions()
+            created, skipped, capped = roster.generate_sessions()
             if created:
                 messages.success(
                     request,
@@ -834,6 +1042,14 @@ def roster_approve(request, pk):
                     f'{len(skipped)} date(s) in the range could not be auto-scheduled (lab already booked) '
                     f'and were skipped — add those manually if still needed.'
                 )
+            if capped:
+                messages.warning(request, capped[0][1])
+                if len(capped) > 1:
+                    messages.warning(
+                        request,
+                        f'{len(capped)} scheduled session(s) had fewer students assigned than the roster\'s '
+                        f'headcount because the lab didn\'t have enough PCs — see the schedule for details.'
+                    )
         else:
             messages.success(request, f'Roster "{roster.name}" approved.')
     return modal_redirect(request, 'roster_detail', pk=pk)
@@ -906,7 +1122,7 @@ class RosterUpdateView(RoleRequiredMixin, ModalFormMixin, UpdateView):
                 f'check-in were left untouched).'
             )
         if self.object.approval_status == 'approved' and self.object.has_full_schedule():
-            created, skipped = self.object.generate_sessions()
+            created, skipped, capped = self.object.generate_sessions()
             if created:
                 messages.success(
                     self.request,
@@ -920,6 +1136,14 @@ class RosterUpdateView(RoleRequiredMixin, ModalFormMixin, UpdateView):
                     f'{len(skipped)} date(s) in the range could not be auto-scheduled (lab already booked) '
                     f'and were skipped — add those manually if still needed.'
                 )
+            if capped:
+                messages.warning(self.request, capped[0][1])
+                if len(capped) > 1:
+                    messages.warning(
+                        self.request,
+                        f'{len(capped)} scheduled session(s) had fewer students assigned than the roster\'s '
+                        f'headcount because the lab didn\'t have enough PCs — see the schedule for details.'
+                    )
         return response
 
     def get_success_url(self):

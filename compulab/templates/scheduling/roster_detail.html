@@ -16,8 +16,19 @@
   --cr-orange:var(--amber); --cr-orange-tint:var(--amber-dim);
   --cr-red:var(--red); --cr-red-tint:var(--red-dim);
   font-family:'Inter',sans-serif; background:var(--cr-bg); color:var(--cr-text);
-  margin:-20px; padding:20px; min-height:100%;
+  margin:-20px; padding:20px; min-height:100%; max-width:100%; box-sizing:border-box;
+  /* This page is opened both as a full page AND inside the app-wide modal
+     (see base.html's .app-modal, fixed at 560px regardless of the actual
+     browser viewport). A @media query alone can't tell those two cases
+     apart, so the 3/2-column grids below stayed cramped whenever the
+     modal was open on a wide screen. Making .cr itself a size container
+     lets the @container rules below respond to how much room THIS
+     element actually has, in both contexts. */
+  container-type: inline-size;
+  container-name: cr;
 }
+.cr *{box-sizing:border-box; min-width:0;}
+.cr-table-wrap{width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch;}
 .cr h1,.cr h2,.cr h3{font-family:'Space Grotesk',sans-serif;}
 .cr a{color:var(--cr-blue); text-decoration:none;}
 .cr a:hover{text-decoration:underline;}
@@ -84,21 +95,38 @@ html[data-theme="light"] .cr-add-btn{ color:#fff; }
   .cr-info-grid{grid-template-columns:repeat(2,1fr);}
   .cr-two-col{grid-template-columns:1fr;}
 }
+@media (max-width:480px){
+  .cr-info-grid{grid-template-columns:repeat(2,1fr); gap:8px;}
+}
+
+/* Container-query versions of the same breakpoints, keyed off .cr's own
+   width — these are what actually fire while this page is open inside
+   the app-wide modal, since the modal stays a fixed ~560px regardless of
+   the browser viewport. */
+@container cr (max-width:900px){
+  .cr-info-grid{grid-template-columns:repeat(2,1fr);}
+}
+@container cr (max-width:640px){
+  .cr-two-col{grid-template-columns:1fr;}
+}
+@container cr (max-width:480px){
+  .cr-info-grid{grid-template-columns:repeat(2,1fr); gap:8px;}
+}
 </style>
 
-<div class="cr">
+<div class="cr" data-modal-wide>
 
   <div class="page-header" style="margin-bottom:16px; align-items:flex-start;">
     <div>
       <a href="{% url 'roster_list' %}" class="cr-btn" style="padding:6px 12px; font-size:12px; margin-bottom:10px;">&larr; Back to Rosters</a>
-      <h1 style="font-size:20px; font-weight:600; margin:0; display:flex; align-items:center; gap:10px;">
+      <h1 style="font-size:20px; font-weight:600; margin:0; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
         Manage Class Roster
         <span class="cr-badge" style="font-size:12px; background:var(--cr-purple-tint); color:var(--cr-purple);">{{ roster.course_code|default:roster.name }}</span>
         <span class="cr-badge {{ roster.approval_status }}" style="font-size:12px;">{{ roster.get_approval_status_display }}</span>
         {% if roster.status == 'inactive' %}<span class="cr-badge inactive" style="font-size:12px;">Archived</span>{% endif %}
       </h1>
     </div>
-    <div style="display:flex; gap:10px; align-items:center;">
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
       {% if roster.approval_status == 'pending' and can_review_roster %}
       <form method="post" action="{% url 'roster_approve' roster.pk %}"
             onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Approve this roster?', text: 'The schedule will be checked once more for conflicts and, if clear, added to the official calendar.', icon: 'question', confirmButtonText: 'Yes, approve', confirmButtonColor: '#3ed6c4'}); return false;"
@@ -203,6 +231,7 @@ html[data-theme="light"] .cr-add-btn{ color:#fff; }
         <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         <input type="text" id="cr-roster-search" class="cr-input" placeholder="Search student…" autocomplete="off">
       </div>
+      <div class="cr-table-wrap">
       <table class="cr-table" id="cr-students-table">
         <thead><tr><th>Student ID</th><th>Full Name</th><th>Department</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
@@ -226,6 +255,7 @@ html[data-theme="light"] .cr-add-btn{ color:#fff; }
           {% endfor %}
         </tbody>
       </table>
+      </div>
     </div>
 
     <div class="cr-card">
@@ -246,6 +276,7 @@ html[data-theme="light"] .cr-add-btn{ color:#fff; }
 
   <div class="cr-card">
     <div class="cr-section-title">Reservation History<span class="count">{{ linked_sessions|length }}</span></div>
+    <div class="cr-table-wrap">
     <table class="cr-table">
       <thead><tr><th>Date</th><th>Laboratory</th><th>Subject / Activity</th><th>Time</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>
@@ -277,6 +308,7 @@ html[data-theme="light"] .cr-add-btn{ color:#fff; }
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
 
 </div>

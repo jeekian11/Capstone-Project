@@ -1,0 +1,18 @@
+# Secrets — never commit these
+.env
+
+# Python
+__pycache__/
+*.pyc
+venv/
+env/
+
+# Django
+db.sqlite3
+db.sqlite3.backup
+server_log.txt
+
+# OS/editor cruft
+.DS_Store
+Thumbs.db
+.vscode/

@@ -1,75 +1,248 @@
 {% extends base_template|default:"base.html" %}
-{% block title %}My Schedule{% endblock %}
+{% load static %}
+{% block title %}Scheduling{% endblock %}
 
 {% block content %}
 
+<script src="{% static 'vendor/fullcalendar/index.global.min.js' %}"></script>
+<script>
+  if (typeof FullCalendar === 'undefined') {
+    document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.11/index.global.min.js"><\/script>');
+  }
+</script>
+
 <style>
-  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
-  @media (max-width: 1000px) { .three-col { grid-template-columns: 1fr; } }
+.is-metrics{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px; min-width:0;}
+.is-metric{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; display:flex; align-items:flex-start; gap:12px; min-width:0;}
+.is-metric-icon{ width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.is-metric-icon svg{ width:18px; height:18px; }
+.is-metric.green .is-metric-icon{ background:rgba(62,214,196,0.14); color:var(--green,#3ed6c4); }
+.is-metric.blue .is-metric-icon{ background:var(--blue-dim,rgba(91,157,255,0.14)); color:var(--blue); }
+.is-metric.amber .is-metric-icon{ background:var(--amber-dim,rgba(242,169,59,0.14)); color:var(--amber); }
+.is-metric.purple .is-metric-icon{ background:var(--purple-dim,rgba(167,139,250,0.14)); color:var(--purple); }
+.is-metric-body{ min-width:0; }
+.is-metric-label{ font-size:12px; color:var(--text-dim); font-weight:500; }
+.is-metric-val{ font-family:var(--font-display); font-size:24px; font-weight:700; letter-spacing:-0.01em; color:var(--text); margin-top:2px; }
+.is-metric-sub{ font-size:11px; color:var(--text-faint); margin-top:2px; }
+
+.is-layout{ display:grid; grid-template-columns:1fr 300px; gap:16px; align-items:start; min-width:0; }
+.is-side{ display:flex; flex-direction:column; gap:16px; min-width:0; }
+.is-panel{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; min-width:0; }
+.is-panel-title{ font-family:var(--font-display); font-size:13px; font-weight:600; color:var(--text); margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.is-action{ font-size:11px; color:var(--blue); text-decoration:none; font-weight:500; flex-shrink:0; }
+
+/* mini calendar */
+.is-cal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.is-cal-nav{ display:flex; align-items:center; gap:6px; }
+.is-cal-nav a{ width:22px; height:22px; border-radius:6px; display:flex; align-items:center; justify-content:center; color:var(--text-dim); text-decoration:none; border:1px solid var(--border); flex-shrink:0; }
+.is-cal-nav a:hover{ background:var(--surface-raised); color:var(--text); }
+.is-cal-title{ font-family:var(--font-display); font-size:12px; font-weight:600; color:var(--text); }
+.is-cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; text-align:center; }
+.is-cal-dow{ font-size:9.5px; color:var(--text-faint); font-weight:600; padding:4px 0; }
+.is-cal-day{ font-size:11px; color:var(--text-dim); padding:5px 0; border-radius:6px; }
+.is-cal-day.status-today{ background:var(--green,#3ed6c4); color:#0a0e12; font-weight:700; }
+.is-cal-day.status-reserved{ color:var(--blue); font-weight:600; }
+.is-cal-day.status-pending{ color:var(--amber); font-weight:600; }
+
+.is-legend{ display:flex; flex-direction:column; gap:8px; }
+.is-legend-item{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-dim); }
+.is-legend-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+.is-up-item{ padding:10px 0; border-bottom:1px solid var(--border-soft); min-width:0; }
+.is-up-item:last-child{ border-bottom:none; padding-bottom:0; }
+.is-up-top{ display:flex; align-items:center; gap:7px; }
+.is-up-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.is-up-title{ font-size:12.5px; font-weight:500; color:var(--text); overflow-wrap:anywhere; }
+.is-up-sub{ font-size:11px; color:var(--text-dim); margin-top:2px; margin-left:15px; overflow-wrap:anywhere; }
+.is-empty-sub{ font-size:12px; color:var(--text-faint); text-align:center; padding:14px 0; }
+
+.is-quick-actions{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:16px; min-width:0; }
+.is-quick-btn{ display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:12px; background:var(--surface); border:1px solid var(--border); color:var(--text); font-size:13px; font-weight:500; text-decoration:none; min-width:0; }
+.is-quick-btn:hover{ border-color:var(--green,#3ed6c4); }
+.is-quick-icon{ width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.is-quick-icon svg{ width:16px; height:16px; }
+.is-quick-btn.q-green .is-quick-icon{ background:rgba(62,214,196,0.14); color:var(--green,#3ed6c4); }
+.is-quick-btn.q-blue .is-quick-icon{ background:var(--blue-dim,rgba(91,157,255,0.14)); color:var(--blue); }
+.is-quick-btn.q-amber .is-quick-icon{ background:var(--amber-dim,rgba(242,169,59,0.14)); color:var(--amber); }
+.is-quick-btn.q-purple .is-quick-icon{ background:var(--purple-dim,rgba(167,139,250,0.14)); color:var(--purple); }
+
+#calendar{
+  --fc-border-color:var(--border); --fc-page-bg-color:var(--surface); --fc-neutral-bg-color:var(--surface-raised);
+  --fc-list-event-hover-bg-color:var(--surface-raised); --fc-today-bg-color:rgba(91,157,255,0.08);
+  --fc-button-bg-color:var(--surface-raised); --fc-button-border-color:var(--border);
+  --fc-button-hover-bg-color:var(--border); --fc-button-active-bg-color:var(--border-soft);
+  --fc-button-text-color:var(--text); font-family:var(--font-body); color:var(--text);
+}
+#calendar .fc-toolbar-title{font-family:var(--font-display); font-size:16px; font-weight:600; color:var(--text);}
+#calendar .fc-col-header-cell-cushion, #calendar .fc-daygrid-day-number{color:var(--text-dim); text-decoration:none; font-size:12px;}
+#calendar .fc-event{border:none; font-size:11px; padding:1px 4px; cursor:pointer;}
+#calendar .fc-button{text-transform:capitalize; font-family:var(--font-body); font-size:12.5px; box-shadow:none !important;}
+#calendar a{color:inherit;}
+
+.is-modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.55); display:none; align-items:center; justify-content:center; z-index:1000;}
+.is-modal-backdrop.open{display:flex;}
+.is-modal{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:22px; width:340px; max-width:90vw; max-height:calc(100dvh - 48px); overflow-y:auto; box-sizing:border-box; position:relative;}
+.is-modal h3{font-family:var(--font-display); font-size:16px; margin:0 0 4px; color:var(--text);}
+.is-modal-lab{font-size:12px; color:var(--text-dim); margin-bottom:14px;}
+.is-modal-row{display:flex; justify-content:space-between; font-size:12.5px; padding:6px 0; border-bottom:1px solid var(--border-soft); color:var(--text);}
+.is-modal-row span:first-child{color:var(--text-dim);}
+.is-modal-close{position:absolute; top:14px; right:16px; background:none; border:none; color:var(--text-faint); font-size:18px; cursor:pointer;}
+
+@media (max-width:960px){
+  .is-metrics{ grid-template-columns:repeat(2,1fr); }
+  .is-layout{ grid-template-columns:1fr; }
+  .is-quick-actions{ grid-template-columns:repeat(2,1fr); }
+}
 </style>
 
 <div class="page-header">
   <div>
-    <h1>My schedule</h1>
-    <div class="sub">{{ my_sessions|length }} upcoming sessions</div>
+    <h1>Scheduling</h1>
+    <div class="sub">Your reservations and requests — click a date to reserve, click a session for details</div>
   </div>
-  <div class="sub" style="text-align:right; max-width:260px">To reserve a lab, coordinate with the admin or your lab in-charge.</div>
+  <a href="{% url 'instructor_request_new' %}" class="action-btn primary">+ New Reservation</a>
 </div>
 
-<div class="three-col">
-  <div class="card">
-    <div class="section-title">My sessions</div>
-    {% for session in my_sessions %}
-      <div class="schedule-row">
-        <div class="schedule-time">{{ session.date|date:"M d" }}<br>{{ session.start_time|time:"H:i" }}</div>
-        <div class="schedule-block">
-          <div class="s-title">{{ session.subject }}</div>
-          <div class="s-sub">{{ session.lab.name }} · {% if session.requester_type == 'walk_in' or session.requester_type == 'override' %}{{ session.pcs_requested }} PC{{ session.pcs_requested|pluralize }}{% else %}{{ session.student_count }} students{% endif %}</div>
-        </div>
-      </div>
-    {% empty %}
-      <p class="empty">No sessions scheduled.</p>
-    {% endfor %}
+<div class="is-metrics">
+  <div class="is-metric green">
+    <div class="is-metric-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18M8 3v3M16 3v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+    <div class="is-metric-body"><div class="is-metric-label">Today's Sessions</div><div class="is-metric-val">{{ todays_sessions_count }}</div><div class="is-metric-sub">{% if todays_sessions_count %}Scheduled today{% else %}No scheduled session{% endif %}</div></div>
   </div>
-
-  <div class="card">
-    <div class="section-title">My requests</div>
-    {% for req in my_requests %}
-      <div class="schedule-row">
-        <div class="schedule-time">{{ req.date|date:"M d" }}</div>
-        <div class="schedule-block">
-          <div class="s-title">{{ req.subject }} <span class="status-pill pill-{{ req.status }}">{{ req.get_status_display }}</span></div>
-          <div class="s-sub">{{ req.lab.name }} · {{ req.start_time|time:"H:i" }}–{{ req.end_time|time:"H:i" }}</div>
-        </div>
-      </div>
-    {% empty %}
-      <p class="empty">No requests submitted yet.</p>
-    {% endfor %}
+  <div class="is-metric blue">
+    <div class="is-metric-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+    <div class="is-metric-body"><div class="is-metric-label">My Reservations</div><div class="is-metric-val">{{ reservations_week_count }}</div><div class="is-metric-sub">This week</div></div>
   </div>
-
-  <div class="card">
-    <div class="section-title">My class rosters</div>
-    {% for roster in my_rosters %}
-      <div class="schedule-row">
-        <div class="schedule-block">
-          <div class="s-title">
-            {{ roster.course_code|default:roster.name }}
-            <span class="status-pill pill-{{ roster.approval_status }}">{{ roster.get_approval_status_display }}</span>
-          </div>
-          <div class="s-sub">
-            {{ roster.subject|default:"—" }}{% if roster.section %} · {{ roster.section }}{% endif %}
-            {% if roster.lab %} · {{ roster.lab.name }}{% endif %}
-          </div>
-          {% if roster.approval_status == 'rejected' and roster.rejection_reason %}
-            <div class="s-sub" style="color:var(--red-soft);">Reason: {{ roster.rejection_reason }} — edit to resubmit.</div>
-          {% endif %}
-        </div>
-        <a href="{% url 'roster_detail' roster.pk %}" class="action-btn icon-only js-modal-link" title="View roster">&#8594;</a>
-      </div>
-    {% empty %}
-      <p class="empty">No class rosters yet.</p>
-    {% endfor %}
+  <div class="is-metric amber">
+    <div class="is-metric-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+    <div class="is-metric-body"><div class="is-metric-label">Pending Requests</div><div class="is-metric-val">{{ pending_requests_count }}</div><div class="is-metric-sub">Waiting for approval</div></div>
+  </div>
+  <div class="is-metric purple">
+    <div class="is-metric-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="is-metric-body"><div class="is-metric-label">Total Classes</div><div class="is-metric-val">{{ total_classes_count }}</div><div class="is-metric-sub">All reservations</div></div>
   </div>
 </div>
+
+<div class="is-layout">
+  <div class="card" style="margin-bottom:0; min-width:0;">
+    <form method="get" style="margin-bottom:12px;">
+      <select name="lab" class="form-control" style="max-width:220px; display:inline-block;" onchange="this.form.submit()">
+        <option value="">All Laboratories</option>
+        {% for lab in labs %}
+          <option value="{{ lab.pk }}" {% if selected_lab == lab.pk|stringformat:"s" %}selected{% endif %}>{{ lab.name }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    <div id="calendar"></div>
+  </div>
+
+  <div class="is-side">
+    <div class="is-panel">
+      <div class="is-cal-head">
+        <div class="is-cal-nav">
+          <a href="?month={{ cal_prev }}{% if selected_lab %}&lab={{ selected_lab }}{% endif %}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></a>
+        </div>
+        <span class="is-cal-title">{{ cal_label }}</span>
+        <div class="is-cal-nav">
+          <a href="?month={{ cal_next }}{% if selected_lab %}&lab={{ selected_lab }}{% endif %}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></a>
+        </div>
+      </div>
+      <div class="is-cal-grid">
+        {% for label in cal_weekday_labels %}<div class="is-cal-dow">{{ label }}</div>{% endfor %}
+        {% for week in cal_weeks %}{% for day in week %}
+          {% if day %}<div class="is-cal-day status-{{ day.status }}">{{ day.day }}</div>{% else %}<div class="is-cal-day"></div>{% endif %}
+        {% endfor %}{% endfor %}
+      </div>
+    </div>
+
+    <div class="is-panel">
+      <div class="is-panel-title">Legend</div>
+      <div class="is-legend">
+        <div class="is-legend-item"><span class="is-legend-dot" style="background:#5b9dff;"></span> Reserved (confirmed)</div>
+        <div class="is-legend-item"><span class="is-legend-dot" style="background:#f2a93b;"></span> Pending approval</div>
+        <div class="is-legend-item"><span class="is-legend-dot" style="background:#8b98a3;"></span> Declined</div>
+      </div>
+    </div>
+
+    <div class="is-panel">
+      <div class="is-panel-title">Upcoming (Next 7 Days) <a href="#" class="is-action">View all →</a></div>
+      {% for s in upcoming %}
+        <div class="is-up-item">
+          <div class="is-up-top"><span class="is-up-dot" style="background:#5b9dff;"></span><span class="is-up-title">{{ s.subject }}</span></div>
+          <div class="is-up-sub">{{ s.lab.name }} · {{ s.date|date:"M j, Y" }}, {{ s.start_time|time:"g:i A" }}–{{ s.end_time|time:"g:i A" }}</div>
+        </div>
+      {% empty %}
+        <p class="is-empty-sub">No upcoming reservations in the next 7 days.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="is-panel-title" style="margin-bottom:0;">Quick Actions</div>
+  <div class="is-quick-actions">
+    <a href="{% url 'instructor_request_new' %}" class="is-quick-btn q-green">
+      <div class="is-quick-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+      New Reservation
+    </a>
+    <a href="{% url 'attendance' %}" class="is-quick-btn q-blue">
+      <div class="is-quick-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.8"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      Attendance
+    </a>
+    <a href="{% url 'inst_alerts' %}" class="is-quick-btn q-amber">
+      <div class="is-quick-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      Notifications
+    </a>
+    <a href="{% url 'roster_list' %}" class="is-quick-btn q-purple">
+      <div class="is-quick-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="17" cy="9" r="2.4" stroke="currentColor" stroke-width="1.8"/><path d="M2.5 20c0-3.5 2.9-6 6.5-6s6.5 2.5 6.5 6M15.5 14.3c2.4.3 4.5 2.3 4.5 5.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      Class Rosters
+    </a>
+  </div>
+</div>
+
+<div class="is-modal-backdrop" id="isModal">
+  <div class="is-modal">
+    <button type="button" class="is-modal-close" onclick="document.getElementById('isModal').classList.remove('open')">&times;</button>
+    <h3 id="imSubject"></h3>
+    <div class="is-modal-lab" id="imLab"></div>
+    <div class="is-modal-row"><span>Time</span><span id="imTime"></span></div>
+    <div class="is-modal-row"><span>Status</span><span id="imStatus"></span></div>
+    <div class="is-modal-row"><span>Code</span><span id="imCode" style="font-family:var(--font-mono)"></span></div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var calEl = document.getElementById('calendar');
+  if (!calEl) return;
+  var events = {{ calendar_events_json|safe }};
+  var modal = document.getElementById('isModal');
+
+  var calendar = new FullCalendar.Calendar(calEl, {
+    initialView: 'dayGridMonth',
+    initialDate: '{{ initial_date }}',
+    height: 'auto',
+    dayMaxEvents: false,
+    headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listMonth' },
+    events: events,
+    dateClick: function (info) {
+      var today = new Date(); today.setHours(0, 0, 0, 0);
+      if (info.date < today) return;
+      openAppModal('{% url "instructor_request_new" %}?date=' + info.dateStr, info.dayEl);
+    },
+    eventClick: function (info) {
+      var p = info.event.extendedProps;
+      document.getElementById('imSubject').textContent = p.subject;
+      document.getElementById('imLab').textContent = p.lab;
+      document.getElementById('imTime').textContent = p.time || '';
+      document.getElementById('imStatus').textContent = p.status || '';
+      document.getElementById('imCode').textContent = p.code || '—';
+      modal.classList.add('open');
+    }
+  });
+  calendar.render();
+
+  modal.addEventListener('click', function (e) { if (e.target === modal) modal.classList.remove('open'); });
+});
+</script>
 
 {% endblock %}

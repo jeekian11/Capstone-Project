@@ -8,14 +8,16 @@
     <h1>Manual Unlock (Guest)</h1>
     <div class="sub">For first-time walk-in guests with no registered account. Enter the guest's Full Name so the access log can identify who used the computer.</div>
   </div>
-  <a href="{% url 'pc_status' %}" class="action-btn">Back to PC Status</a>
+  <a href="{% url 'pc_status' %}" class="action-btn"
+     onclick="if (this.closest('#appModalBody')) { event.preventDefault(); closeAppModal(); }">Back to PC Status</a>
 </div>
 
 <div class="card" style="max-width:640px">
   <form method="get" class="form-row" style="align-items:end;">
     <div class="form-group" style="margin-bottom:0; flex:1;">
       <label class="form-label" for="lab">Laboratory</label>
-      <select name="lab" id="lab" class="form-control" onchange="this.form.submit()">
+      <select name="lab" id="lab" class="form-control"
+              onchange="var url='{% url 'manual_unlock' %}?lab=' + encodeURIComponent(this.value); if (this.closest('#appModalBody')) { openAppModal(url, this); } else { window.location.href = url; }">
         <option value="">Select a laboratory…</option>
         {% for lab in all_labs %}
           <option value="{{ lab.pk }}" {% if selected_lab == lab.pk|stringformat:"s" %}selected{% endif %}>{{ lab.name }}</option>
@@ -53,6 +55,8 @@
 
       <div class="form-actions">
         <button type="submit" class="action-btn primary">Unlock for Guest</button>
+        <a href="{% url 'pc_status' %}" class="action-btn"
+           onclick="if (this.closest('#appModalBody')) { event.preventDefault(); closeAppModal(); }">Cancel</a>
       </div>
     </form>
   {% else %}

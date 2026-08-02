@@ -23,7 +23,8 @@
 .cr a:hover{text-decoration:underline;}
 .cr-card{background:var(--cr-card); border:1px solid var(--cr-border); border-radius:14px; padding:18px 20px; box-shadow:0 1px 2px rgba(0,0,0,.2);}
 
-.cr-metrics{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:16px;}
+.cr-metrics{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:16px; min-width:0;}
+.cr-metrics > *{min-width:0;}
 .cr-metric{display:flex; align-items:center; gap:12px;}
 .cr-metric-icon{width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
 .cr-metric-icon svg{width:19px; height:19px;}
@@ -34,7 +35,8 @@
 .ic-blue{background:var(--cr-blue-tint); color:var(--cr-blue);}
 .ic-orange{background:var(--cr-orange-tint); color:var(--cr-orange);}
 
-.cr-filter-form{display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr 1fr auto auto; gap:12px; align-items:end;}
+.cr-filter-form{display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr 1fr auto auto; gap:12px; align-items:end; min-width:0;}
+.cr-filter-form > *{min-width:0;}
 .cr-label{font-size:12px; font-weight:500; color:var(--cr-dim); margin-bottom:6px; display:block;}
 .cr-input, .cr-select{width:100%; padding:9px 12px; border:1px solid var(--cr-border); border-radius:8px; font-size:13px; background:var(--cr-bg); color:var(--cr-text); font-family:inherit;}
 .cr-btn{display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:8px; border:1px solid var(--cr-border); background:var(--cr-card); color:var(--cr-text); font-size:13px; font-weight:500; cursor:pointer; white-space:nowrap;}
@@ -72,6 +74,12 @@ html[data-theme="light"] .cr-pagination span.cr-page.current{ color:#fff; }
 
 @media (max-width:1100px){
   .cr-filter-form{grid-template-columns:1fr 1fr;}
+}
+@media (max-width:640px){
+  .cr-filter-form{grid-template-columns:1fr; gap:10px;}
+  /* No scroll wrapper in the markup around this table, so let the table
+     itself scroll sideways rather than blowing out the page width. */
+  .cr-table{display:block; overflow-x:auto; -webkit-overflow-scrolling:touch;}
 }
 </style>
 

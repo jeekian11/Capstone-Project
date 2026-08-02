@@ -55,8 +55,8 @@
 
 /* schedule table */
 .ic2-table{width:100%; border-collapse:collapse; font-size:12.5px;}
-.ic2-table th{text-align:left; padding:6px 8px; color:var(--text-faint); font-weight:500; border-bottom:1px solid var(--border); font-size:10.5px; text-transform:uppercase; letter-spacing:.04em;}
-.ic2-table td{padding:9px 8px; border-bottom:1px solid var(--border-soft); color:var(--text); vertical-align:top;}
+.ic2-table th{text-align:left; padding:6px 8px; color:var(--text-faint); font-weight:500; border-bottom:1px solid var(--border); font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; white-space:nowrap;}
+.ic2-table td{padding:9px 8px; border-bottom:1px solid var(--border-soft); color:var(--text); vertical-align:top; white-space:nowrap;}
 .ic2-table tr:last-child td{border-bottom:none;}
 .ic2-table .time{font-family:'JetBrains Mono',monospace; color:var(--text-dim); white-space:nowrap; font-size:11.5px;}
 .ic2-table .subj{font-weight:500;}
@@ -75,11 +75,22 @@
 
 .ic2-empty{color:var(--text-faint); font-size:13px; text-align:center; padding:20px 0;}
 
-@media (max-width:1200px){
-  .ic2-cols{grid-template-columns:1fr;}
-}
+/* Shrink sizing/spacing on tablets, and actually stack the grids once
+   there isn't room for 3-4 columns side by side. */
 @media (max-width:860px){
-  .ic2-metrics{grid-template-columns:repeat(2,1fr);}
+  .ic2-hero-title{ font-size:17px; }
+  .ic2-metrics{ grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:16px; }
+  .ic2-metric{ padding:10px 12px; gap:8px; border-radius:10px; }
+  .ic2-metric-icon{ width:28px; height:28px; }
+  .ic2-metric-icon svg{ width:14px; height:14px; }
+  .ic2-metric-label{ font-size:10px; }
+  .ic2-metric-val{ font-size:16px; }
+  .ic2-metric-sub{ font-size:9.5px; }
+  .ic2-cols{ grid-template-columns:1fr; gap:10px; }
+  .ic2-panel{ padding:12px 14px; border-radius:10px; }
+  .ic2-panel-title{ font-size:11px; }
+  .ic2-pc-grid{ grid-template-columns:repeat(auto-fill,minmax(38px,1fr)); gap:5px; }
+  .ic2-table{ font-size:10.5px; }
 }
 </style>
 
@@ -224,6 +235,7 @@
         <a href="{% url 'lab_schedule' %}">View Calendar &rarr;</a>
       </div>
       {% if todays_sessions %}
+      <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
       <table class="ic2-table">
         <thead>
           <tr><th>Time</th><th>Subject / Activity</th><th>Instructor</th><th>Section</th><th>Status</th></tr>
@@ -240,6 +252,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
       {% else %}
         <p class="ic2-empty">No sessions scheduled today.</p>
       {% endif %}

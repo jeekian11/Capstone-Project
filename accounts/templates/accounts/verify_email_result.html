@@ -1,0 +1,21 @@
+{% extends "auth_base.html" %}
+{% block title %}Verify Email{% endblock %}
+
+{% block content %}
+<div class="auth-card" style="max-width:420px; text-align:center; margin:0 auto;">
+  {% if success %}
+    <h2 style="color:#2ecc71;">Email Verified ✓</h2>
+    <p style="color:#888; font-size:13px; line-height:1.6;">
+      Your email has been confirmed. You can now log in to your account.
+    </p>
+    <a href="{% url 'login' %}" class="btn" style="display:inline-block; margin-top:12px;">Go to Login</a>
+  {% else %}
+    <h2 style="color:#e74c3c;">Verification Failed</h2>
+    <p style="color:#888; font-size:13px; line-height:1.6;">
+      This verification link is invalid or has expired. Please contact your admin
+      to have a new verification email sent.
+    </p>
+    <a href="{% url 'login' %}" class="btn" style="display:inline-block; margin-top:12px;">Back to Login</a>
+  {% endif %}
+</div>
+{% endblock %}

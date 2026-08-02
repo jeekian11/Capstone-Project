@@ -58,24 +58,30 @@ def lab_pc_capacity(lab, date, start_time, end_time, exclude_pk=None):
     return total_pcs, used, max(total_pcs - used, 0)
 
 
-def student_count_error(lab, student_count):
+def cap_student_count(lab, student_count):
     """Validates an Instructor/Student/Group (whole-lab, exclusive-booking)
     request's `student_count` against the lab's total physical PC count.
 
     These requester types block the entire lab for their time slot rather
-    than reserving a specific number of PCs (see lab_pc_capacity above), but
-    the number of students who'll actually need a PC still can't exceed how
-    many PCs the lab physically has — otherwise some students would have
-    nowhere to sit. Returns an error message string if the request can't be
-    granted, or None if it's fine.
+    than reserving a specific number of PCs (see lab_pc_capacity above).
+    Rather than rejecting the whole reservation when more students are
+    requested than the lab has PCs for, the request is auto-capped at
+    however many PCs are actually available so the reservation still goes
+    through — the requester is simply told only that many were assigned.
+
+    Returns (assigned_count, note) where `note` is a human-readable message
+    if the count had to be capped, or None if the requested count already
+    fit within the lab's capacity.
     """
     total_pcs = lab.pcs.count()
     if student_count > total_pcs:
-        return (
-            f'{lab.name} only has {total_pcs} PC(s) — this reservation is for '
-            f'{student_count} student(s), which exceeds the lab\'s capacity.'
+        note = (
+            f'Only {total_pcs} out of {student_count} student(s) have been assigned because only '
+            f'{total_pcs} PC{"s" if total_pcs != 1 else ""} '
+            f'{"are" if total_pcs != 1 else "is"} currently available in {lab.name}.'
         )
-    return None
+        return total_pcs, note
+    return student_count, None
 
 
 def roster_schedule_conflicts(lab, instructor, section, schedule_days, start_time, end_time,

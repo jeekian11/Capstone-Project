@@ -103,9 +103,15 @@ html[data-theme="light"] .ic-orange{ color:#fff; }
 
 .ml-empty{color:var(--ml-faint); font-size:13px; text-align:center; padding:24px 0;}
 
-@media (max-width:1200px){
+@media (max-width:1200px) and (min-width:861px){
   .ml-row-main{grid-template-columns:1fr;}
   .ml-filter-form{grid-template-columns:1fr 1fr;}
+}
+@media (max-width:860px){
+  .ml-metrics{ gap:8px; }
+  .ml-filter-form{ grid-template-columns:1fr 1fr; gap:8px; }
+  .ml-row-main{ grid-template-columns:1fr; gap:8px; }
+  .ml-grid{ grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; }
 }
 </style>
 

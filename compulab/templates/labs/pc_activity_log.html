@@ -68,12 +68,30 @@
   .pal-quick-actions { display: flex; flex-direction: column; gap: 8px; }
   .pal-quick-actions .action-btn { justify-content: flex-start; width: 100%; }
 
-  @media (max-width: 1200px) {
+  @media (max-width: 1200px) and (min-width: 861px) {
     .pal-stats { grid-template-columns: repeat(3, 1fr); }
     .pal-filters-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  /* Below 860px there's no honest way to fit a 300px-min sidebar next to
+     the main timeline, so the two-column layout stacks — and below that,
+     the card grids need real column counts, not just smaller versions of
+     the same 6/3-column layout. */
+  @media (max-width: 860px) {
     .pal-layout { flex-direction: column; }
-    .pal-side { position: static; width: 100%; }
-    .pal-bottom-grid { grid-template-columns: 1fr; }
+    .pal-side { position: static; width: 100%; min-width: 0; }
+    .pal-stats { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .pal-stat { padding: 9px; gap: 8px; border-radius: 10px; }
+    .pal-stat-icon { width: 30px; height: 30px; }
+    .pal-stat-icon svg { width: 15px; height: 15px; }
+    .pal-stat-val { font-size: 14px; }
+    .pal-stat-label { font-size: 9px; }
+    .pal-filters-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .pal-bottom-grid { grid-template-columns: 1fr; gap: 8px; }
+  }
+  @media (max-width: 480px) {
+    .pal-stats { grid-template-columns: repeat(2, 1fr); }
+    .pal-filters-grid { grid-template-columns: 1fr 1fr; }
+    .pal-donut-wrap { flex-direction: column; align-items: stretch; }
   }
 </style>
 

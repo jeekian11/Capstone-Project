@@ -1,0 +1,62 @@
+{% load static %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2b22; --muted:#66756c; --faint:#94a099;
+    --green:#1b7a4d; --green-dark:#125c38; --green-soft:rgba(27,122,77,0.10);
+    --red:#b23a3a; --red-soft:rgba(214,69,69,0.08); --red-border:rgba(214,69,69,0.28);
+    --border:#e3e8e3;
+    --font-display:'Space Grotesk',sans-serif;
+    --font-body:'Inter',sans-serif;
+  }
+  .ac-wrap{
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:32px; font-family:var(--font-body);
+    background-image:url("{% static 'img/login-bg.jpg' %}");
+    background-size:cover; background-position:center; background-attachment:fixed;
+  }
+  .ac-card{
+    width:100%; max-width:380px; background:#ffffff; border-radius:20px;
+    padding:30px 28px; box-shadow:0 30px 70px rgba(10,25,15,0.35), 0 4px 18px rgba(10,25,15,0.15);
+  }
+  .ac-head{ display:flex; align-items:center; gap:9px; margin-bottom:6px; }
+  .ac-icon{
+    width:32px; height:32px; border-radius:50%; background:var(--green-soft);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .ac-head h2{ font-family:var(--font-display); font-size:16.5px; font-weight:600; color:var(--ink); letter-spacing:-0.01em; }
+  .ac-sub{ font-size:12.5px; color:var(--muted); line-height:1.5; margin-bottom:18px; }
+  .ac-sub b{ color:var(--ink); font-weight:600; }
+
+  .ac-error{ background:var(--red-soft); border:1px solid var(--red-border); color:var(--red); font-size:12px; padding:9px 12px; border-radius:8px; margin-bottom:14px; }
+  .ac-field-error{ color:var(--red); font-size:11px; margin-top:4px; }
+
+  .ac-card label{ display:block; font-size:11.5px; font-weight:500; color:var(--muted); margin:11px 0 5px; }
+  .ac-card label:first-of-type{ margin-top:0; }
+  .ac-input-wrap{ position:relative; }
+  .ac-input-wrap svg{ position:absolute; left:12px; top:50%; transform:translateY(-50%); pointer-events:none; }
+  .ac-card input{
+    width:100%; padding:8px 12px 8px 34px; background:#fafbfa; border:1px solid var(--border);
+    border-radius:8px; color:var(--ink); font-size:13px; font-family:var(--font-body);
+    transition:border-color 0.15s ease, background-color 0.15s ease;
+  }
+  .ac-card input::placeholder{ color:var(--faint); }
+  .ac-card input:focus{ outline:none; border-color:var(--green); background:#fff; }
+
+  .ac-card button[type="submit"], .ac-btn{
+    width:100%; margin-top:18px; padding:9px 14px; border:none; border-radius:8px;
+    background:linear-gradient(135deg,var(--green),var(--green-dark)); color:#fff;
+    font-family:var(--font-body); font-size:13.5px; font-weight:600; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:8px; text-decoration:none;
+    transition:opacity 0.15s ease, transform 0.15s ease;
+  }
+  .ac-card button[type="submit"]:hover, .ac-btn:hover{ opacity:0.92; transform:translateY(-1px); }
+
+  .ac-foot{ margin-top:16px; font-size:11.5px; color:var(--faint); text-align:center; }
+  .ac-foot a{ color:var(--green); text-decoration:none; font-weight:500; }
+  .ac-foot a:hover{ text-decoration:underline; }
+
+  .ac-status-icon{ width:52px; height:52px; border-radius:50%; background:var(--green-soft); display:flex; align-items:center; justify-content:center; margin:0 auto 16px; }
+  .ac-center{ text-align:center; }
+</style>

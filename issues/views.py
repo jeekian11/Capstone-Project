@@ -69,7 +69,7 @@ class IssueCreateView(RoleRequiredMixin, ModalFormMixin, CreateView):
                 message=f'Reported at {form.instance.lab} — {form.instance.pc}',
                 is_system_alert=True,
             )
-        messages.success(self.request, 'Issue logged successfully.')
+        messages.success(self.request, 'Issue logged.')
         return super().form_valid(form)
 
 

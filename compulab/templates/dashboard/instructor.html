@@ -7,99 +7,326 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
 <style>
-.in-topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; flex-wrap:wrap; gap:16px;}
-.in-brand{display:flex; align-items:center; gap:12px;}
-.in-brand-mark{width:34px; height:34px; border-radius:8px; background:linear-gradient(135deg,var(--purple),var(--blue)); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-weight:600; font-size:14px; color:#0a0e12;}
-html[data-theme="light"] .in-brand-mark,
-html[data-theme="light"] .in-quick-btn.primary{ color:#fff; }
-.in-brand-text h1{font-family:var(--font-display); font-size:19px; margin:0; font-weight:600; letter-spacing:-0.01em; color:var(--text);}
-.in-brand-text span{font-size:12px; color:var(--text-faint); font-family:var(--font-mono);}
+/* ---------- greeting banner ---------- */
+.in-banner{
+  position:relative; overflow:hidden; border-radius:14px; padding:26px 28px;
+  margin-bottom:20px; background:linear-gradient(120deg,#0f3d29,#1b7a4d 65%,#1f8f58);
+  border:1px solid var(--border);
+}
+.in-banner-content{ position:relative; z-index:1; max-width:560px; }
+.in-banner-greet{ display:flex; align-items:center; gap:10px; font-family:var(--font-display); font-size:21px; font-weight:600; color:#fff; letter-spacing:-0.01em; }
+.in-banner-wave{ font-size:22px; }
+.in-banner-role{ font-size:13px; color:rgba(255,255,255,0.85); margin-top:4px; }
+.in-banner-sub{ font-size:12.5px; color:rgba(255,255,255,0.7); margin-top:10px; }
+.in-banner-art{ position:absolute; right:20px; bottom:0; width:180px; opacity:0.92; z-index:0; }
+@media (max-width:640px){ .in-banner-art{ display:none; } }
 
-.in-metrics{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:24px;}
-.in-metric{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px 20px; position:relative; overflow:hidden;}
-.in-metric::before{content:''; position:absolute; top:0; left:0; width:3px; height:100%; background:var(--bar-color,var(--text-faint));}
-.in-metric-label{font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px; font-weight:500;}
-.in-metric-val{font-family:var(--font-display); font-size:32px; font-weight:600; letter-spacing:-0.01em; color:var(--text);}
-.in-metric.amber{--bar-color:var(--amber);} .in-metric.amber .in-metric-val{color:var(--amber);}
-.in-metric.blue{--bar-color:var(--blue);} .in-metric.blue .in-metric-val{color:var(--blue);}
-.in-metric.purple{--bar-color:var(--purple);} .in-metric.purple .in-metric-val{color:var(--purple);}
+/* ---------- stat cards ---------- */
+.in-metrics{display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:20px; min-width:0;}
+.in-metric{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; display:flex; flex-direction:column; gap:10px; min-width:0;}
+.in-metric-top{ display:flex; align-items:flex-start; gap:12px; min-width:0; }
+.in-metric-icon{ width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.in-metric-icon svg{ width:18px; height:18px; }
+.in-metric.amber .in-metric-icon{ background:var(--amber-dim,rgba(242,169,59,0.14)); color:var(--amber); }
+.in-metric.blue .in-metric-icon{ background:var(--blue-dim,rgba(91,157,255,0.14)); color:var(--blue); }
+.in-metric.purple .in-metric-icon{ background:var(--purple-dim,rgba(167,139,250,0.14)); color:var(--purple); }
+.in-metric.green .in-metric-icon{ background:rgba(62,214,196,0.14); color:var(--green,#3ed6c4); }
+.in-metric.teal .in-metric-icon{ background:rgba(45,212,191,0.14); color:#2dd4bf; }
+.in-metric-body{ min-width:0; }
+.in-metric-label{ font-size:12px; color:var(--text-dim); font-weight:500; }
+.in-metric-val{ font-family:var(--font-display); font-size:24px; font-weight:700; letter-spacing:-0.01em; color:var(--text); margin-top:2px; }
+.in-metric-link{ font-size:11px; color:var(--blue); text-decoration:none; font-weight:500; }
+.in-metric-link:hover{ text-decoration:underline; }
 
-.in-two-col{display:grid; grid-template-columns:1.3fr 1fr; gap:20px;}
-.in-panel{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:24px;}
-.in-section-title{font-family:var(--font-display); font-size:14px; font-weight:600; color:var(--text); margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;}
-.in-action{font-size:12px; color:var(--blue); text-decoration:none; font-weight:500;}
+/* ---------- next class ---------- */
+.in-next{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:20px; min-width:0; }
+.in-next-row{ display:flex; align-items:center; gap:16px; min-width:0; flex-wrap:wrap; }
+.in-next-time{ font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--green,#3ed6c4); background:rgba(62,214,196,0.1); border-radius:10px; padding:10px 14px; text-align:center; flex-shrink:0; }
+.in-next-body{ flex:1; min-width:150px; }
+.in-next-title{ font-size:14px; font-weight:600; color:var(--text); overflow-wrap:anywhere; }
+.in-next-sub{ font-size:12px; color:var(--text-dim); margin-top:3px; overflow-wrap:anywhere; }
+.in-next-sub2{ font-size:11.5px; color:var(--text-faint); margin-top:2px; }
 
-.in-schedule-row{display:flex; gap:14px; padding:12px 0; border-bottom:1px solid var(--border-soft); align-items:center;}
+/* ---------- status pills ---------- */
+.in-pill{ font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:999px; flex-shrink:0; }
+.in-pill.approved{ background:rgba(62,214,196,0.14); color:var(--green,#3ed6c4); }
+.in-pill.pending{ background:var(--amber-dim,rgba(242,169,59,0.14)); color:var(--amber); }
+.in-pill.declined{ background:rgba(139,152,163,0.14); color:var(--text-dim); }
+
+/* ---------- weekly chart ---------- */
+.in-chart-wrap{ position:relative; height:190px; min-width:0; }
+
+/* ---------- quick actions ---------- */
+.in-section-label{ font-family:var(--font-display); font-size:13px; font-weight:600; color:var(--text); margin-bottom:12px; }
+.in-quick-actions{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; min-width:0;}
+.in-quick-btn{
+  display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:12px;
+  background:var(--surface); border:1px solid var(--border); color:var(--text);
+  font-size:13px; font-weight:500; text-decoration:none; min-width:0; transition:border-color .15s ease;
+}
+.in-quick-btn:hover{ border-color:var(--green,#3ed6c4); }
+.in-quick-icon{ width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; position:relative; }
+.in-quick-icon svg{ width:17px; height:17px; }
+.in-quick-btn.q-green .in-quick-icon{ background:rgba(62,214,196,0.14); color:var(--green,#3ed6c4); }
+.in-quick-btn.q-blue .in-quick-icon{ background:var(--blue-dim,rgba(91,157,255,0.14)); color:var(--blue); }
+.in-quick-btn.q-amber .in-quick-icon{ background:var(--amber-dim,rgba(242,169,59,0.14)); color:var(--amber); }
+.in-quick-btn.q-purple .in-quick-icon{ background:var(--purple-dim,rgba(167,139,250,0.14)); color:var(--purple); }
+.in-quick-badge{
+  position:absolute; top:-4px; right:-4px; min-width:16px; height:16px; padding:0 4px; border-radius:999px;
+  background:var(--purple); color:#0a0e12; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center;
+}
+
+/* ---------- bottom rows ---------- */
+.in-row3{ display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:16px; align-items:start; min-width:0; margin-bottom:16px; }
+.in-row2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; min-width:0; }
+.in-panel{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px; min-width:0;}
+.in-section-title{font-family:var(--font-display); font-size:13.5px; font-weight:600; color:var(--text); margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; gap:8px;}
+.in-action{font-size:11.5px; color:var(--blue); text-decoration:none; font-weight:500; flex-shrink:0;}
+
+.in-schedule-row{display:flex; gap:14px; padding:12px 0; border-bottom:1px solid var(--border-soft); align-items:center; min-width:0;}
 .in-schedule-row:last-child{border-bottom:none; padding-bottom:0;}
-.in-schedule-time{font-family:var(--font-mono); font-size:12px; color:var(--text-dim); width:96px; flex-shrink:0;}
-.in-schedule-block{flex:1; padding:10px 14px; background:var(--surface-raised); border-radius:8px; border-left:3px solid var(--purple);}
-.in-s-title{font-size:13.5px; font-weight:500; color:var(--text);}
-.in-s-sub{font-size:12px; color:var(--text-dim); margin-top:2px;}
+.in-schedule-time{font-family:var(--font-mono); font-size:11.5px; color:var(--text-dim); width:64px; flex-shrink:0;}
+.in-schedule-block{flex:1; min-width:0; padding:10px 14px; background:var(--surface-raised); border-radius:8px; border-left:3px solid var(--purple);}
+.in-s-title{font-size:13px; font-weight:500; color:var(--text); overflow-wrap:anywhere;}
+.in-s-sub{font-size:11.5px; color:var(--text-dim); margin-top:2px; overflow-wrap:anywhere;}
 
-.in-alert-item{display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-bottom:1px solid var(--border-soft);}
+.in-empty{ display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px 10px; color:var(--text-faint); }
+.in-empty svg{ width:56px; height:56px; opacity:.5; margin-bottom:10px; }
+.in-empty-title{ font-size:13px; font-weight:600; color:var(--text-dim); }
+.in-empty-sub{ font-size:11.5px; margin-top:3px; margin-bottom:14px; }
+
+.in-alert-item{display:flex; align-items:flex-start; gap:10px; padding:11px 0; border-bottom:1px solid var(--border-soft); min-width:0;}
 .in-alert-item:last-child{border-bottom:none; padding-bottom:0;}
-.in-alert-title{font-size:13.5px; font-weight:500; color:var(--text); margin-bottom:2px;}
-.in-alert-sub{font-size:12.5px; color:var(--text-dim); line-height:1.4;}
-.in-alert-time{margin-left:auto; font-size:11px; color:var(--text-faint); font-family:var(--font-mono); white-space:nowrap;}
-.in-empty{color:var(--text-faint); font-size:13px; text-align:center; padding:24px 0;}
+.in-alert-dot{ width:8px; height:8px; border-radius:50%; margin-top:5px; flex-shrink:0; background:var(--text-faint); }
+.in-alert-dot.success{ background:var(--green,#3ed6c4); }
+.in-alert-dot.info{ background:var(--blue); }
+.in-alert-dot.warning{ background:var(--amber); }
+.in-alert-dot.critical{ background:var(--red,#ff5d5d); }
+.in-alert-body{ min-width:0; flex:1; }
+.in-alert-title{font-size:12.5px; font-weight:500; color:var(--text); margin-bottom:2px; overflow-wrap:anywhere;}
+.in-alert-sub{font-size:11.5px; color:var(--text-dim); line-height:1.4; overflow-wrap:anywhere;}
+.in-alert-time{ font-size:10.5px; color:var(--text-faint); margin-top:3px; }
 
-.in-quick-actions{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:24px;}
-.in-quick-btn{display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border-radius:9px; background:var(--surface); border:1px solid var(--border); color:var(--text); font-size:13px; font-weight:500; text-decoration:none;}
-.in-quick-btn.primary{background:linear-gradient(135deg,var(--purple),var(--blue)); color:#0a0e12; border-color:transparent; font-weight:600;}
+/* ---------- mini calendar ---------- */
+.in-cal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.in-cal-nav{ display:flex; align-items:center; gap:6px; }
+.in-cal-nav a{ width:24px; height:24px; border-radius:6px; display:flex; align-items:center; justify-content:center; color:var(--text-dim); text-decoration:none; border:1px solid var(--border); flex-shrink:0; }
+.in-cal-nav a:hover{ background:var(--surface-raised); color:var(--text); }
+.in-cal-title{ font-family:var(--font-display); font-size:12.5px; font-weight:600; color:var(--text); }
+.in-cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; text-align:center; }
+.in-cal-dow{ font-size:10px; color:var(--text-faint); font-weight:600; padding:4px 0; }
+.in-cal-day{ position:relative; font-size:11.5px; color:var(--text-dim); padding:6px 0; border-radius:7px; }
+.in-cal-day.status-today{ background:var(--green,#3ed6c4); color:#0a0e12; font-weight:700; }
+.in-cal-day.status-reserved{ color:var(--blue); font-weight:600; }
+.in-cal-day.status-pending{ color:var(--amber); font-weight:600; }
+.in-cal-legend{ display:flex; gap:14px; margin-top:12px; flex-wrap:wrap; }
+.in-cal-legend-item{ display:flex; align-items:center; gap:5px; font-size:10.5px; color:var(--text-dim); }
+.in-cal-legend-dot{ width:7px; height:7px; border-radius:50%; }
 
-@media (max-width:860px){
-  .in-metrics{grid-template-columns:repeat(1,1fr);}
-  .in-two-col{grid-template-columns:1fr;}
+@media (max-width:1100px){
+  .in-metrics{ grid-template-columns:repeat(3,1fr); }
+}
+@media (max-width:960px){
+  .in-metrics{ grid-template-columns:repeat(2,1fr); }
+  .in-quick-actions{ grid-template-columns:repeat(2,1fr); }
+  .in-row3{ grid-template-columns:1fr; }
+  .in-row2{ grid-template-columns:1fr; }
+}
+@media (max-width:480px){
+  .in-metrics{ grid-template-columns:1fr; }
+  .in-banner{ padding:20px; }
+  .in-banner-greet{ font-size:17px; }
+  .in-next-row{ flex-direction:column; align-items:flex-start; }
 }
 </style>
 
-<div class="in-topbar">
-  <div class="in-brand">
-    <div class="in-brand-mark">I</div>
-    <div class="in-brand-text">
-      <h1>{{ request.user.display_name }}</h1>
-      <span>Instructor Dashboard</span>
+<div class="in-banner">
+  <div class="in-banner-content">
+    <div class="in-banner-greet"><span class="in-banner-wave">👋</span> {{ greeting }}, {{ request.user.display_name }}!</div>
+    <div class="in-banner-role">{{ request.user.get_role_display }}{% if request.user.department_display %} · {{ request.user.department_display }}{% endif %}</div>
+    <div class="in-banner-sub">
+      You have {{ unread_count }} unread notification{{ unread_count|pluralize }}
+      and {% if todays_sessions_count %}{{ todays_sessions_count }} scheduled class{{ todays_sessions_count|pluralize }}{% else %}no scheduled class{% endif %} today.
     </div>
   </div>
+  <svg class="in-banner-art" viewBox="0 0 200 140" xmlns="http://www.w3.org/2000/svg">
+    <rect x="18" y="112" width="164" height="6" rx="3" fill="rgba(255,255,255,0.18)"/>
+    <rect x="30" y="66" width="46" height="46" rx="4" fill="rgba(255,255,255,0.12)"/>
+    <rect x="30" y="66" width="46" height="8" rx="4" fill="rgba(255,255,255,0.22)"/>
+    <rect x="38" y="82" width="30" height="4" rx="2" fill="rgba(255,255,255,0.28)"/>
+    <rect x="38" y="92" width="22" height="4" rx="2" fill="rgba(255,255,255,0.28)"/>
+    <rect x="38" y="102" width="26" height="4" rx="2" fill="rgba(255,255,255,0.28)"/>
+    <g>
+      <rect x="86" y="60" width="70" height="46" rx="3" fill="rgba(0,0,0,0.18)"/>
+      <rect x="90" y="64" width="62" height="38" rx="2" fill="rgba(255,255,255,0.12)"/>
+      <rect x="78" y="104" width="86" height="8" rx="3" fill="rgba(0,0,0,0.22)"/>
+    </g>
+    <g>
+      <ellipse cx="168" cy="110" rx="16" ry="4" fill="rgba(0,0,0,0.15)"/>
+      <rect x="160" y="80" width="16" height="32" rx="2" fill="rgba(255,255,255,0.14)"/>
+      <path d="M168 80c-10 0-16-8-16-18 10 0 16 8 16 18z" fill="rgba(255,255,255,0.22)"/>
+      <path d="M168 80c10 0 16-10 16-20-10 0-16 8-16 20z" fill="rgba(255,255,255,0.18)"/>
+      <line x1="168" y1="80" x2="168" y2="60" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-linecap="round"/>
+    </g>
+  </svg>
 </div>
 
-<div class="in-quick-actions">
-  <a href="{% url 'inst_schedule' %}" class="in-quick-btn">My schedule</a>
-  <a href="{% url 'attendance' %}" class="in-quick-btn">Attendance</a>
-  <a href="{% url 'inst_alerts' %}" class="in-quick-btn">Notifications{% if unread_count %} ({{ unread_count }}){% endif %}</a>
-</div>
 
 <div class="in-metrics">
   <div class="in-metric amber">
-    <div class="in-metric-label">Today's sessions</div>
-    <div class="in-metric-val">{{ todays_sessions_count }}</div>
+    <div class="in-metric-top">
+      <div class="in-metric-icon">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18M8 3v3M16 3v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div class="in-metric-body">
+        <div class="in-metric-label">Today's Classes</div>
+        <div class="in-metric-val">{{ todays_sessions_count }}</div>
+      </div>
+    </div>
+    <a href="{% url 'inst_schedule' %}" class="in-metric-link">View today's schedule →</a>
   </div>
   <div class="in-metric blue">
-    <div class="in-metric-label">Pending requests</div>
-    <div class="in-metric-val">{{ pending_requests_count }}</div>
+    <div class="in-metric-top">
+      <div class="in-metric-icon">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div class="in-metric-body">
+        <div class="in-metric-label">Pending Requests</div>
+        <div class="in-metric-val">{{ pending_requests_count }}</div>
+      </div>
+    </div>
+    <a href="{% url 'inst_schedule' %}" class="in-metric-link">View all requests →</a>
   </div>
   <div class="in-metric purple">
-    <div class="in-metric-label">Unread notifications</div>
-    <div class="in-metric-val">{{ unread_count }}</div>
+    <div class="in-metric-top">
+      <div class="in-metric-icon">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.7 21a2 2 0 0 1-3.4 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div class="in-metric-body">
+        <div class="in-metric-label">Unread Notifications</div>
+        <div class="in-metric-val">{{ unread_count }}</div>
+      </div>
+    </div>
+    <a href="{% url 'inst_alerts' %}" class="in-metric-link">View notifications →</a>
+  </div>
+  <div class="in-metric green">
+    <div class="in-metric-top">
+      <div class="in-metric-icon">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 21h8M12 18v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div class="in-metric-body">
+        <div class="in-metric-label">Reserved Labs</div>
+        <div class="in-metric-val">{{ reserved_labs_week_count }}</div>
+      </div>
+    </div>
+    <a href="{% url 'inst_schedule' %}" class="in-metric-link">This week →</a>
+  </div>
+  <div class="in-metric teal">
+    <div class="in-metric-top">
+      <div class="in-metric-icon">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.8"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="17.5" cy="8.5" r="2.4" stroke="currentColor" stroke-width="1.8"/><path d="M15.7 13.2c2.6.3 4.8 2.4 4.8 5.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div class="in-metric-body">
+        <div class="in-metric-label">Today's Attendance</div>
+        <div class="in-metric-val">{% if todays_attendance_pct is not None %}{{ todays_attendance_pct }}%{% else %}—{% endif %}</div>
+      </div>
+    </div>
+    <a href="{% url 'attendance' %}" class="in-metric-link">View attendance →</a>
   </div>
 </div>
 
-<div class="in-two-col">
+<div class="in-next">
+  <div class="in-section-title">Next Class</div>
+  {% if next_class %}
+  <div class="in-next-row">
+    <div class="in-next-time">{{ next_class.start_time|time:"g:i A" }}</div>
+    <div class="in-next-body">
+      <div class="in-next-title">{{ next_class.subject }}</div>
+      <div class="in-next-sub">{{ next_class.lab.name }}{% if next_class.roster %} · {{ next_class.roster.section }}{% endif %}</div>
+      <div class="in-next-sub2">{{ next_class.date|date:"F j, Y" }}{% if next_class.date == today %} (Today){% endif %} · {{ next_class.start_time|time:"g:i A" }}–{{ next_class.end_time|time:"g:i A" }}</div>
+    </div>
+    <a href="{% url 'inst_schedule' %}" class="action-btn primary">View Details</a>
+  </div>
+  {% else %}
+  <p class="in-empty-sub" style="text-align:left; padding:2px 0;">
+    No upcoming confirmed classes.
+    {% if pending_requests_count %}You have {{ pending_requests_count }} request{{ pending_requests_count|pluralize }} still waiting for approval.{% else %}<a href="{% url 'instructor_request_new' %}" class="in-action">Reserve a laboratory →</a>{% endif %}
+  </p>
+  {% endif %}
+</div>
+
+<div class="in-row3">
+  <div class="in-panel">
+    <div class="in-section-title">Weekly Overview</div>
+    <div class="in-chart-wrap"><canvas id="weeklyChart"></canvas></div>
+  </div>
+
+  <div class="in-panel">
+    <div class="in-cal-head">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
+      <div class="in-cal-nav">
+        <a href="?month={{ cal_prev }}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
+        </a>
+        <span class="in-cal-title">{{ cal_label }}</span>
+        <a href="?month={{ cal_next }}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+    </div>
+    <div class="in-cal-grid">
+      {% for label in cal_weekday_labels %}<div class="in-cal-dow">{{ label }}</div>{% endfor %}
+      {% for week in cal_weeks %}
+        {% for day in week %}
+          {% if day %}
+            <div class="in-cal-day status-{{ day.status }}">{{ day.day }}</div>
+          {% else %}
+            <div class="in-cal-day"></div>
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+    </div>
+    <div class="in-cal-legend">
+      <div class="in-cal-legend-item"><span class="in-cal-legend-dot" style="background:var(--green,#3ed6c4);"></span> Today</div>
+      <div class="in-cal-legend-item"><span class="in-cal-legend-dot" style="background:var(--blue);"></span> Reserved</div>
+      <div class="in-cal-legend-item"><span class="in-cal-legend-dot" style="background:var(--amber);"></span> Pending</div>
+    </div>
+  </div>
+
   <div class="in-panel">
     <div class="in-section-title">
-      Upcoming sessions
+      Upcoming Reservations
       <a href="{% url 'inst_schedule' %}" class="in-action">View all →</a>
     </div>
-    {% for session in upcoming_sessions %}
-      <div class="in-schedule-row">
-        <div class="in-schedule-time">{{ session.date|date:"M d" }}<br>{{ session.start_time|time:"H:i" }}</div>
-        <div class="in-schedule-block">
-          <div class="in-s-title">{{ session.subject }}</div>
-          <div class="in-s-sub">{{ session.lab.name }} · {{ session.student_count }} students</div>
+    {% for s in upcoming_sessions %}
+      <div class="in-schedule-row" style="align-items:flex-start;">
+        <div style="flex:1; min-width:0;">
+          <div class="in-s-title">{{ s.subject }}</div>
+          <div class="in-s-sub">{{ s.lab.name }} · {{ s.date|date:"M j, Y" }}</div>
+          <div class="in-s-sub">{{ s.start_time|time:"g:i A" }}–{{ s.end_time|time:"g:i A" }}</div>
+        </div>
+        <span class="in-pill approved">Approved</span>
+      </div>
+    {% empty %}
+      <p class="in-empty-sub" style="text-align:center; padding:14px 0;">No upcoming reservations.</p>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="in-row2">
+  <div class="in-panel">
+    <div class="in-section-title">Recent Activity</div>
+    {% for a in recent_activity %}
+      <div class="in-alert-item">
+        <div class="in-alert-dot {% if a.icon == 'check' %}success{% else %}info{% endif %}"></div>
+        <div class="in-alert-body">
+          <div class="in-alert-title">{{ a.title }}</div>
+          <div class="in-alert-sub">{{ a.sub }}</div>
+          <div class="in-alert-time">{{ a.when|timesince }} ago</div>
         </div>
       </div>
     {% empty %}
-      <p class="in-empty">No upcoming sessions. Coordinate with the admin or lab in-charge to reserve one.</p>
+      <p class="in-empty-sub" style="text-align:center; padding:14px 0;">No recent activity yet.</p>
     {% endfor %}
   </div>
 
@@ -110,16 +337,69 @@ html[data-theme="light"] .in-quick-btn.primary{ color:#fff; }
     </div>
     {% for notif in notifications %}
       <div class="in-alert-item">
-        <div style="flex:1">
+        <div class="in-alert-dot {{ notif.category }}"></div>
+        <div class="in-alert-body">
           <div class="in-alert-title">{{ notif.title }}</div>
           <div class="in-alert-sub">{{ notif.message }}</div>
+          <div class="in-alert-time">{{ notif.created_at|timesince }} ago</div>
         </div>
-        <div class="in-alert-time">{{ notif.created_at|timesince }} ago</div>
       </div>
     {% empty %}
-      <p class="in-empty">No new notifications.</p>
+      <p class="in-empty-sub" style="text-align:center; padding:14px 0;">No new notifications.</p>
     {% endfor %}
   </div>
 </div>
+
+<div class="in-section-label" style="margin-top:20px;">Quick Actions</div>
+<div class="in-quick-actions">
+  <a href="{% url 'instructor_request_new' %}" class="in-quick-btn q-green">
+    <div class="in-quick-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+    Reserve Laboratory
+  </a>
+  <a href="{% url 'inst_schedule' %}" class="in-quick-btn q-blue">
+    <div class="in-quick-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18M8 3v3M16 3v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+    My Schedule
+  </a>
+  <a href="{% url 'attendance' %}" class="in-quick-btn q-amber">
+    <div class="in-quick-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.8"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="17.5" cy="8.5" r="2.4" stroke="currentColor" stroke-width="1.8"/><path d="M15.7 13.2c2.6.3 4.8 2.4 4.8 5.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+    Attendance
+  </a>
+  <a href="{% url 'inst_alerts' %}" class="in-quick-btn q-purple">
+    <div class="in-quick-icon">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.7 21a2 2 0 0 1-3.4 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      {% if unread_count %}<span class="in-quick-badge">{{ unread_count }}</span>{% endif %}
+    </div>
+    Notifications
+  </a>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+(function(){
+  var ctx = document.getElementById('weeklyChart');
+  if (!ctx) return;
+  var labels = {{ weekly_chart_labels|safe }};
+  var classesData = {{ weekly_chart_classes|safe }};
+  var requestsData = {{ weekly_chart_requests|safe }};
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'Classes', data: classesData, borderColor: '#3ed6c4', backgroundColor: 'rgba(62,214,196,0.1)', tension: 0.35, fill: true, pointRadius: 3 },
+        { label: 'Requests', data: requestsData, borderColor: '#f2a93b', backgroundColor: 'rgba(242,169,59,0.08)', tension: 0.35, fill: true, pointRadius: 3 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { color: '#8b98a3', boxWidth: 10, font: { size: 11 } } } },
+      scales: {
+        x: { ticks: { color: '#8b98a3', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        y: { beginAtZero: true, ticks: { color: '#8b98a3', font: { size: 10 }, precision: 0 }, grid: { color: 'rgba(255,255,255,0.04)' } }
+      }
+    }
+  });
+})();
+</script>
 
 {% endblock %}

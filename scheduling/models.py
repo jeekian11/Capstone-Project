@@ -173,20 +173,27 @@ class ClassRoster(models.Model):
         schedule): a date/time that already has a Session generated from
         this roster is skipped rather than duplicated, and a date/time that
         conflicts with an unrelated, already-scheduled session is skipped
-        and reported rather than double-booking the lab.
+        and reported rather than double-booking the lab. A date/time where
+        the roster's headcount exceeds the lab's PC count is NOT skipped —
+        the session is still created, auto-capped at however many PCs are
+        actually available (see scheduling.utils.cap_student_count).
 
-        Returns (created_sessions, skipped) where skipped is a list of
-        (date, reason) tuples for anything that couldn't be auto-scheduled.
+        Returns (created_sessions, skipped, capped) where skipped is a list
+        of (date, reason) tuples for anything that couldn't be
+        auto-scheduled at all, and capped is a list of (date, note) tuples
+        for sessions that were created with fewer students assigned than
+        the roster's actual headcount.
         """
         from datetime import timedelta
         from scheduling.models import Session
-        from scheduling.utils import generate_reservation_code
+        from scheduling.utils import generate_reservation_code, cap_student_count
         from scheduling.views import _slot_error
 
         created_sessions = []
         skipped = []
+        capped = []
         if not self.has_full_schedule() or self.approval_status != 'approved':
-            return created_sessions, skipped
+            return created_sessions, skipped, capped
 
         target_weekdays = {
             self.WEEKDAY_KEYS.index(d) for d in self.schedule_days.split(',')
@@ -216,6 +223,7 @@ class ClassRoster(models.Model):
                     if error:
                         skipped.append((current, error))
                     else:
+                        assigned_count, cap_note = cap_student_count(self.lab, student_count)
                         code = generate_reservation_code()
                         session = Session.objects.create(
                             lab=self.lab, instructor=self.instructor, roster=self,
@@ -223,12 +231,14 @@ class ClassRoster(models.Model):
                             requester_id_number=requester_id_number, reservation_code=code,
                             subject=subject, date=current,
                             start_time=self.schedule_start_time, end_time=self.schedule_end_time,
-                            student_count=student_count,
+                            student_count=assigned_count,
                         )
                         created_sessions.append(session)
+                        if cap_note:
+                            capped.append((current, cap_note))
             current += timedelta(days=1)
 
-        return created_sessions, skipped
+        return created_sessions, skipped, capped
 
     def delete(self, *args, **kwargs):
         """Deleting a roster also deletes the still-pending schedule it

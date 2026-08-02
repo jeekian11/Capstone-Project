@@ -9,7 +9,7 @@ from django.core.exceptions import PermissionDenied
 from django.urls import reverse_lazy, reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
-from accounts.mixins import RoleRequiredMixin, ModalFormMixin, ModalDetailMixin, modal_redirect
+from accounts.mixins import RoleRequiredMixin, ModalFormMixin, ModalDetailMixin, modal_redirect, is_modal_request
 from labs.models import PC, Lab, InventoryItem, MaintenanceLog, EquipmentIssue, PCActivityLog
 from labs.network import refresh_pc_statuses
 from labs.privacy import resolve_site_label
@@ -955,7 +955,22 @@ class PCStatusView(RoleRequiredMixin, TemplateView):
 # on hand, PC agent lock-screen unreachable, etc.), while still respecting
 # the same "only if the lab has room" rule and leaving the same kind of
 # transaction trail (SessionCheckIn + ActivityLog) walk-ins do.
-class OverrideCheckInView(RoleRequiredMixin, TemplateView):
+def _modal_aware_lab_redirect(request, view_name, lab_id):
+    """Same idea as modal_redirect() in accounts/mixins.py, but for these
+    two views' GET target which always carries a `?lab=` query param —
+    modal_redirect() itself only supports reverse()'s args/kwargs, not a
+    query string. When opened via the app-wide modal (js-modal-link), the
+    error/success message set with messages.error()/messages.success()
+    just before this is called still gets shown: the JS response handler
+    closes the modal and does a real window.location.reload(), and that
+    real navigation is what flushes the Django message onto the page."""
+    url = f"{reverse(view_name)}?lab={lab_id}"
+    if is_modal_request(request):
+        return JsonResponse({'success': True, 'redirect': url})
+    return redirect(url)
+
+
+class OverrideCheckInView(RoleRequiredMixin, ModalFormMixin, TemplateView):
     allowed_roles = ['admin', 'incharge']
     template_name = 'labs/override_checkin.html'
 
@@ -983,13 +998,13 @@ class OverrideCheckInView(RoleRequiredMixin, TemplateView):
         pc = PC.objects.select_related('lab').filter(pk=pc_id).first() if pc_id.isdigit() else None
         if pc is None:
             messages.error(request, 'Select a computer to override into.')
-            return redirect(f"{reverse('override_checkin')}?lab={request.POST.get('lab', '')}")
+            return _modal_aware_lab_redirect(request, 'override_checkin', request.POST.get('lab', ''))
 
         User = get_user_model()
         account = User.objects.filter(pk=student_pk, role__in=('student', 'instructor'), is_active=True).first() if student_pk.isdigit() else None
         if account is None:
             messages.error(request, 'Select a registered, active student or instructor account.')
-            return redirect(f"{reverse('override_checkin')}?lab={pc.lab_id}")
+            return _modal_aware_lab_redirect(request, 'override_checkin', pc.lab_id)
 
         # Re-check occupancy/availability at submit time too — the picker
         # above is just a convenience, this is the real gate (protects
@@ -998,7 +1013,7 @@ class OverrideCheckInView(RoleRequiredMixin, TemplateView):
         pc.refresh_from_db()
         if pc.status != 'online':
             messages.error(request, f'{pc.pc_id} is no longer available — someone else may have just taken it.')
-            return redirect(f"{reverse('override_checkin')}?lab={pc.lab_id}")
+            return _modal_aware_lab_redirect(request, 'override_checkin', pc.lab_id)
 
         now = timezone.localtime()
         active_session = Session.objects.filter(
@@ -1037,7 +1052,7 @@ class OverrideCheckInView(RoleRequiredMixin, TemplateView):
             messages.success(request, f'{account_name} was checked into {pc.pc_id} ({pc.lab.name}).')
         else:
             messages.warning(request, f'{account_name} was recorded as checked into {pc.pc_id}, but the unlock command did not run: {detail}')
-        return redirect(f"{reverse('override_checkin')}?lab={pc.lab_id}")
+        return _modal_aware_lab_redirect(request, 'override_checkin', pc.lab_id)
 
 
 # Lab In-Charge / Admin action: unlock a PC for a first-time walk-in Guest —
@@ -1047,7 +1062,7 @@ class OverrideCheckInView(RoleRequiredMixin, TemplateView):
 # the Lab In-Charge must type in the guest's Full Name before the unlock is
 # allowed to go through; that name is what gets recorded in the access log
 # (SessionCheckIn + ActivityLog) instead of a student ID.
-class ManualUnlockView(RoleRequiredMixin, TemplateView):
+class ManualUnlockView(RoleRequiredMixin, ModalFormMixin, TemplateView):
     allowed_roles = ['admin', 'incharge']
     template_name = 'labs/manual_unlock.html'
 
@@ -1074,21 +1089,21 @@ class ManualUnlockView(RoleRequiredMixin, TemplateView):
         pc = PC.objects.select_related('lab').filter(pk=pc_id).first() if pc_id.isdigit() else None
         if pc is None:
             messages.error(request, 'Select a computer to unlock.')
-            return redirect(f"{reverse('manual_unlock')}?lab={request.POST.get('lab', '')}")
+            return _modal_aware_lab_redirect(request, 'manual_unlock', request.POST.get('lab', ''))
 
         if not guest_name:
             messages.error(
                 request,
                 "Enter the guest's Full Name before unlocking — this is required so the access log can identify who used the computer."
             )
-            return redirect(f"{reverse('manual_unlock')}?lab={pc.lab_id}")
+            return _modal_aware_lab_redirect(request, 'manual_unlock', pc.lab_id)
 
         # Re-check occupancy at submit time too, same reasoning as Override
         # Check-in — the picker above is just a convenience.
         pc.refresh_from_db()
         if pc.status != 'online':
             messages.error(request, f'{pc.pc_id} is no longer available — someone else may have just taken it.')
-            return redirect(f"{reverse('manual_unlock')}?lab={pc.lab_id}")
+            return _modal_aware_lab_redirect(request, 'manual_unlock', pc.lab_id)
 
         now = timezone.localtime()
         active_session = Session.objects.filter(
@@ -1130,7 +1145,7 @@ class ManualUnlockView(RoleRequiredMixin, TemplateView):
             messages.success(request, f'{guest_name} was checked into {pc.pc_id} ({pc.lab.name}) as a guest.')
         else:
             messages.warning(request, f'{guest_name} was recorded as checked into {pc.pc_id}, but the unlock command did not run: {detail}')
-        return redirect(f"{reverse('manual_unlock')}?lab={pc.lab_id}")
+        return _modal_aware_lab_redirect(request, 'manual_unlock', pc.lab_id)
 
 
 def _pc_activity_app_name(title):
@@ -1825,9 +1840,9 @@ class PCImportView(RoleRequiredMixin, FormView):
             PC.objects.bulk_create(to_create)
 
         if created:
-            messages.success(self.request, f'Imported {len(created)} PC(s) successfully.')
+            messages.success(self.request, f'Imported {len(created)} PC{"s" if len(created) != 1 else ""}.')
         if errors:
-            messages.warning(self.request, f'{len(errors)} row(s) had issues — see details below.')
+            messages.warning(self.request, f'{len(errors)} row{"s had" if len(errors) != 1 else " had"} issues — see details below.')
 
         return self.render_to_response(self.get_context_data(form=self.form_class(), results={'created': created, 'errors': errors}))
 
@@ -2292,7 +2307,7 @@ def inventory_status_update(request, pk):
         if new_status in dict(InventoryItem.STATUS):
             item.status = new_status
             item.save(update_fields=['status'])
-            messages.success(request, f'Status Updated Successfully for {item.name}.')
+            messages.success(request, f'Status updated for "{item.name}".')
         return modal_redirect(request, redirect_target, *redirect_args)
     return modal_redirect(request, redirect_target, *redirect_args)
 
@@ -2322,7 +2337,7 @@ class MaintenanceScheduleCreateView(RoleRequiredMixin, ModalFormMixin, CreateVie
     def form_valid(self, form):
         response = super().form_valid(form)
         notify_service.notify_maintenance_submitted(self.object)
-        messages.success(self.request, 'Schedule Created Successfully.')
+        messages.success(self.request, 'Schedule created.')
         return response
 
 
@@ -2336,7 +2351,7 @@ def maintenance_complete(request, pk):
         log.completed_at = timezone.now()
         log.save(update_fields=['completion_notes', 'completed', 'completed_at'])
         notify_service.notify_maintenance_completed(log)
-        messages.success(request, 'Maintenance Marked as Completed.')
+        messages.success(request, 'Maintenance marked as completed.')
         return redirect('maintenance_logs')
     return render(request, 'labs/maintenance_complete_form.html', {'log': log})
 
@@ -2406,7 +2421,7 @@ class EquipmentIssueCreateView(RoleRequiredMixin, ModalFormMixin, CreateView):
         form.instance.reporter = self.request.user
         response = super().form_valid(form)
         notify_service.notify_equipment_issue_reported(self.object)
-        messages.success(self.request, 'Issue reported successfully.')
+        messages.success(self.request, 'Issue reported.')
         return response
 
 
@@ -2430,5 +2445,5 @@ def equipment_issue_resolve(request, pk):
         equipment_issue.resolved_at = timezone.now()
         equipment_issue.save(update_fields=['resolution_notes', 'status', 'resolved_at'])
         notify_service.notify_equipment_issue_resolved(equipment_issue)
-        messages.success(request, 'Resolution Saved Successfully.')
+        messages.success(request, 'Resolution saved.')
     return modal_redirect(request, 'equipment_issues')

@@ -223,6 +223,22 @@
     padding: 9px 0;
     gap: 0;
   }
+
+/* On mobile, the sidebar toggle opens/closes the full off-canvas panel —
+     never shrink it to icon-only there, even if "collapsed" is set from
+     a previous desktop session. */
+  @media (max-width: 768px) {
+    html.sidebar-collapsed .nav { width: 264px; }
+    html.sidebar-collapsed .nav-brand { justify-content: flex-start; padding-left: 8px; padding-right: 8px; gap: 10px; }
+    html.sidebar-collapsed .nav-brand-mark { width: 50px; height: 50px; }
+    html.sidebar-collapsed .nav-brand-text,
+    html.sidebar-collapsed .nav-section,
+    html.sidebar-collapsed .nav-label,
+    html.sidebar-collapsed .nav-badge,
+    html.sidebar-collapsed .nav-led { display: block; }
+    html.sidebar-collapsed .nav-item { justify-content: flex-start; padding: 9px 12px 9px 10px; gap: 11px; }
+  }
+
 </style>
 
 {% if request.user.role == 'admin' %}

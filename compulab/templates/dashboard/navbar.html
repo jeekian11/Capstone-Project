@@ -72,7 +72,6 @@
     letter-spacing: 0.06em;
   }
 
-  /* divider between clock and user chip */
   .topbar-divider {
     width: 1px;
     height: 24px;
@@ -144,6 +143,15 @@
   .theme-toggle .icon-sun { display: none; }
   html[data-theme="light"] .theme-toggle .icon-moon { display: none; }
   html[data-theme="light"] .theme-toggle .icon-sun { display: block; }
+
+  @media (max-width: 768px) {
+    .topbar { grid-template-columns: auto 1fr auto; padding: 8px 12px; gap: 8px; }
+    .topbar-system { display: none; }
+    .topbar-title { font-size: 16px; }
+    .topbar-clock { display: none; }
+    .user-meta { display: none; }
+    .topbar-right { gap: 8px; }
+  }
 </style>
 
 <div class="topbar">
@@ -208,9 +216,7 @@
   setInterval(tick, 1000);
 })();
 
-// Dark/Light toggle — flips the icon + html[data-theme] instantly for a
-// snappy feel, then saves the choice to the account in the background so it
-// follows the user to any other PC/browser they log in on.
+// Dark/Light toggle
 (function() {
   var btn = document.getElementById('themeToggleBtn');
   var form = document.getElementById('themeForm');
@@ -225,30 +231,33 @@
     fetch('{% url "set_theme" %}', {
       method: 'POST',
       body: new FormData(form),
-    }).catch(function() {
-      // saved locally for this page even if the request fails; worst case
-      // it just reverts to the account's stored theme on next page load
-    });
+    }).catch(function() {});
   });
 })();
 
-// Sidebar collapse/expand — purely a display preference (no server round
-// trip needed), so it's kept in localStorage and toggled via a class on
-// <html>. An inline script in base.html's <head> applies the saved state
-// before first paint to avoid a flash of the expanded sidebar.
+// Sidebar collapse/expand (desktop) + off-canvas open/close (mobile)
 (function() {
   var btn = document.getElementById('sidebarToggleBtn');
   if (!btn) return;
   var STORAGE_KEY = 'compulabSidebarCollapsed';
 
   btn.addEventListener('click', function() {
+    if (window.innerWidth <= 768) {
+      document.documentElement.classList.toggle('sidebar-mobile-open');
+      return;
+    }
     var collapsed = !document.documentElement.classList.contains('sidebar-collapsed');
     document.documentElement.classList.toggle('sidebar-collapsed', collapsed);
     try { localStorage.setItem(STORAGE_KEY, collapsed ? '1' : '0'); } catch (e) {}
   });
 
-  // Give every nav item a native tooltip with its label text, so links are
-  // still identifiable by hovering when the sidebar is collapsed to icons.
+  var backdrop = document.getElementById('sidebarBackdrop');
+  if (backdrop) {
+    backdrop.addEventListener('click', function() {
+      document.documentElement.classList.remove('sidebar-mobile-open');
+    });
+  }
+
   document.querySelectorAll('.nav-item').forEach(function(item) {
     if (item.title) return;
     var label = item.querySelector('.nav-label');
