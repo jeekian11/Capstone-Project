@@ -6,11 +6,11 @@ class Lab(models.Model):
     location = models.CharField(max_length=200, blank=True)
     opening_time = models.TimeField(
         default='07:00',
-        help_text='Daily opening time, used as the capacity basis for utilization % in reports.'
+        
     )
     closing_time = models.TimeField(
         default='21:00',
-        help_text='Daily closing time, used as the capacity basis for utilization % in reports.'
+       
     )
 
     def __str__(self):

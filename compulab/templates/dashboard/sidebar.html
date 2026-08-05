@@ -107,6 +107,10 @@ html[data-theme="light"] .nav.role-instructor { --accent-tint: rgba(15,118,110,0
   }
   .nav-section:first-of-type { margin-top: 4px; }
 
+  .brand-letter {
+    color: #FFD700; /* Gold */
+}
+
   .nav-item {
     position: relative;
     display: flex;
@@ -243,7 +247,13 @@ html[data-theme="light"] .nav.role-instructor { --accent-tint: rgba(15,118,110,0
 <nav class="nav role-admin">
   <div class="nav-brand">
     <img src="{% static 'img/logo.jpg' %}" alt="Danao Technological College" class="nav-brand-mark">
-    <span class="nav-brand-text"><b>DANAO TECHNOLOGICAL COLLEGE</b></span>
+    <span class="nav-brand-text">
+    <b>
+        <span class="brand-letter">D</span>ANAO
+        <span class="brand-letter">T</span>ECHNOLOGICAL
+        <span class="brand-letter">C</span>OLLEGE
+    </b>
+</span>
   </div>
 
   <div class="nav-section">Overview</div>

@@ -1222,6 +1222,15 @@ class StudentImportView(RoleRequiredMixin, FormView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['department_choices'] = DEPARTMENT_CHOICES
+        # Same modal-awareness as ModalFormMixin, but done by hand here
+        # instead of mixing it in — this view deliberately keeps the modal
+        # OPEN and shows the created/skipped results inline after a
+        # successful import (an admin often runs it again right away for
+        # a second Department), rather than closing + reloading the page
+        # like a normal add/edit form does.
+        if is_modal_request(self.request):
+            ctx['base_template'] = 'partials/bare.html'
+            ctx['is_modal'] = True
         return ctx
 
     def form_valid(self, form):

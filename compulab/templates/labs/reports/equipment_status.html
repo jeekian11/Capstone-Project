@@ -11,6 +11,7 @@
   <div style="display:flex; gap:10px;">
     <a href="{% url 'report_equipment_status_export' %}?{{ request.GET.urlencode }}&format=pdf" class="action-btn">Export as PDF</a>
     <a href="{% url 'report_equipment_status_export' %}?{{ request.GET.urlencode }}&format=excel" class="action-btn primary">Export as Excel</a>
+    <a href="{% url 'analytics' %}" class="action-btn">Back</a>
   </div>
 </div>
 

@@ -67,8 +67,13 @@
     flex:1.05;
     position:relative;
     padding:30px 28px;
+<<<<<<< HEAD
     display:flex; flex-direction:column; justify-content:center;
     background:rgba(246,248,245,0.66);
+=======
+    display:flex; flex-direction:column; justify-content:center; align-items:flex-start;
+    background:rgba(246,248,245,0.65);
+>>>>>>> c36c5fe (update)
     -webkit-backdrop-filter:blur(24px) saturate(150%);
     backdrop-filter:blur(24px) saturate(150%);
     border-right:1px solid rgba(255,255,255,0.4);
@@ -117,19 +122,31 @@
     background:var(--green-bright); flex-shrink:0;
   }
 
+<<<<<<< HEAD
   .lg-brand{ position:relative; display:flex; align-items:center; gap:10px; margin-bottom:18px; }
   .lg-brand img{
     width:64px; height:64px; border-radius:50%;
+=======
+  .lg-brand{ position:relative; display:flex; align-items:center; gap:10px; margin-bottom:18px; width:100%; }
+  .lg-brand img{
+    width:56px; height:56px; border-radius:50%; flex-shrink:0;
+>>>>>>> c36c5fe (update)
     object-fit:cover; border:2px solid rgba(255,255,255,0.7);
     box-shadow:0 4px 12px rgba(0,0,0,0.15);
   }
   .lg-brand-text{
+<<<<<<< HEAD
     font-family:var(--font-display); font-weight:600; font-size:16px;
     line-height:1.25; color:var(--ink);
+=======
+    font-family:var(--font-display); font-weight:600; font-size:15px;
+    line-height:1.3; color:var(--ink);
+>>>>>>> c36c5fe (update)
   }
 
   .lg-headline{
     position:relative;
+<<<<<<< HEAD
     font-family:var(--font-display); font-weight:600; font-size:21px; line-height:1.22;
     color:var(--ink); letter-spacing:-0.01em; margin-bottom:12px; max-width:270px;
   }
@@ -141,19 +158,41 @@
     position:relative;
     display:grid; grid-template-columns:1fr 1fr; gap:12px 14px;
     max-width:270px;
+=======
+    font-family:var(--font-display); font-weight:600; font-size:21px; line-height:1.28;
+    color:var(--ink); letter-spacing:-0.01em; margin-bottom:12px; max-width:280px;
   }
-  .lg-feature{ display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
+  .lg-headline em{ font-style:normal; color:var(--green); }
+
+  .lg-divider{ width:26px; height:3px; border-radius:2px; background:var(--green); margin-bottom:18px; }
+
+  .lg-feature-grid{
+    position:relative;
+    display:grid; grid-template-columns:1fr 1fr; gap:14px 16px;
+    max-width:280px; width:100%;
+>>>>>>> c36c5fe (update)
+  }
+  .lg-feature{ display:flex; flex-direction:column; align-items:flex-start; gap:7px; }
   .lg-feature-icon{
+<<<<<<< HEAD
     width:26px; height:26px; border-radius:7px;
     background:var(--green-soft); border:1px solid var(--green-line);
     display:flex; align-items:center; justify-content:center;
   }
   .lg-feature span{ font-size:10.5px; font-weight:500; color:var(--muted); line-height:1.4; }
+=======
+    width:28px; height:28px; border-radius:7px; flex-shrink:0;
+    background:var(--green-soft); border:1px solid var(--green-line);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .lg-feature span{ font-size:11px; font-weight:500; color:var(--muted); line-height:1.4; }
+>>>>>>> c36c5fe (update)
 
   /* ---------- right: login card ---------- */
   .lg-formside{
     flex:1;
     background:#ffffff;
+<<<<<<< HEAD
     padding:32px 30px;
     display:flex; flex-direction:column; justify-content:center;
   }
@@ -163,6 +202,17 @@
     width:30px; height:30px; border-radius:9px;
     background:var(--green-soft); border:1px solid var(--green-line);
     display:flex; align-items:center; justify-content:center; flex-shrink:0;
+=======
+    padding:36px 34px;
+    display:flex; flex-direction:column; justify-content:center;
+  }
+
+  .lg-form-head{ display:flex; align-items:center; gap:10px; margin-bottom:20px; }
+  .lg-lock{
+    width:30px; height:30px; border-radius:9px; flex-shrink:0;
+    background:var(--green-soft); border:1px solid var(--green-line);
+    display:flex; align-items:center; justify-content:center;
+>>>>>>> c36c5fe (update)
   }
   .lg-card h2{ font-family:var(--font-display); font-size:16px; font-weight:600; color:var(--ink); letter-spacing:-0.01em; margin:0; }
   .lg-card h2 b{ color:var(--green); font-weight:600; }
@@ -183,12 +233,21 @@
     background:var(--paper); border:1px solid var(--border); border-radius:9px;
     color:var(--ink); font-size:13px; font-family:var(--font-body);
     transition:border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+<<<<<<< HEAD
   }
   .lg-card input::placeholder{ color:var(--faint); }
   .lg-card input:focus{
     outline:none; border-color:var(--green); background:#fff;
     box-shadow:0 0 0 3px var(--green-soft);
   }
+=======
+  }
+  .lg-card input::placeholder{ color:var(--faint); font-size:11.5px; }
+  .lg-card input:focus{
+    outline:none; border-color:var(--green); background:#fff;
+    box-shadow:0 0 0 3px var(--green-soft);
+  }
+>>>>>>> c36c5fe (update)
 
   .lg-card button[type="submit"]{
     width:100%; margin-top:18px; padding:10px 14px; border:none; border-radius:9px;
@@ -214,6 +273,10 @@
        is under 16px — bumping it here (mobile only, so desktop keeps its
        tighter 13px) stops that jarring zoom-in/out on every tap. */
     .lg-card input{ font-size:16px; padding:11px 12px 11px 36px; }
+<<<<<<< HEAD
+=======
+    .lg-card input::placeholder{ font-size:13px; }
+>>>>>>> c36c5fe (update)
     .lg-input-wrap svg{ left:13px; }
     .lg-card button[type="submit"]{ padding:12px 14px; font-size:14px; }
   }
@@ -348,6 +411,7 @@
             </svg>
           </button>
         </form>
+      </div>
     </div>
 
   </div>

@@ -1,6 +1,10 @@
 # accounts/context_processors.py
 from notifications.models import Notification
 from issues.models import Issue
+from django.conf import settings
+
+def app_version(request):
+    return {'APP_VERSION': getattr(settings, 'APP_VERSION', '')}
 
 def sidebar_counts(request):
     if not request.user.is_authenticated:

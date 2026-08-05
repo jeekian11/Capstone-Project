@@ -3,7 +3,14 @@
 {% block title %}PC Activity Log{% endblock %}
 
 {% block content %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
+<script>
+  // Falls back to the CDN if the vendored copy hasn't been fetched yet
+  // (see static/vendor/fetch_assets.sh) so the page still works while online.
+  if (typeof Chart === 'undefined') {
+    document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"><\/script>');
+  }
+</script>
 
 <style>
   .pal-stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 16px; }

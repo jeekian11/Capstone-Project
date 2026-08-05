@@ -33,7 +33,7 @@
              placeholder="Type a name or ID number to find a registered account..."
              value="{{ req.requester_name }}">
       <div id="requester-search-results" class="search-results"
-           style="display:none; position:absolute; z-index:10; background:#fff; border:1px solid #ddd; border-radius:6px; width:100%; max-height:220px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.08);"></div>
+           style="display:none; position:absolute; z-index:10; background:var(--surface-raised); color:var(--text); border:1px solid var(--border); border-radius:6px; width:100%; max-height:220px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.25);"></div>
       <span class="helptext">Pick a registered account to auto-fill the fields below — Full Name, ID, and Department / Year Level.</span>
       <div id="requester-extra-info" class="helptext"
            style="{% if req.instructor.department %}display:block;{% else %}display:none;{% endif %} font-weight:600; margin-top:4px;">
@@ -179,7 +179,7 @@
       item.textContent = r.full_name + ' — ' + r.id_number + (extra ? ' (' + extra + ')' : '');
       item.style.cursor = 'pointer';
       item.style.padding = '8px 10px';
-      item.addEventListener('mouseenter', function() { item.style.background = '#f2f2f2'; });
+      item.addEventListener('mouseenter', function() { item.style.background = 'var(--border-soft)'; });
       item.addEventListener('mouseleave', function() { item.style.background = ''; });
       item.addEventListener('click', function() { selectResult(r); });
       resultsBox.appendChild(item);

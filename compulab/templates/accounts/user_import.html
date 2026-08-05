@@ -5,7 +5,7 @@
 
 <div class="page-header">
   <div>
-    <h1>Import Students (Excel/CSV)</h1>
+    <h1{% if is_modal %} id="appModalTitle"{% endif %}>Import Students (Excel/CSV)</h1>
     <div class="sub">Bulk-create student accounts under one Department at a time</div>
   </div>
   <div>
@@ -43,7 +43,7 @@
 </div>
 
 {% if results %}
-<div class="card" style="max-width:800px; margin-top:16px;">
+<div class="card" style="max-width:800px; margin-top:16px;" data-modal-wide>
   <h3 style="margin-top:0;">Results — {{ results.department }}</h3>
 
   <p><strong>{{ results.created|length }}</strong> student{{ results.created|length|pluralize }} created.
@@ -74,6 +74,13 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
+  {% endif %}
+
+  {% if is_modal %}
+    <div class="form-actions" style="margin-top:16px;">
+      <button type="button" class="action-btn primary"
+              onclick="closeAppModal(); window.location.reload();">Done — refresh Users list</button>
     </div>
   {% endif %}
 </div>

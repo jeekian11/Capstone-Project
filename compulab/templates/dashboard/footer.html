@@ -43,7 +43,10 @@
     border-radius: 50%;
     background: var(--green);
     display: inline-block;
+    transition: background-color 0.2s ease;
   }
+
+  .app-footer-right[data-net="offline"] .app-footer-dot { background: var(--amber); }
 
   @media (max-width: 600px) {
     .app-footer { flex-direction: column; align-items: flex-start; }
@@ -53,10 +56,26 @@
 <footer class="app-footer">
   <div class="app-footer-left">
     <span class="app-footer-mark"></span>
-    <span>&copy; {% now "Y" %} <b>SCLAMS</b> — Smart Computer Lab Management System</span>
+    <span>&copy; {% now "Y" %} <b>ASCLAMS</b> — A Smart Computer Laboratory Management System{% if APP_VERSION %} · v{{ APP_VERSION }}{% endif %}</span>
   </div>
-  <div class="app-footer-right">
+  <div class="app-footer-right" id="appFooterNet" data-net="online" aria-live="polite">
     <span class="app-footer-dot"></span>
-    <span>System operational</span>
+    <span class="app-footer-status-text">System operational</span>
   </div>
 </footer>
+
+<script>
+(function () {
+  var el = document.getElementById('appFooterNet');
+  var textEl = el && el.querySelector('.app-footer-status-text');
+  if (!el || !textEl) return;
+  function sync() {
+    var online = navigator.onLine;
+    el.setAttribute('data-net', online ? 'online' : 'offline');
+    textEl.textContent = online ? 'System operational' : 'Offline — showing cached data';
+  }
+  sync();
+  window.addEventListener('online', sync);
+  window.addEventListener('offline', sync);
+})();
+</script>

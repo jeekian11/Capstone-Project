@@ -26,6 +26,7 @@ SECRET_KEY = 'django-insecure-z$q0s-rr3%osqk_q^tm=*xm$z(k7so(m&e5@li_znp6v-)2(9g
 DEBUG = True
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '0.0.0.0', '192.168.1.96', '192.168.100.51']
+APP_VERSION = '1.0'
 
 # Django 4+ requires the exact scheme+host of any origin that will submit
 # POST requests to be listed here separately from ALLOWED_HOSTS, or every
@@ -82,6 +83,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'accounts.context_processors.sidebar_counts',
+                'accounts.context_processors.app_version',
             ],
         },
     },
