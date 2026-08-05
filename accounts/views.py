@@ -16,7 +16,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse_lazy, reverse
-from accounts.mixins import RoleRequiredMixin, ModalFormMixin, is_modal_request
+from accounts.mixins import RoleRequiredMixin, ModalFormMixin, is_modal_request, bulk_delete
 from accounts.models import ActivityLog
 from accounts.forms import AdminUserCreateForm, AdminUserUpdateForm, AdminSetPasswordForm, ProfileUpdateForm, StudentImportForm
 from accounts.constants import DEPARTMENT_CHOICES, department_year_levels_json, year_level_choices_for, department_name
@@ -951,6 +951,28 @@ class UserDeleteView(RoleRequiredMixin, DeleteView):
         )
         messages.success(self.request, f'{display_name} has been deleted.')
         return response
+
+
+# admin bulk-deletes one or more checked users from the Users dashboard's
+# "Delete Selected" toolbar — same admin-only + can't-delete-yourself rules
+# as UserDeleteView above, just applied to however many rows were checked.
+def users_bulk_delete(request):
+    if not request.user.is_authenticated or request.user.role != 'admin':
+        raise PermissionDenied
+    if request.method != 'POST':
+        raise PermissionDenied
+
+    ids = [v for v in request.POST.getlist('selected_ids') if v]
+    queryset = User.objects.exclude(pk=request.user.pk)
+    for u in queryset.filter(pk__in=ids):
+        ActivityLog.objects.create(
+            actor=request.user, action='delete',
+            target_identifier=u.email or u.id_number,
+            details=f'{u.display_name} was deleted (bulk delete).',
+        )
+    if str(request.user.pk) in ids:
+        messages.error(request, "You can't delete your own account while logged into it — it was skipped.")
+    return bulk_delete(request, queryset, 'users', item_label='user')
 
 
 # admin sets a brand-new password for an existing user (can't show the old one — it's hashed)

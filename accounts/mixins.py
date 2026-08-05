@@ -1,6 +1,7 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse
+from django.contrib import messages
 
 class RoleRequiredMixin(LoginRequiredMixin):
     allowed_roles = []
@@ -24,6 +25,60 @@ def is_modal_request(request):
 
 # kept as an alias so existing internal references keep working
 _is_modal_request = is_modal_request
+
+
+def bulk_delete(request, queryset, redirect_to, *redirect_args, item_label='record', **redirect_kwargs):
+    """Generic "Delete Selected" POST handler shared by every list dashboard
+    (Users, Class Rosters, Labs, Inventory, Notifications, ...) so bulk
+    delete works the same way everywhere instead of each app reinventing
+    it. Pairs with the checkbox column + floating toolbar rendered by
+    templates/partials/bulk_delete_toolbar.html and static/js/bulk-delete.js.
+
+    `queryset` must already be scoped to whatever that page's normal list
+    view would show (its own permission/ownership/department filtering) —
+    this only narrows it further to the checked rows, it never widens
+    access. Only rows whose pk was posted as `selected_ids` are removed.
+
+    Usage from a view (function-based; each app decides its own
+    role/ownership check before calling this, same as its single-row
+    delete view does):
+
+        def users_bulk_delete(request):
+            if not request.user.is_authenticated or request.user.role != 'admin':
+                raise PermissionDenied
+            return bulk_delete(
+                request, User.objects.exclude(pk=request.user.pk),
+                'users', item_label='user',
+            )
+    """
+    from django.shortcuts import redirect
+    from django.urls import reverse
+
+    if request.method != 'POST':
+        raise PermissionDenied
+
+    ids = [v for v in request.POST.getlist('selected_ids') if v]
+    if not ids:
+        messages.error(request, 'No rows were selected — check at least one row first.')
+    else:
+        # Deletes one object at a time (rather than a single bulk
+        # queryset.delete()) so that any model with a custom delete()
+        # override — e.g. ClassRoster, which also cleans up its
+        # still-pending auto-generated sessions — behaves exactly the same
+        # whether it's removed one-by-one or via "Delete Selected".
+        matched = list(queryset.filter(pk__in=ids))
+        count = 0
+        for obj in matched:
+            obj.delete()
+            count += 1
+        if count:
+            messages.success(request, f'Deleted {count} {item_label}{"s" if count != 1 else ""}.')
+        else:
+            messages.error(request, 'None of the selected rows could be deleted (they may no longer exist, or are outside what you\'re allowed to remove).')
+
+    if is_modal_request(request):
+        return JsonResponse({'success': True, 'redirect': reverse(redirect_to, args=redirect_args, kwargs=redirect_kwargs)})
+    return redirect(redirect_to, *redirect_args, **redirect_kwargs)
 
 
 def modal_redirect(request, view_name, *args, **kwargs):

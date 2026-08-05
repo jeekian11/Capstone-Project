@@ -250,11 +250,16 @@ html[data-theme="light"] .um-pill.student{ color:#fff; }
         <span style="color:var(--um-dim); font-weight:500; text-transform:none;">{{ total_filtered }} user{{ total_filtered|pluralize }}</span>
       </div>
       {% if page_obj.object_list %}
+      {% if request.user.role == 'admin' %}
+      <div class="js-bulk-delete" data-item-label="user">
+      <form method="post" action="{% url 'users_bulk_delete' %}" class="js-bulk-delete-form">{% csrf_token %}</form>
+      {% include "partials/bulk_delete_toolbar.html" %}
+      {% endif %}
       <div style="overflow-x:auto;">
         <table class="um-table">
           <thead>
             <tr>
-              <th><input type="checkbox" class="um-checkbox" onclick="document.querySelectorAll('.um-row-check').forEach(c=>c.checked=this.checked)"></th>
+              <th class="bulk-select-col"><input type="checkbox" class="um-checkbox js-select-all"></th>
               <th>#</th>
               <th>Name</th>
               <th>Email</th>
@@ -269,7 +274,11 @@ html[data-theme="light"] .um-pill.student{ color:#fff; }
           <tbody>
             {% for u in page_obj.object_list %}
               <tr>
-                <td><input type="checkbox" class="um-checkbox um-row-check"></td>
+                <td class="bulk-select-col">
+                  {% if request.user.role == 'admin' and u.pk != request.user.pk %}
+                    <input type="checkbox" class="um-checkbox um-row-check js-row-check" value="{{ u.pk }}">
+                  {% endif %}
+                </td>
                 <td>{{ forloop.counter0|add:page_obj.start_index }}</td>
                 <td>
                   <div class="um-name-cell">
@@ -335,6 +344,9 @@ html[data-theme="light"] .um-pill.student{ color:#fff; }
           </tbody>
         </table>
       </div>
+      {% if request.user.role == 'admin' %}
+      </div>
+      {% endif %}
       <div class="um-pagination">
         <div style="display:flex; align-items:center; gap:10px;">
           <span>Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ total_filtered }} users</span>

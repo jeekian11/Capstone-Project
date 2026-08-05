@@ -56,15 +56,10 @@
 .is-up-sub{ font-size:11px; color:var(--text-dim); margin-top:2px; margin-left:15px; overflow-wrap:anywhere; }
 .is-empty-sub{ font-size:12px; color:var(--text-faint); text-align:center; padding:14px 0; }
 
-.is-quick-actions{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:16px; min-width:0; }
-.is-quick-btn{ display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:12px; background:var(--surface); border:1px solid var(--border); color:var(--text); font-size:13px; font-weight:500; text-decoration:none; min-width:0; }
-.is-quick-btn:hover{ border-color:var(--green,#3ed6c4); }
-.is-quick-icon{ width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.is-quick-icon svg{ width:16px; height:16px; }
-.is-quick-btn.q-green .is-quick-icon{ background:rgba(62,214,196,0.14); color:var(--green,#3ed6c4); }
-.is-quick-btn.q-blue .is-quick-icon{ background:var(--blue-dim,rgba(91,157,255,0.14)); color:var(--blue); }
-.is-quick-btn.q-amber .is-quick-icon{ background:var(--amber-dim,rgba(242,169,59,0.14)); color:var(--amber); }
-.is-quick-btn.q-purple .is-quick-icon{ background:var(--purple-dim,rgba(167,139,250,0.14)); color:var(--purple); }
+.is-quick-actions{ display:flex; flex-direction:column; gap:8px; }
+.is-quick-item{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-dim); text-decoration:none; }
+.is-quick-item:hover{ color:var(--text); }
+.is-quick-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
 
 #calendar{
   --fc-border-color:var(--border); --fc-page-bg-color:var(--surface); --fc-neutral-bg-color:var(--surface-raised);
@@ -91,7 +86,6 @@
 @media (max-width:960px){
   .is-metrics{ grid-template-columns:repeat(2,1fr); }
   .is-layout{ grid-template-columns:1fr; }
-  .is-quick-actions{ grid-template-columns:repeat(2,1fr); }
 }
 </style>
 
@@ -100,7 +94,7 @@
     <h1>Scheduling</h1>
     <div class="sub">Your reservations and requests — click a date to reserve, click a session for details</div>
   </div>
-  <a href="{% url 'instructor_request_new' %}" class="action-btn primary">+ New Reservation</a>
+ <a href="{% url 'instructor_request_new' %}" class="action-btn primary js-modal-link">+ New Reservation</a> 
 </div>
 
 <div class="is-metrics">
@@ -155,11 +149,12 @@
     </div>
 
     <div class="is-panel">
-      <div class="is-panel-title">Legend</div>
-      <div class="is-legend">
-        <div class="is-legend-item"><span class="is-legend-dot" style="background:#5b9dff;"></span> Reserved (confirmed)</div>
-        <div class="is-legend-item"><span class="is-legend-dot" style="background:#f2a93b;"></span> Pending approval</div>
-        <div class="is-legend-item"><span class="is-legend-dot" style="background:#8b98a3;"></span> Declined</div>
+      <div class="is-panel-title">Quick Actions</div>
+      <div class="is-quick-actions">
+        <a href="{% url 'instructor_request_new' %}" class="is-quick-item js-modal-link"><span class="is-quick-dot" style="background:#3ed6c4;"></span> New Reservation</a>
+        <a href="{% url 'attendance' %}" class="is-quick-item"><span class="is-quick-dot" style="background:#5b9dff;"></span> Attendance</a>
+        <a href="{% url 'inst_alerts' %}" class="is-quick-item"><span class="is-quick-dot" style="background:#f2a93b;"></span> Notifications</a>
+        <a href="{% url 'roster_list' %}" class="is-quick-item"><span class="is-quick-dot" style="background:#a78bfa;"></span> Class Rosters</a>
       </div>
     </div>
 
@@ -174,28 +169,6 @@
         <p class="is-empty-sub">No upcoming reservations in the next 7 days.</p>
       {% endfor %}
     </div>
-  </div>
-</div>
-
-<div class="card">
-  <div class="is-panel-title" style="margin-bottom:0;">Quick Actions</div>
-  <div class="is-quick-actions">
-    <a href="{% url 'instructor_request_new' %}" class="is-quick-btn q-green">
-      <div class="is-quick-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
-      New Reservation
-    </a>
-    <a href="{% url 'attendance' %}" class="is-quick-btn q-blue">
-      <div class="is-quick-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.8"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-      Attendance
-    </a>
-    <a href="{% url 'inst_alerts' %}" class="is-quick-btn q-amber">
-      <div class="is-quick-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-      Notifications
-    </a>
-    <a href="{% url 'roster_list' %}" class="is-quick-btn q-purple">
-      <div class="is-quick-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="17" cy="9" r="2.4" stroke="currentColor" stroke-width="1.8"/><path d="M2.5 20c0-3.5 2.9-6 6.5-6s6.5 2.5 6.5 6M15.5 14.3c2.4.3 4.5 2.3 4.5 5.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-      Class Rosters
-    </a>
   </div>
 </div>
 

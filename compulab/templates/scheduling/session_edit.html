@@ -8,7 +8,7 @@
     <h1>Edit scheduled session</h1>
     <div class="sub">Reservation code: <code>{{ session.reservation_code }}</code></div>
   </div>
-  <a href="{% url 'view_schedule' %}?lab={{ session.lab_id }}&date={{ session.date|date:'Y-m-d' }}" class="action-btn">← Back to schedule</a>
+  <a href="{% url 'view_schedule' %}?lab={{ session.lab_id }}&date={{ session.date|date:'Y-m-d' }}</a>
 </div>
 
 <div class="card" style="max-width:640px">

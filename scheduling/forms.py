@@ -236,9 +236,6 @@ class ClassRosterForm(forms.ModelForm):
         self.fields['schedule_valid_from'].required = False
         self.fields['schedule_valid_until'].required = False
         self.fields['schedule_valid_from'].help_text = (
-            'Set a full schedule (day(s), time, lab, and this validity period, e.g. January to May) '
-            'to have the system automatically create a reservation-coded session for every matching '
-            'date — no individual reservations needed.'
         )
         if self.instance and self.instance.pk and self.instance.schedule_days:
             self.initial['schedule_days'] = self.instance.schedule_days.split(',')

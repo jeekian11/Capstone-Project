@@ -15,6 +15,7 @@ urlpatterns = [
     path('users/<int:pk>/activate/', views.user_activate, name='user_activate'),
     path('users/<int:pk>/deactivate/', views.user_deactivate, name='user_deactivate'),
     path('users/<int:pk>/delete/', views.UserDeleteView.as_view(), name='user_delete'),
+    path('users/bulk-delete/', views.users_bulk_delete, name='users_bulk_delete'),
     path('users/<int:pk>/reset-password/', views.UserResetPasswordView.as_view(), name='user_reset_password'),
     path('logs/', views.LogHistoryView.as_view(), name='log_history'),
     path('logs/export/', views.export_logs_pdf, name='log_export_pdf'),

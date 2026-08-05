@@ -38,6 +38,7 @@ urlpatterns = [
     path('rosters/<int:pk>/reject/', views.roster_reject, name='roster_reject'),
     path('rosters/<int:pk>/generate-sessions/', views.roster_generate_sessions, name='roster_generate_sessions'),
     path('rosters/<int:pk>/delete/', views.RosterDeleteView.as_view(), name='roster_delete'),
+    path('rosters/bulk-delete/', views.rosters_bulk_delete, name='rosters_bulk_delete'),
     path('rosters/check-availability/', views.roster_check_availability, name='roster_check_availability'),
     path('rosters/<int:pk>/students/add/', views.roster_add_student, name='roster_add_student'),
     path('rosters/<int:pk>/students/import/', views.roster_import_students, name='roster_import_students'),

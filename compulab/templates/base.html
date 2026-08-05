@@ -439,6 +439,31 @@ div:where(.swal2-container) div:where(.swal2-popup){
 @media (max-width:360px){
   .app-modal{padding:12px 12px calc(12px + env(safe-area-inset-bottom, 0px));}
 }
+
+/* ---------------------------------------------------------------------
+   Shared "Delete Selected" bulk-action toolbar + checkbox column, used by
+   every list dashboard (Users, Class Rosters, Labs, Inventory,
+   Notifications, ...). See static/js/bulk-delete.js for the behavior and
+   templates/partials/bulk_delete_toolbar.html for the drop-in markup.
+--------------------------------------------------------------------- */
+.bulk-toolbar{
+  display:none; align-items:center; gap:12px;
+  padding:10px 14px; margin-bottom:12px;
+  background:var(--red-dim); border:1px solid var(--red); border-radius:10px;
+  font-size:13px; color:var(--text);
+}
+.bulk-toolbar.is-visible{ display:flex; }
+.bulk-toolbar .js-bulk-count{ font-weight:700; }
+.bulk-toolbar .bulk-delete-btn{
+  margin-left:auto; display:inline-flex; align-items:center; gap:6px;
+  background:var(--red); color:#fff; border:none; border-radius:7px;
+  padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer;
+}
+.bulk-toolbar .bulk-delete-btn:hover{ opacity:.9; }
+.bulk-toolbar .bulk-delete-btn svg{ width:14px; height:14px; }
+.bulk-select-col{ width:34px; }
+.bulk-select-col input[type="checkbox"],
+.js-row-check{ width:16px; height:16px; cursor:pointer; accent-color:var(--red); }
 </style>
 
 <script src="{% static 'vendor/sweetalert2/sweetalert2.all.min.js' %}"></script>
@@ -776,5 +801,6 @@ document.addEventListener('keydown', function (e) {
 });
 
 </script>
+<script src="{% static 'js/bulk-delete.js' %}"></script>
 </body>
 </html>

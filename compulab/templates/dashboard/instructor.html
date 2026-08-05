@@ -250,7 +250,7 @@
   {% else %}
   <p class="in-empty-sub" style="text-align:left; padding:2px 0;">
     No upcoming confirmed classes.
-    {% if pending_requests_count %}You have {{ pending_requests_count }} request{{ pending_requests_count|pluralize }} still waiting for approval.{% else %}<a href="{% url 'instructor_request_new' %}" class="in-action">Reserve a laboratory →</a>{% endif %}
+    {% if pending_requests_count %}You have {{ pending_requests_count }} request{{ pending_requests_count|pluralize }} still waiting for approval.{% else %}<a href="{% url 'instructor_request_new' %}" class="in-action js-modal-link">Reserve a laboratory →</a>{% endif %}
   </p>
   {% endif %}
 </div>
@@ -348,29 +348,6 @@
       <p class="in-empty-sub" style="text-align:center; padding:14px 0;">No new notifications.</p>
     {% endfor %}
   </div>
-</div>
-
-<div class="in-section-label" style="margin-top:20px;">Quick Actions</div>
-<div class="in-quick-actions">
-  <a href="{% url 'instructor_request_new' %}" class="in-quick-btn q-green">
-    <div class="in-quick-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
-    Reserve Laboratory
-  </a>
-  <a href="{% url 'inst_schedule' %}" class="in-quick-btn q-blue">
-    <div class="in-quick-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18M8 3v3M16 3v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-    My Schedule
-  </a>
-  <a href="{% url 'attendance' %}" class="in-quick-btn q-amber">
-    <div class="in-quick-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.8"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="17.5" cy="8.5" r="2.4" stroke="currentColor" stroke-width="1.8"/><path d="M15.7 13.2c2.6.3 4.8 2.4 4.8 5.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-    Attendance
-  </a>
-  <a href="{% url 'inst_alerts' %}" class="in-quick-btn q-purple">
-    <div class="in-quick-icon">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.7 21a2 2 0 0 1-3.4 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      {% if unread_count %}<span class="in-quick-badge">{{ unread_count }}</span>{% endif %}
-    </div>
-    Notifications
-  </a>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>

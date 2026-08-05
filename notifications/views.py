@@ -99,6 +99,27 @@ def delete_notification(request, pk):
     return redirect(request.META.get('HTTP_REFERER', 'notifications'))
 
 
+# bulk-delete one or more checked notifications from the "Delete Selected"
+# toolbar on the Notifications dashboard — same per-row rule as
+# delete_notification above (own notifications, or any notification if
+# admin), just applied to however many rows were checked.
+def notifications_bulk_delete(request):
+    if request.method != 'POST':
+        return redirect(request.META.get('HTTP_REFERER', 'notifications'))
+    ids = [v for v in request.POST.getlist('selected_ids') if v]
+    if request.user.role == 'admin':
+        qs = Notification.objects.filter(pk__in=ids)
+    else:
+        qs = Notification.objects.filter(pk__in=ids, user=request.user)
+    count = qs.count()
+    qs.delete()
+    if count:
+        messages.success(request, f'Deleted {count} notification{"s" if count != 1 else ""}.')
+    else:
+        messages.error(request, 'No notifications were selected.')
+    return redirect(request.META.get('HTTP_REFERER', 'notifications'))
+
+
 # admin/incharge: compose and broadcast a manual notification to chosen
 # recipients (announcements, schedule changes, closure notices, etc.) —
 # manual notifications always send regardless of the Alert Settings

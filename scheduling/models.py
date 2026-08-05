@@ -32,9 +32,9 @@ class ClassRoster(models.Model):
         max_length=200, blank=True,
         help_text='Auto-generated from Course Code + Subject if left blank.'
     )
-    course_code = models.CharField(max_length=50, blank=True, help_text='e.g. "BSIS 3A"')
-    subject = models.CharField(max_length=200, blank=True, help_text='e.g. "Systems Analysis and Design"')
-    section = models.CharField(max_length=50, blank=True, help_text='e.g. "BSIS-3A"')
+    course_code = models.CharField(max_length=50, blank=True)
+    subject = models.CharField(max_length=200, blank=True)
+    section = models.CharField(max_length=50, blank=True)
     lab = models.ForeignKey(
         'labs.Lab', on_delete=models.SET_NULL, null=True, blank=True, related_name='class_rosters',
         help_text='Laboratory room.'
@@ -47,7 +47,7 @@ class ClassRoster(models.Model):
     academic_year = models.CharField(max_length=20, blank=True, help_text='e.g. "2026-2027"')
     DAY_CHOICES = [
         ('mon', 'Monday'), ('tue', 'Tuesday'), ('wed', 'Wednesday'),
-        ('thu', 'Thursday'), ('fri', 'Friday'), ('sat', 'Saturday'), ('sun', 'Sunday'),
+        ('thu', 'Thursday'), ('fri', 'Friday'),
     ]
     DAY_LABELS = dict(DAY_CHOICES)
 

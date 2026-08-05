@@ -123,7 +123,7 @@
     <div class="cal-modal-row"><span>Requester</span><span id="cmRequester"></span></div>
     <div class="cal-modal-row"><span>Code</span><span id="cmCode" style="font-family:var(--font-mono)"></span></div>
     <div class="cal-modal-actions">
-      <a id="cmEdit" href="#" class="action-btn" style="flex:1; text-align:center;">Edit</a>
+      <a id="cmEdit" href="#" class="action-btn js-modal-link" style="flex:1; text-align:center;">Edit</a>
       <form id="cmDeleteForm" method="post" style="flex:1;">
         {% csrf_token %}
         <button type="submit" class="action-btn danger" style="width:100%;">Delete</button>

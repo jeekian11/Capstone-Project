@@ -38,6 +38,7 @@ urlpatterns = [
     path('inventory/add/', views.InventoryCreateView.as_view(), name='inventory_create'),
     path('inventory/<int:pk>/edit/', views.InventoryUpdateView.as_view(), name='inventory_update'),
     path('inventory/<int:pk>/delete/', views.InventoryDeleteView.as_view(), name='inventory_delete'),
+    path('inventory/bulk-delete/', views.inventory_bulk_delete, name='inventory_bulk_delete'),
     path('analytics/', views.AnalyticsView.as_view(), name='analytics'),
     path('analytics/export/', reports.export_analytics_overview, name='analytics_export'),
     path('alerts/', views.AlertsView.as_view(), name='alerts'),

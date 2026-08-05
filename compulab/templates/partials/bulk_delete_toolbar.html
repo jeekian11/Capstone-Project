@@ -1,0 +1,24 @@
+{% comment %}
+Drop-in "Delete Selected" toolbar. Include inside the .js-bulk-delete
+wrapper, right above the table/list it applies to:
+
+  <div class="js-bulk-delete" data-item-label="user">
+    <form method="post" action="{% url 'users_bulk_delete' %}" class="js-bulk-delete-form">
+      {% csrf_token %}
+      {% include "partials/bulk_delete_toolbar.html" %}
+      <table>...</table>
+    </form>
+  </div>
+
+See static/js/bulk-delete.js for the full markup contract (checkbox
+classes, select-all checkbox, etc.).
+{% endcomment %}
+<div class="bulk-toolbar js-bulk-toolbar">
+  <span><span class="js-bulk-count">0</span> selected</span>
+  <button type="button" class="bulk-delete-btn js-bulk-delete-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z"/>
+    </svg>
+    Delete Selected
+  </button>
+</div>

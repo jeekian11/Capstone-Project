@@ -9,7 +9,7 @@ from django.core.exceptions import PermissionDenied
 from django.urls import reverse_lazy, reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
-from accounts.mixins import RoleRequiredMixin, ModalFormMixin, ModalDetailMixin, modal_redirect, is_modal_request
+from accounts.mixins import RoleRequiredMixin, ModalFormMixin, ModalDetailMixin, modal_redirect, is_modal_request, bulk_delete
 from labs.models import PC, Lab, InventoryItem, MaintenanceLog, EquipmentIssue, PCActivityLog
 from labs.network import refresh_pc_statuses
 from labs.privacy import resolve_site_label
@@ -1910,6 +1910,15 @@ class InventoryDeleteView(RoleRequiredMixin, DeleteView):
         response = super().form_valid(form)
         messages.success(self.request, f'"{name}" removed from inventory.')
         return response
+
+
+# admin bulk-removes one or more checked items from the Inventory
+# dashboard's "Delete Selected" toolbar — same admin-only rule as
+# InventoryDeleteView above, just applied to however many rows were checked.
+def inventory_bulk_delete(request):
+    if not request.user.is_authenticated or request.user.role != 'admin':
+        raise PermissionDenied
+    return bulk_delete(request, InventoryItem.objects.all(), 'inventory', item_label='inventory item')
 
 
 # inventory list — stat cards, search/filter bar, table, and the bottom

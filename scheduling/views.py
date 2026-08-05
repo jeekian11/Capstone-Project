@@ -6,7 +6,8 @@ from django.db.models import Q
 from django.shortcuts import redirect, get_object_or_404, render
 from django.utils import timezone
 from django.urls import reverse_lazy, reverse
-from accounts.mixins import RoleRequiredMixin, ModalFormMixin, ModalDetailMixin, is_modal_request, modal_redirect
+from accounts.mixins import RoleRequiredMixin, ModalFormMixin, ModalDetailMixin, is_modal_request, modal_redirect, bulk_delete
+from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse
 from scheduling.models import Session, SessionRequest
 from scheduling.forms import SessionForm, SessionRequestForm, InstructorSessionRequestForm
@@ -1163,6 +1164,16 @@ class RosterDeleteView(RoleRequiredMixin, ModalFormMixin, DeleteView):
     def form_valid(self, form):
         messages.success(self.request, f'Roster "{self.object.name}" deleted.')
         return super().form_valid(form)
+
+
+# admin/incharge bulk-deletes one or more checked rosters from the Class
+# Rosters dashboard's "Delete Selected" toolbar — same allowed_roles as
+# RosterDeleteView above, just applied to however many rows were checked.
+def rosters_bulk_delete(request):
+    from scheduling.models import ClassRoster
+    if not request.user.is_authenticated or request.user.role not in ('admin', 'incharge'):
+        raise PermissionDenied
+    return bulk_delete(request, ClassRoster.objects.all(), 'roster_list', item_label='roster')
 
 
 def roster_check_availability(request):

@@ -60,6 +60,12 @@
   </select>
 </form>
 
+<div class="js-bulk-delete" data-item-label="notification">
+<form method="post" action="{% url 'notifications_bulk_delete' %}" class="js-bulk-delete-form">{% csrf_token %}</form>
+{% include "partials/bulk_delete_toolbar.html" %}
+<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:13px; color:var(--text-dim);">
+  <input type="checkbox" class="js-select-all"> Select all
+</div>
 <div class="card">
   {% for notif in notifications %}
     {% include "notifications/_item.html" %}
@@ -70,6 +76,7 @@
       <div class="notif-empty-sub">Updates about your reservations and sessions will show up here.</div>
     </div>
   {% endfor %}
+</div>
 </div>
 
 {% endblock %}

@@ -238,10 +238,18 @@
 
   <div class="card">
     {% if page_obj.object_list %}
+    {% if request.user.role == 'admin' %}
+    <div class="js-bulk-delete" data-item-label="inventory item">
+    <form method="post" action="{% url 'inventory_bulk_delete' %}" class="js-bulk-delete-form">{% csrf_token %}</form>
+    {% include "partials/bulk_delete_toolbar.html" %}
+    {% endif %}
     <div style="overflow-x:auto;">
       <table class="inv-table">
         <thead>
           <tr>
+            {% if request.user.role == 'admin' %}
+            <th class="bulk-select-col"><input type="checkbox" class="js-select-all"></th>
+            {% endif %}
             <th>#</th>
             <th>Item Name</th>
             <th>Category</th>
@@ -256,6 +264,9 @@
         <tbody>
           {% for item in page_obj.object_list %}
             <tr>
+              {% if request.user.role == 'admin' %}
+              <td class="bulk-select-col"><input type="checkbox" class="js-row-check" value="{{ item.pk }}"></td>
+              {% endif %}
               <td>{{ forloop.counter0|add:page_obj.start_index }}</td>
               <td>{{ item.name }}</td>
               <td>{{ item.category }}</td>
@@ -288,6 +299,9 @@
         </tbody>
       </table>
     </div>
+    {% if request.user.role == 'admin' %}
+    </div>
+    {% endif %}
     <div class="inv-pagination">
       <span>Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} entries</span>
       <div class="inv-page-btns">

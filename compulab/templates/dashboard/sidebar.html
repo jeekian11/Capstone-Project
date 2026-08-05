@@ -55,14 +55,12 @@
 }
 
   .nav.role-admin      { --accent: var(--green); --accent-tint: var(--green-dim); }
-  .nav.role-incharge   { --accent: var(--amber); --accent-tint: var(--amber-dim); }
-  .nav.role-instructor { --accent: var(--purple); --accent-tint: var(--purple-dim); }
+.nav.role-incharge   { --accent: var(--green); --accent-tint: var(--green-dim); }
+.nav.role-instructor { --accent: var(--green); --accent-tint: var(--green-dim); }
 
-  /* the dim tints above are tuned for white content surfaces; on the dark
-     navy sidebar (light mode) they need more alpha to stay legible */
-  html[data-theme="light"] .nav.role-admin      { --accent-tint: rgba(15,118,110,0.35); }
-  html[data-theme="light"] .nav.role-incharge   { --accent-tint: rgba(245,158,11,0.30); }
-  html[data-theme="light"] .nav.role-instructor { --accent-tint: rgba(109,40,217,0.32); }
+html[data-theme="light"] .nav.role-admin      { --accent-tint: rgba(15,118,110,0.35); }
+html[data-theme="light"] .nav.role-incharge   { --accent-tint: rgba(15,118,110,0.35); }
+html[data-theme="light"] .nav.role-instructor { --accent-tint: rgba(15,118,110,0.35); }
 
   .nav-brand {
     display: flex;
@@ -332,7 +330,7 @@
 <nav class="nav role-incharge">
   <div class="nav-brand">
     <img src="{% static 'img/logo.jpg' %}" alt="Danao Technological College" class="nav-brand-mark">
-    <span class="nav-brand-text">SC<b>LAMS</b></span>
+    <span class="nav-brand-text"><b>DANAO TECHNOLOGICAL COLLEGE</b></span>
   </div>
 
   <div class="nav-section">Overview</div>
@@ -422,7 +420,7 @@
 <nav class="nav role-instructor">
   <div class="nav-brand">
     <img src="{% static 'img/logo.jpg' %}" alt="Danao Technological College" class="nav-brand-mark">
-    <span class="nav-brand-text">SC<b>LAMS</b></span>
+    <span class="nav-brand-text"><b>DANAO TECHNOLOGICAL COLLEGE</b></span>
   </div>
 
   <div class="nav-section">Overview</div>
