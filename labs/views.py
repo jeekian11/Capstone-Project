@@ -9,6 +9,7 @@ from django.core.exceptions import PermissionDenied
 from django.urls import reverse_lazy, reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
 from accounts.mixins import RoleRequiredMixin, ModalFormMixin, ModalDetailMixin, modal_redirect, is_modal_request, bulk_delete
 from labs.models import PC, Lab, InventoryItem, MaintenanceLog, EquipmentIssue, PCActivityLog
 from labs.network import refresh_pc_statuses
@@ -639,7 +640,7 @@ def pc_agent_end_session_api(request):
     if pc is None:
         return JsonResponse({'ok': False, 'error': 'PC not registered'}, status=200)
 
-    reason = payload.get('reason', 'manual')  # 'manual', 'expired', or 'remote_lock'
+    reason = payload.get('reason', 'manual')  # 'manual', 'expired', 'remote_lock', or 'override'
     session = pc.current_session
     user = pc.current_user
 
@@ -650,6 +651,11 @@ def pc_agent_end_session_api(request):
             detail_msg = (
                 f"{pc.pc_id} ({pc.lab.name}) locked remotely by a Lab In-Charge "
                 f"(Manual PC Control tool)."
+            )
+        elif reason == 'override':
+            detail_msg = (
+                f"{pc.pc_id} ({pc.lab.name}) session ended — Admin/In-Charge Override "
+                f"took over this PC after the on-screen warning countdown."
             )
         else:
             detail_msg = f"{pc.pc_id} ({pc.lab.name}) locked by the student (session ended early)."
@@ -970,6 +976,72 @@ def _modal_aware_lab_redirect(request, view_name, lab_id):
     return redirect(url)
 
 
+def _finish_override_grant(pc_pk, account_pk, outgoing_session_pk, admin_pk):
+    """
+    Runs on a daemon background thread a couple seconds after an
+    Admin/In-Charge confirmed an Override on a PC that was in use by
+    someone else — timed to fire just after the agent's own local
+    countdown (see WarningBanner / start_override_countdown in
+    lab_pc_agent/agent.py) finishes and the agent re-locks + reports the
+    outgoing user's session ended (clearing pc.current_user/
+    current_session server-side via pc_agent_end_session_api).
+
+    This is what actually grants the new student/instructor access —
+    same mechanics as the immediate-grant path for a free PC, just
+    delayed so the outgoing user's warning has time to play out first.
+    """
+    from django.contrib.auth import get_user_model
+    from accounts.models import ActivityLog
+    from scheduling.models import Session, SessionCheckIn
+    from labs.network import unlock_pc
+
+    User = get_user_model()
+    try:
+        pc = PC.objects.select_related('lab').get(pk=pc_pk)
+        account = User.objects.get(pk=account_pk)
+    except (PC.DoesNotExist, User.DoesNotExist):
+        return
+    admin = User.objects.filter(pk=admin_pk).first()
+
+    # Safety net: if the agent never checked in (offline, unreachable,
+    # crashed) the PC may still show the outgoing user here. Don't leave
+    # the new student locked out indefinitely just because the on-screen
+    # warning/relock didn't complete — proceed with the switch anyway.
+    pc.refresh_from_db()
+
+    now = timezone.localtime()
+    active_session = Session.objects.filter(
+        lab=pc.lab, date=now.date(), start_time__lte=now.time(), end_time__gte=now.time(),
+    ).order_by('start_time').first()
+
+    success, detail = unlock_pc(pc)
+
+    id_number = account.id_number or account.display_name
+    SessionCheckIn.objects.update_or_create(
+        session=active_session, id_number=id_number,
+        defaults={'checkin_type': 'override', 'student': account, 'pc': pc},
+    )
+
+    pc.status = 'in_use'
+    pc.last_active = timezone.now()
+    pc.current_user = account
+    pc.current_session = active_session
+    pc.save(update_fields=['status', 'last_active', 'current_user', 'current_session'])
+
+    ActivityLog.objects.create(
+        actor=admin,
+        action='pc_unlock',
+        target_identifier=id_number,
+        pc=pc,
+        details=(
+            f"Override by {admin.display_name if admin else 'an admin'}: granted {account.display_name} "
+            f"({id_number}) access to {pc.pc_id} ({pc.lab.name}) after the warning countdown finished"
+            + (f", overlapping reservation {active_session.reservation_code}" if active_session else ", no active reservation")
+            + ('.' if success else f' — unlock command did not run: {detail}.')
+        )
+    )
+
+
 class OverrideCheckInView(RoleRequiredMixin, ModalFormMixin, TemplateView):
     allowed_roles = ['admin', 'incharge']
     template_name = 'labs/override_checkin.html'
@@ -984,18 +1056,27 @@ class OverrideCheckInView(RoleRequiredMixin, ModalFormMixin, TemplateView):
         ctx['selected_lab'] = self.request.GET.get('lab', '')
         if ctx['selected_lab']:
             ctx['available_pcs'] = PC.objects.filter(lab_id=ctx['selected_lab'], status='online').order_by('pc_id')
+            # Occupied PCs can ALSO be overridden — the admin/in-charge just
+            # gets an extra confirmation step and the current user gets an
+            # on-screen warning before the switch happens (see post()).
+            ctx['busy_pcs'] = PC.objects.filter(
+                lab_id=ctx['selected_lab'], status='in_use'
+            ).select_related('current_user').order_by('pc_id')
+            ctx['override_warning_seconds'] = getattr(settings, 'OVERRIDE_WARNING_SECONDS', 15)
         return ctx
 
     def post(self, request, *args, **kwargs):
         from accounts.models import ActivityLog
         from django.contrib.auth import get_user_model
-        from labs.network import unlock_pc
+        from labs.network import unlock_pc, send_override_warning
         from scheduling.models import Session, SessionCheckIn
+        import threading
 
         pc_id = request.POST.get('pc', '')
         student_pk = request.POST.get('student_id', '')
+        confirmed = request.POST.get('confirm_override') == '1'
 
-        pc = PC.objects.select_related('lab').filter(pk=pc_id).first() if pc_id.isdigit() else None
+        pc = PC.objects.select_related('lab', 'current_user').filter(pk=pc_id).first() if pc_id.isdigit() else None
         if pc is None:
             messages.error(request, 'Select a computer to override into.')
             return _modal_aware_lab_redirect(request, 'override_checkin', request.POST.get('lab', ''))
@@ -1008,9 +1089,83 @@ class OverrideCheckInView(RoleRequiredMixin, ModalFormMixin, TemplateView):
 
         # Re-check occupancy/availability at submit time too — the picker
         # above is just a convenience, this is the real gate (protects
-        # against the PC being taken by someone else between page load and
-        # submit, or against a stale/forged pc id in the POST body).
+        # against the PC's state changing between page load and submit,
+        # or against a stale/forged pc id in the POST body).
         pc.refresh_from_db()
+
+        # OCCUPIED PC: taking it from whoever is currently using it needs an
+        # explicit confirmation, a countdown warning shown on that PC's own
+        # screen, and only THEN does access actually switch to the new
+        # student/instructor — handled by _finish_override_grant() on a
+        # delayed background thread, timed to run just after the agent's
+        # own local countdown finishes and it re-locks/clears itself.
+        if pc.status == 'in_use':
+            if not confirmed:
+                current_name = pc.current_user.display_name if pc.current_user else (pc.current_guest_name or 'someone')
+                messages.error(
+                    request,
+                    f'{pc.pc_id} is currently in use by {current_name}. Confirm the override to continue — '
+                    f'they will see a warning on screen before their session ends.'
+                )
+                return _modal_aware_lab_redirect(request, 'override_checkin', pc.lab_id)
+
+            seconds = getattr(settings, 'OVERRIDE_WARNING_SECONDS', 15)
+            outgoing_user = pc.current_user
+            outgoing_session = pc.current_session
+
+            # Record the outgoing user's session as force-ended right now —
+            # this is the permanent record of who was using the PC and when
+            # their session ended, independent of whether the on-screen
+            # warning or the agent's own auto-lock succeeds.
+            if outgoing_session is not None and outgoing_user is not None:
+                SessionCheckIn.objects.filter(
+                    session=outgoing_session,
+                    id_number=outgoing_user.id_number or outgoing_user.display_name,
+                ).update(checked_out_at=timezone.now(), ended_by=request.user)
+
+            ActivityLog.objects.create(
+                actor=request.user,
+                action='pc_unlock',
+                target_identifier=account.id_number or account.display_name,
+                pc=pc,
+                details=(
+                    f"Override by {request.user.display_name}: {pc.pc_id} ({pc.lab.name}) taken from "
+                    f"{outgoing_user.display_name if outgoing_user else (pc.current_guest_name or 'a walk-in guest')} "
+                    f"— {seconds}s on-screen warning sent, then access will switch to {account.display_name}."
+                )
+            )
+
+            warned, warn_detail = send_override_warning(pc, request.user.display_name, seconds)
+
+            def _delayed_grant(pc_pk, account_pk, session_pk, admin_pk, wait_seconds):
+                import time
+                from django.db import connections
+                time.sleep(wait_seconds + 2)  # +2s buffer past the agent's own local countdown
+                try:
+                    _finish_override_grant(pc_pk, account_pk, session_pk, admin_pk)
+                finally:
+                    connections.close_all()
+
+            threading.Thread(
+                target=_delayed_grant,
+                args=(pc.pk, account.pk, outgoing_session.pk if outgoing_session else None, request.user.pk, seconds),
+                daemon=True,
+            ).start()
+
+            if warned:
+                messages.success(
+                    request,
+                    f'Override started — {pc.pc_id} will switch to {account.display_name} in {seconds} seconds, '
+                    f'after a warning is shown on that PC\u2019s screen.'
+                )
+            else:
+                messages.warning(
+                    request,
+                    f'Override scheduled, but the on-screen warning could not be sent ({warn_detail}). '
+                    f'{pc.pc_id} will still switch to {account.display_name} in {seconds} seconds.'
+                )
+            return _modal_aware_lab_redirect(request, 'override_checkin', pc.lab_id)
+
         if pc.status != 'online':
             messages.error(request, f'{pc.pc_id} is no longer available — someone else may have just taken it.')
             return _modal_aware_lab_redirect(request, 'override_checkin', pc.lab_id)

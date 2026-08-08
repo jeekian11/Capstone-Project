@@ -381,6 +381,15 @@ class SessionCheckIn(models.Model):
     )
     pc = models.ForeignKey('labs.PC', on_delete=models.SET_NULL, null=True, blank=True, related_name='checkins')
     checked_in_at = models.DateTimeField(auto_now_add=True)
+    checked_out_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='Set when this check-in was force-ended by an Admin/In-Charge Override before it ended naturally.',
+    )
+    ended_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='ended_checkins',
+        help_text='Admin/In-Charge who force-ended this session via Override, if applicable.',
+    )
 
     class Meta:
         unique_together = [('session', 'id_number')]

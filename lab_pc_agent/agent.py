@@ -96,6 +96,7 @@ CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'agent_co
 #   ('login_result', dict)       -> from the on-screen login form's network call
 #   ('pc_info', dict)            -> from fetch_pc_info_in_background (server-assigned pc_id/lab_name)
 #   ('network_status', bool)     -> from check_network_in_background (can we reach the CompuLab server right now?)
+#   ('override_warning', int, str) -> from the HTTP server (Admin/In-Charge Override); (seconds, admin_name)
 _command_queue = queue.Queue()
 
 
@@ -156,11 +157,36 @@ class UnlockHandler(BaseHTTPRequestHandler):
         _command_queue.put(action)
         self._send(200, {'ok': True})
 
+    def _handle_override_warning(self):
+        try:
+            length = int(self.headers.get('Content-Length', 0))
+            raw = self.rfile.read(length) if length else b''
+            data = json.loads(raw or b'{}')
+        except Exception:
+            self._send(400, {'ok': False, 'error': 'bad request body'})
+            return
+
+        config = load_config()
+        if data.get('secret') != config.get('secret'):
+            self._send(403, {'ok': False, 'error': 'invalid secret'})
+            return
+
+        try:
+            seconds = int(data.get('seconds', 15))
+        except (TypeError, ValueError):
+            seconds = 15
+        admin_name = str(data.get('admin_name') or 'An admin')
+
+        _command_queue.put(('override_warning', seconds, admin_name))
+        self._send(200, {'ok': True})
+
     def do_POST(self):
         if self.path == '/unlock':
             self._handle_signal('unlock')
         elif self.path == '/lock':
             self._handle_signal('lock')
+        elif self.path == '/override-warning':
+            self._handle_override_warning()
         else:
             self._send(404, {'ok': False, 'error': 'not found'})
 
@@ -809,6 +835,8 @@ class LockScreen:
         self._warning_after_id = None
         self._warning_shown = False
         self._session_end_dt = None
+        self._override_after_id = None
+        self._override_tick_after_id = None
         self.mini_panel = None  # created after root exists; see main()
         self.warning_banner = None  # created after root exists; see main()
         self.status_bar = None
@@ -1585,6 +1613,71 @@ class LockScreen:
         self._relock_after_id = None
         self.show(reason='expired')
 
+    def start_override_countdown(self, seconds, admin_name):
+        """
+        Triggered by a '/override-warning' signal from the server: an
+        Admin/In-Charge has confirmed taking this PC over for a different
+        student. Shows the same red WarningBanner used for the normal
+        "session ending soon" notice, ticking down each second, then
+        auto-locks (reason='override') once time is up — same as if the
+        current student had pressed 'Lock Now' themselves, except this one
+        can't be dismissed/cancelled from this side.
+        """
+        # Cancel any prior override countdown so a second override signal
+        # (shouldn't normally happen, but be safe) restarts cleanly instead
+        # of stacking timers.
+        if self._override_after_id is not None:
+            try:
+                self.root.after_cancel(self._override_after_id)
+            except Exception:
+                pass
+            self._override_after_id = None
+        if self._override_tick_after_id is not None:
+            try:
+                self.root.after_cancel(self._override_tick_after_id)
+            except Exception:
+                pass
+            self._override_tick_after_id = None
+
+        if not self.warning_banner:
+            self._override_after_id = self.root.after(max(0, int(seconds)) * 1000, self._override_auto_lock)
+            return
+
+        self._override_seconds_left = max(0, int(seconds))
+        self._override_admin_name = admin_name
+
+        def _tick():
+            self.warning_banner.set_detail(
+                f'{self._override_admin_name} is taking over this PC. '
+                f'Save your work now — locking in {self._override_seconds_left} second'
+                f'{"s" if self._override_seconds_left != 1 else ""}.'
+            )
+            if self._override_seconds_left <= 0:
+                self._override_tick_after_id = None
+                return
+            self._override_seconds_left -= 1
+            self._override_tick_after_id = self.root.after(1000, _tick)
+
+        self.warning_banner.title_label.config(text='ADMIN OVERRIDE')
+        self.warning_banner.show()
+        _tick()
+        self._override_after_id = self.root.after(max(0, int(seconds)) * 1000, self._override_auto_lock)
+
+    def _override_auto_lock(self):
+        self._override_after_id = None
+        if self._override_tick_after_id is not None:
+            try:
+                self.root.after_cancel(self._override_tick_after_id)
+            except Exception:
+                pass
+            self._override_tick_after_id = None
+        if self.warning_banner:
+            self.warning_banner.hide()
+            # Reset the title back to the normal wording for the next time
+            # this banner is used for an ordinary reservation-ending warning.
+            self.warning_banner.title_label.config(text='SYSTEM WARNING')
+        self.show(reason='override')
+
     def lock_now_clicked(self):
         """The student pressed 'Lock Now' on the MiniPanel — end the session early."""
         self.show(reason='manual')
@@ -1615,8 +1708,10 @@ class LockScreen:
     def show(self, reason=None):
         """Ends the session. `reason` is 'expired' (auto timer), 'manual'
         (student clicked Lock Now), 'remote_lock' (Lab In-Charge sent a
-        /lock signal, e.g. via the offline Manual PC Control tool), or
-        None (startup, before any session has ever started).
+        /lock signal, e.g. via the offline Manual PC Control tool),
+        'override' (Admin/In-Charge Override countdown ran out — see
+        start_override_countdown()), or None (startup, before any session
+        has ever started).
 
         None of these sign the student out of Windows anymore — all of
         them just re-show this overlay over the SAME still-signed-in
@@ -1655,7 +1750,7 @@ class LockScreen:
             self.config.get('secret', ''),
         )
 
-        if reason in ('expired', 'manual', 'remote_lock'):
+        if reason in ('expired', 'manual', 'remote_lock', 'override'):
             notify_end_session_sync(
                 self.config.get('server_url', 'http://127.0.0.1:8000'),
                 self.config.get('secret', ''),
@@ -1759,6 +1854,8 @@ def poll_queue(root, lock_screen):
                     lock_screen.apply_pc_info(item[1])
                 elif isinstance(item, tuple) and item[0] == 'network_status':
                     lock_screen.apply_network_status(item[1])
+                elif isinstance(item, tuple) and item[0] == 'override_warning':
+                    lock_screen.start_override_countdown(item[1], item[2])
             except Exception:
                 import traceback
                 print('[agent] Error while handling queued item — continuing anyway:')

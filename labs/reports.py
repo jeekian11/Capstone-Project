@@ -325,6 +325,19 @@ def export_instructor_usage(request):
 # Report 3 — Attendance
 # ---------------------------------------------------------------------------
 
+def _norm_id(id_number):
+    """Canonical form of an ID number for matching only (never display).
+    Check-in matches an ID case-insensitively, but the roster/present/
+    absent comparison below used to compare the raw, as-typed ID against
+    the roster's stored ID with exact-case string equality — so a student
+    who checked in with different casing/whitespace than how their ID was
+    entered on the roster (e.g. a CSV import) was recorded as present
+    under their typed ID AND still listed as absent under their roster
+    ID. Normalizing both sides before comparing fixes that false
+    "Absent"."""
+    return (id_number or '').strip().casefold()
+
+
 def _attendance_data(request):
     from scheduling.models import Session
 
@@ -348,7 +361,11 @@ def _attendance_data(request):
 
         roster_by_id = {}
         if s.roster_id:
-            roster_by_id = {rs.id_number: rs.full_name for rs in s.roster.students.all()}
+            # Keyed by normalized ID so a roster ID and a differently-cased/
+            # spaced typed ID from the same student are treated as one
+            # person instead of two (present under one, absent under the
+            # other).
+            roster_by_id = {_norm_id(rs.id_number): (rs.id_number, rs.full_name) for rs in s.roster.students.all()}
 
         # Walk-in/Override check-ins (people using a PC during this slot who
         # aren't the requester, a roster member, or a counted group member —
@@ -358,13 +375,15 @@ def _attendance_data(request):
             c.id_number: c for c in
             s.check_ins.filter(checkin_type__in=('walk_in', 'override')).select_related('student', 'pc')
         }
+        walk_in_ids_norm = {_norm_id(i) for i in walk_in_checkins}
 
         present = []
         seen_ids = set()
         for log in logs:
-            if log.target_identifier in seen_ids or log.target_identifier in walk_in_checkins:
+            norm = _norm_id(log.target_identifier)
+            if norm in seen_ids or norm in walk_in_ids_norm:
                 continue
-            seen_ids.add(log.target_identifier)
+            seen_ids.add(norm)
             # Prefer the roster's own name; if this person isn't on the
             # roster (e.g. a Group booking's members, who aren't named
             # anywhere), fall back to the resolved account from
@@ -372,8 +391,9 @@ def _attendance_data(request):
             # to show the reservation's requester for every group member,
             # which was wrong.
             checkin = s.check_ins.filter(id_number=log.target_identifier).select_related('student').first()
+            roster_entry = roster_by_id.get(norm)
             name = (
-                roster_by_id.get(log.target_identifier)
+                (roster_entry[1] if roster_entry else None)
                 or (checkin.student.display_name if checkin and checkin.student else None)
                 or s.requester_name or '—'
             )
@@ -384,17 +404,32 @@ def _attendance_data(request):
                 'time': log.created_at,
             })
 
-        if s.roster_id:
-            # roster attached — absent list has real names, not just a count
-            absent = [
-                {'id_number': id_number, 'full_name': full_name}
-                for id_number, full_name in roster_by_id.items()
-                if id_number not in seen_ids
-            ]
-            expected = len(roster_by_id)
+        # A session that hasn't started yet can't have "absent" students —
+        # nobody has had the chance to check in. Without this check, every
+        # roster member on an upcoming session was marked absent the moment
+        # the report was generated, well before class time.
+        now = timezone.localtime()
+        session_started = s.date < now.date() or (s.date == now.date() and s.start_time <= now.time())
+
+        if not session_started:
+            absent = [] if s.roster_id else None
+            not_started = True
+            expected = len(roster_by_id) if s.roster_id else (
+                s.pcs_requested if s.requester_type in ('walk_in', 'override') else (s.student_count or 0)
+            )
         else:
-            absent = None  # no roster — names aren't knowable, only a count
-            expected = s.pcs_requested if s.requester_type in ('walk_in', 'override') else (s.student_count or 0)
+            not_started = False
+            if s.roster_id:
+                # roster attached — absent list has real names, not just a count
+                absent = [
+                    {'id_number': id_number, 'full_name': full_name}
+                    for norm, (id_number, full_name) in roster_by_id.items()
+                    if norm not in seen_ids
+                ]
+                expected = len(roster_by_id)
+            else:
+                absent = None  # no roster — names aren't knowable, only a count
+                expected = s.pcs_requested if s.requester_type in ('walk_in', 'override') else (s.student_count or 0)
 
         # Walk-in / Override transactions: people who used a PC during this
         # session's slot without being the requester, a roster member, or a
@@ -414,10 +449,14 @@ def _attendance_data(request):
         ]
 
         present_count = len(present)
-        absent_count = len(absent) if absent is not None else max(expected - present_count, 0)
+        if not_started:
+            absent_count = 0
+        else:
+            absent_count = len(absent) if absent is not None else max(expected - present_count, 0)
         rows.append({
             'session': s,
             'has_roster': bool(s.roster_id),
+            'not_started': not_started,
             'present': present,
             'absent': absent,
             'walk_ins': walk_ins,
@@ -453,7 +492,9 @@ def export_attendance(request):
     for r in data['rows']:
         s = r['session']
         time_logs = '; '.join(f"{p['name']} ({p['id_number']}) @ {timezone.localtime(p['time']).strftime('%H:%M')}" for p in r['present']) or '—'
-        if r['has_roster']:
+        if r.get('not_started'):
+            absent_names = 'Session has not started yet'
+        elif r['has_roster']:
             absent_names = '; '.join(f"{a['full_name']} ({a['id_number']})" for a in r['absent']) or 'None'
         else:
             absent_names = 'No roster attached — estimate only'
@@ -804,4 +845,3 @@ def _export_excel(title, period, headers, rows, filename):
     )
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
-

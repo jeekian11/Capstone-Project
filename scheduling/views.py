@@ -896,17 +896,25 @@ class RosterDetailView(RoleRequiredMixin, ModalDetailMixin, DetailView):
         ctx['students'] = self.object.students.select_related('student').all()
         ctx['can_review_roster'] = self.request.user.role in ('admin', 'incharge')
 
+        from django.core.paginator import Paginator
+
         now = timezone.localtime()
         today, now_time = now.date(), now.time()
-        sessions = list(self.object.sessions.select_related('lab').order_by('-date', '-start_time')[:20])
-        for s in sessions:
+        all_sessions = self.object.sessions.select_related('lab').order_by('date', 'start_time')
+        paginator = Paginator(all_sessions, 15)
+        page_number = self.request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        for s in page_obj:
             if s.date < today or (s.date == today and s.end_time <= now_time):
                 s.reservation_status = 'completed'
             elif s.date == today and s.start_time <= now_time < s.end_time:
                 s.reservation_status = 'ongoing'
             else:
                 s.reservation_status = 'scheduled'
-        ctx['linked_sessions'] = sessions
+        ctx['linked_sessions'] = page_obj
+        ctx['sessions_page_obj'] = page_obj
+        ctx['sessions_paginator'] = paginator
+        ctx['sessions_is_paginated'] = page_obj.has_other_pages()
         return ctx
 
 

@@ -129,6 +129,20 @@ class AdminUserCreateForm(forms.ModelForm):
                     validate_password(p1)
                 except ValidationError as e:
                     self.add_error('password1', e)
+
+            # Admin and Lab In-Charge accounts don't use Department/Year
+            # Level/Student ID at all — clear out anything left over from
+            # switching the role dropdown away from Instructor/Student
+            # after those fields were already filled in.
+            if role in ('admin', 'incharge'):
+                # department is a CharField with no null=True — it must be
+                # cleared to '' (not None), or MySQL rejects the insert
+                # with "Column 'department' cannot be null". year_level IS
+                # nullable (PositiveSmallIntegerField(null=True)), so None
+                # is correct there.
+                cleaned['department'] = ''
+                cleaned['year_level'] = None
+                cleaned['id_number'] = ''
             # Email format + uniqueness for this role is otherwise enforced
             # automatically: EmailField validates format, and the model
             # field's unique=True triggers Django's built-in uniqueness

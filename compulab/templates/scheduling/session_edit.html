@@ -8,7 +8,7 @@
     <h1>Edit scheduled session</h1>
     <div class="sub">Reservation code: <code>{{ session.reservation_code }}</code></div>
   </div>
-  <a href="{% url 'view_schedule' %}?lab={{ session.lab_id }}&date={{ session.date|date:'Y-m-d' }}</a>
+  <a href="{% url 'view_schedule' %}?lab={{ session.lab_id }}&date={{ session.date|date:'Y-m-d' }}"></a>
 </div>
 
 <div class="card" style="max-width:640px">
@@ -34,7 +34,7 @@
              value="{{ session.requester_name }}">
       <div id="requester-search-results" class="search-results"
            style="display:none; position:absolute; z-index:10; background:var(--surface-raised); color:var(--text); border:1px solid var(--border); border-radius:6px; width:100%; max-height:220px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.25);"></div>
-      <span class="helptext">Pick a registered account to auto-fill the fields below — Full Name, ID, and Department / Year Level.</span>
+      
       <div id="requester-extra-info" class="helptext"
            style="{% if session.instructor.department %}display:block;{% else %}display:none;{% endif %} font-weight:600; margin-top:4px;">
         {% if session.instructor.department %}Department: {{ session.instructor.department_display }}{% if session.instructor.year_level %} — {{ session.instructor.year_level_display }}{% endif %}{% endif %}
@@ -45,7 +45,6 @@
       <div class="form-group">
         <label class="form-label" for="{{ form.requester_id_number.id_for_label }}">Student / instructor ID</label>
         {{ form.requester_id_number }}
-        <span class="helptext">Must match an account already registered by an Admin under Users — unregistered IDs can't hold a reservation.</span>
         {% if form.requester_id_number.errors %}<div class="form-errors">{{ form.requester_id_number.errors|join:", " }}</div>{% endif %}
       </div>
     </div>
@@ -71,15 +70,7 @@
     <div class="form-group">
       <label class="form-label" for="{{ form.roster.id_for_label }}">Class roster (optional)</label>
       {{ form.roster }}
-      <span class="helptext">
-        Only relevant for <strong>Instructor</strong> requests — link a roster to let everyone in that
-        class check in with this same reservation code (using their own ID number) and to show real
-        names in attendance reports.
-        For <strong>Group of students</strong>, leave this blank: any ID number will work with the
-        shared code, no roster/names needed.
-        For <strong>Student</strong> (individual), leave this blank too: only that one ID will work.
-        <a href="{% url 'roster_list' %}">Manage rosters</a>.
-      </span>
+
       {% if form.roster.errors %}<div class="form-errors">{{ form.roster.errors|join:", " }}</div>{% endif %}
     </div>
 

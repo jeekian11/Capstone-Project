@@ -1,5 +1,6 @@
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
 from django.conf import settings
+from django.templatetags.static import static
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
@@ -10,7 +11,7 @@ from django.db.models import Q, Value
 from django.db.models.functions import Concat
 from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DeleteView, FormView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.views import LoginView
+from django.contrib.auth.views import LoginView, PasswordResetView, PasswordResetConfirmView
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -78,49 +79,49 @@ class CompulabLoginView(LoginView):
         ctx = super().get_context_data(**kwargs)
         ctx['pc_count'] = PC.objects.count()
         return ctx
-    
-    def form_valid(self, form):
-        # Students authenticate at the lab computer with their Student ID
-        # Number + a reservation code (see labs.ReservationPCLoginView),
-        # never here — this is the web management system, which signs in
-        # with Email + Password and is off-limits to student accounts.
-        user = form.get_user()
-        if user.role == 'student':
-            form.add_error(None, "Student accounts can't sign in here. Please use the login screen on a lab computer instead.")
-            return self.form_invalid(form)
-        if not user.email_verified:
-            form.add_error(None, 'Please verify your email first. Check your Gmail inbox for the verification link.')
-            return self.form_invalid(form)
-        # successful login clears any failed-attempt counter for this account
-        cache.delete(f'failed_login:{user.email.lower()}')
-        return super().form_valid(form)
 
-    def form_invalid(self, form):
-        # Django's AuthenticationForm always names its identity field
-        # "username" internally (a historical quirk), regardless of what
-        # USERNAME_FIELD is set to on the User model — so even though this
-        # form now authenticates by Email, the posted value is still read
-        # from form.data['username']. The login template's input is named
-        # accordingly; nothing else needs to change here.
-        email = (form.data.get('username') or '').strip().lower()
-        if email:
-            key = f'failed_login:{email}'
-            count = cache.get(key, 0) + 1
-            cache.set(key, count, FAILED_LOGIN_WINDOW_SECONDS)
-            if count == FAILED_LOGIN_THRESHOLD:
-                notify_service.notify_failed_login(email, count)
-        return super().form_invalid(form)
-
-    def get_context_data(self, **kwargs):
-        from labs.models import PC
-        ctx = super().get_context_data(**kwargs)
-        ctx['pc_count'] = PC.objects.count()
-        return ctx
 
 User = get_user_model()
 
 
+# Self-service "forgot password" — reachable from the login page's
+# "Forgot password?" link. Both subclasses below plug into the same URLs
+# Django's built-in django.contrib.auth.urls already provides (see
+# compulab/urls.py) — Django looks up a view by its `name`, and since
+# these use the same names ('password_reset', 'password_reset_confirm'),
+# placing them BEFORE the include() in urls.py is what makes these the
+# ones that actually get used instead of the plain defaults.
+class CompulabPasswordResetView(PasswordResetView):
+    # Django's default PasswordResetView only sends whatever
+    # email_template_name renders as a PLAIN TEXT body — even though the
+    # existing password_reset_email.html is full of HTML markup, it was
+    # being sent as literal `<div style="...">` text instead of a
+    # rendered email. email_template_name now points at a real plain-text
+    # version, and html_email_template_name attaches the pretty one as a
+    # proper text/html alternative, exactly like send_password_changed_email()
+    # below does by hand.
+    email_template_name = 'registration/password_reset_email.txt'
+    html_email_template_name = 'registration/password_reset_email.html'
+    # PasswordResetForm.save() builds its own email context (domain,
+    # protocol, uid, token, user) — it never sees anything from
+    # get_context_data(), so the logo/header photo have to be injected
+    # here instead, the same way send_verification_email() builds them
+    # by hand for the account-verification email.
+    extra_email_context = {
+        'logo_url': f'{settings.SITE_URL}{static("img/logo.jpg")}',
+        'header_bg_url': f'{settings.SITE_URL}{static("img/login-bg.jpg")}',
+    }
+
+
+class CompulabPasswordResetConfirmView(PasswordResetConfirmView):
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        notify_service.send_password_changed_email(form.user)
+        return response
+
+
 class ProfileView(LoginRequiredMixin, ModalFormMixin, UpdateView):
+
     """Lets any logged-in user (admin, in-charge, or instructor) update
     their own name, email, and profile picture from the navbar avatar."""
     model = User
@@ -526,22 +527,31 @@ def send_verification_email(request, user):
     current password hash."""
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
-    verify_url = request.build_absolute_uri(
-        reverse('verify_email', kwargs={'uidb64': uid, 'token': token})
-    )
-    send_mail(
-        subject='Verify your CompuLab account email',
-        message=(
-            f'Hi {user.display_name},\n\n'
-            f'An account was created for you on CompuLab as {user.get_role_display()}.\n'
-            f'Please confirm this is your real email address by clicking the link below:\n\n'
-            f'{verify_url}\n\n'
-            f'You won\'t be able to log in until this is confirmed.\n'
-        ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
-        fail_silently=True,
-    )
+    # Use the fixed SITE_DOMAIN (LAN IP) instead of request.build_absolute_uri(),
+    # which would embed whatever host the admin happened to be using
+    # (e.g. 127.0.0.1) — unreachable from a phone checking Gmail.
+    relative_url = reverse('verify_email', kwargs={'uidb64': uid, 'token': token})
+    scheme = 'https' if request.is_secure() else 'http'
+    verify_url = f'{scheme}://{settings.SITE_DOMAIN}{relative_url}'
+    logo_url = f'{settings.SITE_URL}{static("img/logo.jpg")}'
+    # Same background photo used behind the login card, so the
+    # verification email reads as a continuation of the login page
+    # instead of a completely different, generic-looking email.
+    header_bg_url = f'{settings.SITE_URL}{static("img/login-bg.jpg")}'
+    context = {'user': user, 'verify_url': verify_url, 'logo_url': logo_url, 'header_bg_url': header_bg_url}
+    text_body = render_to_string('emails/verify_email.txt', context)
+    html_body = render_to_string('emails/verify_email.html', context)
+    try:
+        message = EmailMultiAlternatives(
+            subject='Verify your CompuLab account email',
+            body=text_body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[user.email],
+        )
+        message.attach_alternative(html_body, 'text/html')
+        message.send(fail_silently=True)
+    except Exception:
+        pass  # never let an email hiccup block account creation itself
 
 
 # admin create new user
@@ -607,6 +617,20 @@ class UserUpdateView(RoleRequiredMixin, ModalFormMixin, UpdateView):
 # attendance module for instructor: (1) generate a per-day attendance
 # summary for their own sessions with PDF/Excel export, and (2) browse
 # individual attendance log records filtered by date / student / session.
+def _norm_id(id_number):
+    """Canonical form of an ID number for matching purposes only (never
+    for display). Check-in accepts an ID case-insensitively (see
+    verify_reservation_and_check_in's use of id_number__iexact), but the
+    roster/present/absent comparisons below used to compare the raw,
+    as-typed ID against the roster's stored ID with exact-case string
+    equality — so a student who checked in with different
+    casing/whitespace than how their ID was entered on the roster (e.g.
+    a CSV import) was recorded as present under their typed ID AND
+    still listed as absent under their roster ID. Normalizing both sides
+    before comparing fixes that false "Absent"."""
+    return (id_number or '').strip().casefold()
+
+
 def _pc_detected_attendance(session):
     """Present/absent breakdown for one session, based ONLY on PC-unlock
     activity logs in that session's lab/time window (and the attached
@@ -620,6 +644,12 @@ def _pc_detected_attendance(session):
     end_dt = datetime.combine(session.date, session.end_time)
     start_dt = tz.make_aware(start_dt) if tz.is_naive(start_dt) else start_dt
     end_dt = tz.make_aware(end_dt) if tz.is_naive(end_dt) else end_dt
+    # A session that hasn't started yet can never have PC-unlock logs, so
+    # every roster student would otherwise fall straight into `absent` —
+    # indistinguishable from a student who skipped class. Track this
+    # separately so callers can show "not started yet" instead of a false
+    # absence.
+    not_started = tz.now() < start_dt
 
     logs = ActivityLog.objects.filter(
         action='pc_unlock', pc__lab_id=session.lab_id,
@@ -628,22 +658,27 @@ def _pc_detected_attendance(session):
 
     roster_by_id = {}
     if session.roster_id:
-        roster_by_id = {rs.id_number: rs.full_name for rs in session.roster.students.all()}
+        # Keyed by normalized ID so a roster ID and a differently-cased/
+        # spaced typed ID from the same student are treated as one person.
+        roster_by_id = {_norm_id(rs.id_number): (rs.id_number, rs.full_name) for rs in session.roster.students.all()}
 
     from scheduling.models import SessionCheckIn
     walk_in_ids = set(
+        _norm_id(i) for i in
         SessionCheckIn.objects.filter(session=session, checkin_type__in=('walk_in', 'override', 'guest'))
         .values_list('id_number', flat=True)
     )
 
     present, seen_ids = [], set()
     for log in logs:
-        if log.target_identifier in seen_ids or log.target_identifier in walk_in_ids:
+        norm = _norm_id(log.target_identifier)
+        if norm in seen_ids or norm in walk_in_ids:
             continue
-        seen_ids.add(log.target_identifier)
+        seen_ids.add(norm)
         checkin = SessionCheckIn.objects.filter(session=session, id_number=log.target_identifier).select_related('student').first()
+        roster_entry = roster_by_id.get(norm)
         name = (
-            roster_by_id.get(log.target_identifier)
+            (roster_entry[1] if roster_entry else None)
             or (checkin.student.display_name if checkin and checkin.student else None)
             or session.requester_name or '—'
         )
@@ -653,7 +688,11 @@ def _pc_detected_attendance(session):
         })
 
     if session.roster_id:
-        absent = [{'id_number': i, 'full_name': n} for i, n in roster_by_id.items() if i not in seen_ids]
+        # Roster students not yet detected as present. Before the session
+        # starts this is really "not yet determined" rather than a true
+        # absence — see `not_started` below, which callers use to avoid
+        # rendering these as confirmed absences.
+        absent = [{'id_number': i, 'full_name': n} for norm, (i, n) in roster_by_id.items() if norm not in seen_ids]
         expected = len(roster_by_id)
     else:
         absent = None
@@ -678,22 +717,31 @@ def _pc_detected_attendance(session):
         'session': session, 'has_roster': bool(session.roster_id),
         'present': present, 'absent': absent, 'walk_ins': walk_ins,
         'present_count': len(present),
-        'absent_count': len(absent) if absent is not None else max(expected - len(present), 0),
+        'absent_count': (
+            0 if not_started else
+            (len(absent) if absent is not None else max(expected - len(present), 0))
+        ),
         'expected_count': expected,
+        'not_started': not_started,
     }
 
 
 def _mark_candidates(session):
     """Rows to show on the manual attendance-marking page: every roster
     student (if a roster is attached), or otherwise just the PC-detected
-    present students — anyone else is added ad hoc from that page."""
+    present students — anyone else is added ad hoc from that page.
+    Before the session starts, a roster student who hasn't logged into a
+    PC yet gets no default status (neither radio pre-selected) instead of
+    defaulting to 'absent' — the class hasn't happened yet, so there's
+    nothing to mark absent."""
     base = _pc_detected_attendance(session)
     candidates = []
     if base['has_roster']:
         for p in base['present']:
             candidates.append({'id_number': p['id_number'], 'name': p['name'], 'default_status': 'present'})
         for a in base['absent']:
-            candidates.append({'id_number': a['id_number'], 'name': a['full_name'], 'default_status': 'absent'})
+            default = None if base['not_started'] else 'absent'
+            candidates.append({'id_number': a['id_number'], 'name': a['full_name'], 'default_status': default})
     else:
         for p in base['present']:
             candidates.append({'id_number': p['id_number'], 'name': p['name'], 'default_status': 'present'})
@@ -711,25 +759,35 @@ def _instructor_session_attendance(session):
     if not manual_records:
         base['manually_marked'] = False
         return base
+    # Once the instructor has actually marked someone, that's a deliberate
+    # action taken — the "hasn't started yet" caveat no longer applies.
+    base['not_started'] = False
 
+    # Keyed by normalized ID (see _norm_id) so a manual mark for the same
+    # person doesn't get treated as a different student just because it
+    # was typed with different casing/whitespace than the PC-detected or
+    # roster ID — that mismatch was another source of real attendees
+    # ending up duplicated onto the Absent list.
     combined = {}
     for p in base['present']:
-        combined[p['id_number']] = {'name': p['name'], 'status': 'present', 'pc': p['pc'], 'time': p['time']}
+        combined[_norm_id(p['id_number'])] = {'id_number': p['id_number'], 'name': p['name'], 'status': 'present', 'pc': p['pc'], 'time': p['time']}
     if base['absent'] is not None:
         for a in base['absent']:
-            combined[a['id_number']] = {'name': a['full_name'], 'status': 'absent', 'pc': '—', 'time': None}
+            combined[_norm_id(a['id_number'])] = {'id_number': a['id_number'], 'name': a['full_name'], 'status': 'absent', 'pc': '—', 'time': None}
 
     for m in manual_records:
-        existing = combined.get(m.id_number, {})
-        combined[m.id_number] = {
+        norm = _norm_id(m.id_number)
+        existing = combined.get(norm, {})
+        combined[norm] = {
+            'id_number': existing.get('id_number') or m.id_number,
             'name': m.full_name or existing.get('name') or m.id_number,
             'status': m.status,
             'pc': existing.get('pc') if m.status == 'present' and existing.get('pc') else ('Manual' if m.status == 'present' else '—'),
             'time': existing.get('time') if m.status == 'present' else None,
         }
 
-    present = [{'id_number': k, 'name': v['name'], 'pc': v['pc'], 'time': v['time']} for k, v in combined.items() if v['status'] == 'present']
-    absent = [{'id_number': k, 'full_name': v['name']} for k, v in combined.items() if v['status'] == 'absent']
+    present = [{'id_number': v['id_number'], 'name': v['name'], 'pc': v['pc'], 'time': v['time']} for v in combined.values() if v['status'] == 'present']
+    absent = [{'id_number': v['id_number'], 'full_name': v['name']} for v in combined.values() if v['status'] == 'absent']
 
     return {
         'session': session, 'has_roster': base['has_roster'],
@@ -737,6 +795,7 @@ def _instructor_session_attendance(session):
         'present_count': len(present), 'absent_count': len(absent),
         'expected_count': max(len(combined), base['expected_count']),
         'manually_marked': True,
+        'not_started': False,
     }
 
 
@@ -781,8 +840,14 @@ def session_attendance_mark(request, pk):
         c['current_status'] = manual_by_id[c['id_number']].status if c['id_number'] in manual_by_id else c['default_status']
     ad_hoc = [m for m in manual_by_id.values() if m.id_number not in candidate_ids]
 
+    from django.utils import timezone as tz
+    from datetime import datetime
+    start_dt = datetime.combine(session.date, session.start_time)
+    start_dt = tz.make_aware(start_dt) if tz.is_naive(start_dt) else start_dt
+
     return render(request, 'accounts/session_attendance_mark.html', {
         'session': session, 'candidates': candidates, 'ad_hoc': ad_hoc,
+        'not_started': tz.now() < start_dt,
     })
 
 
@@ -792,37 +857,96 @@ def _instructor_summary_rows(user, day):
     return [_instructor_session_attendance(s) for s in sessions]
 
 
-def _instructor_log_rows(user, day=None, session_id=None, student=None):
-    """Flattened, individually-filterable attendance records (one row per
-    student per session) for 'View attendance logs'."""
+LOG_GROUPS_PER_PAGE = 10
+LOG_DEFAULT_WINDOW_DAYS = 30
+
+
+def _instructor_log_groups(user, day=None, session_id=None, student=None, roster_id=None, page=1):
+    """Attendance log records for 'View attendance logs', grouped one
+    group per schedule/session (instead of a single flat table mixing
+    every session's students together) so the log stays readable as the
+    semester's session count grows. Each group carries its own
+    present/absent rows plus a status-pill-friendly count summary.
+
+    `roster_id` narrows to a single class (Class Roster → Select a Class →
+    Attendance log), i.e. every session generated from that roster's
+    schedule — not just one date/time occurrence of it. Pass the string
+    'none' to narrow to sessions with no roster attached ("Other /
+    walk-in") instead. `session_id` narrows further to one specific
+    occurrence within that class, for when the instructor wants a single
+    day's log.
+
+    With many rosters generating many recurring sessions, an unfiltered
+    "show everything" view gets unusably long fast, and — since sessions
+    that haven't started yet have no attendance to show — mostly clutter
+    rather than help. So when the instructor hasn't narrowed things down
+    with a date/class/session/student filter, this defaults to the most
+    recent LOG_DEFAULT_WINDOW_DAYS of *already-started* sessions, and
+    always paginates the result at LOG_GROUPS_PER_PAGE groups/page. A
+    class filter is treated as a deliberate narrowing (like the others)
+    so picking a class shows its full history, not just the last window."""
+    from datetime import timedelta
+    from django.utils import timezone as tz
+    from django.core.paginator import Paginator
     from scheduling.models import Session
+
+    today = tz.now().date()
+    filtered = bool(day or session_id or student or roster_id)
+
     sessions = Session.objects.filter(instructor=user).select_related('lab', 'roster')
+    if roster_id == 'none':
+        sessions = sessions.filter(roster_id__isnull=True)
+    elif roster_id:
+        sessions = sessions.filter(roster_id=roster_id)
     if day:
         sessions = sessions.filter(date=day)
     if session_id:
         sessions = sessions.filter(pk=session_id)
+    if not filtered:
+        # No explicit filter: recent window, and never sessions still in
+        # the future (they can't have attendance yet — see `not_started`).
+        sessions = sessions.filter(date__lte=today, date__gte=today - timedelta(days=LOG_DEFAULT_WINDOW_DAYS))
     sessions = sessions.order_by('-date', 'start_time')
 
-    rows = []
+    needle = student.strip().lower() if student else None
+    groups = []
     for s in sessions:
         data = _instructor_session_attendance(s)
+        rows = []
         for p in data['present']:
             rows.append({
-                'date': s.date, 'session': s, 'id_number': p['id_number'],
-                'name': p['name'], 'status': 'present', 'pc': p['pc'], 'time': p['time'],
+                'id_number': p['id_number'], 'name': p['name'],
+                'status': 'present', 'pc': p['pc'], 'time': p['time'],
             })
-        if data['absent'] is not None:
+        # A session that hasn't started yet has no real attendance to
+        # log — skip its (not-yet-meaningful) absent rows entirely.
+        if data['absent'] is not None and not data.get('not_started'):
             for a in data['absent']:
                 rows.append({
-                    'date': s.date, 'session': s, 'id_number': a['id_number'],
-                    'name': a['full_name'], 'status': 'absent', 'pc': '—', 'time': None,
+                    'id_number': a['id_number'], 'full_name': a['full_name'], 'name': a['full_name'],
+                    'status': 'absent', 'pc': '—', 'time': None,
                 })
 
-    if student:
-        needle = student.strip().lower()
-        rows = [r for r in rows if needle in r['id_number'].lower() or needle in r['name'].lower()]
+        if needle:
+            rows = [r for r in rows if needle in r['id_number'].lower() or needle in r['name'].lower()]
+            if not rows:
+                # A student filter that matches no one in this session
+                # hides the whole group instead of leaving an empty card.
+                continue
 
-    return rows
+        rows.sort(key=lambda r: (r['status'] != 'present', r['name'].lower()))
+        present_count = sum(1 for r in rows if r['status'] == 'present')
+        absent_count = sum(1 for r in rows if r['status'] == 'absent')
+        groups.append({
+            'session': s, 'rows': rows,
+            'present_count': present_count, 'absent_count': absent_count,
+            'has_roster': data['has_roster'], 'manually_marked': data.get('manually_marked', False),
+            'not_started': data.get('not_started', False),
+        })
+
+    paginator = Paginator(groups, LOG_GROUPS_PER_PAGE)
+    page_obj = paginator.get_page(page)
+    return page_obj, filtered
 
 
 class AttendanceView(RoleRequiredMixin, TemplateView):
@@ -832,30 +956,96 @@ class AttendanceView(RoleRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         from labs.reports import _parse_date
         from django.utils import timezone as tz
+        from django.http import Http404
         from scheduling.models import Session
 
         ctx = super().get_context_data(**kwargs)
         today = tz.now().date()
         user = self.request.user
 
-        ctx['my_sessions'] = Session.objects.filter(instructor=user).order_by('date')
+        # Group the instructor's sessions by class (roster). The
+        # Attendance module opens on a list of classes, one card each
+        # (Class Roster -> Select a Class -> Attendance log); clicking a
+        # card is the only way into that class's log, so the module never
+        # shows every class's records mixed together. Sessions with no
+        # roster attached get their own "Other / walk-in" card.
+        all_sessions = list(
+            Session.objects.filter(instructor=user).select_related('roster', 'lab').order_by('date', 'start_time')
+        )
+        roster_groups = {}
+        no_roster_sessions = []
+        for s in all_sessions:
+            if s.roster_id:
+                group = roster_groups.setdefault(s.roster_id, {'name': s.roster.name, 'sessions': []})
+                group['sessions'].append(s)
+            else:
+                no_roster_sessions.append(s)
 
-        # 1) generate attendance summary
+        class_cards = [
+            {
+                'roster_key': str(rid), 'name': g['name'],
+                'session_count': len(g['sessions']), 'latest_session': g['sessions'][-1],
+            }
+            for rid, g in sorted(roster_groups.items(), key=lambda kv: kv[1]['name'])
+        ]
+        if no_roster_sessions:
+            class_cards.append({
+                'roster_key': 'none', 'name': 'Other / walk-in',
+                'session_count': len(no_roster_sessions), 'latest_session': no_roster_sessions[-1],
+            })
+        ctx['class_cards'] = class_cards
+
+        # 1) generate attendance summary — always visible, independent of
+        # whether a class has been selected below.
         summary_date = _parse_date(self.request.GET.get('summary_date'), today)
         ctx['summary_date'] = summary_date
         ctx['summary_rows'] = _instructor_summary_rows(user, summary_date)
 
-        # 2) view attendance logs, filtered by date / student / session
+        # 2) view attendance logs — only once a class card has actually
+        # been clicked (roster_key present in the URL). The landing view
+        # (no roster_key) stops here and just shows the class cards above.
+        roster_key = self.kwargs.get('roster_key')
+        ctx['selected_roster_key'] = roster_key
+        if roster_key is None:
+            return ctx
+
+        if roster_key == 'none':
+            if not no_roster_sessions:
+                raise Http404('No walk-in sessions for this instructor.')
+            ctx['selected_roster_label'] = 'Other / walk-in'
+            ctx['selected_session_choices'] = list(reversed(no_roster_sessions))
+        else:
+            try:
+                roster_id_int = int(roster_key)
+            except (TypeError, ValueError):
+                raise Http404('Invalid class.')
+            group = roster_groups.get(roster_id_int)
+            if not group:
+                # Not one of this instructor's classes — either a typo'd
+                # URL or another instructor's roster id.
+                raise Http404('Class not found.')
+            ctx['selected_roster_label'] = group['name']
+            ctx['selected_session_choices'] = list(reversed(group['sessions']))
+
         log_date = self.request.GET.get('log_date') or ''
         ctx['log_date'] = log_date
         ctx['log_student'] = self.request.GET.get('log_student', '')
         ctx['log_session'] = self.request.GET.get('log_session', '')
-        ctx['log_rows'] = _instructor_log_rows(
+        try:
+            page = int(self.request.GET.get('page') or 1)
+        except ValueError:
+            page = 1
+        log_groups, log_filtered = _instructor_log_groups(
             user,
             day=_parse_date(log_date, None) if log_date else None,
             session_id=ctx['log_session'] or None,
             student=ctx['log_student'] or None,
+            roster_id=roster_key,
+            page=page,
         )
+        ctx['log_groups'] = log_groups
+        ctx['log_filtered'] = log_filtered
+        ctx['log_window_days'] = LOG_DEFAULT_WINDOW_DAYS
         return ctx
 
 
@@ -1002,6 +1192,7 @@ class UserResetPasswordView(RoleRequiredMixin, ModalFormMixin, FormView):
 
     def form_valid(self, form):
         form.save()
+        notify_service.send_password_changed_email(self.target_user)
         ActivityLog.objects.create(
             actor=self.request.user,
             action='reset_password',

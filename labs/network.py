@@ -113,6 +113,50 @@ def unlock_pc(pc):
         return False, f'Fallback unlock command failed: {e}'
 
 
+def send_override_warning(pc, admin_name, seconds):
+    """
+    Tells the agent on this PC to show an on-screen countdown warning
+    before an Admin/In-Charge Override forcibly ends the current user's
+    session — gives them `seconds` to notice and save their work before
+    the agent auto-locks the PC on its own (see agent.py's WarningBanner
+    and LockScreen.start_override_countdown()).
+
+    Fire-and-forget in spirit: if this fails (agent offline, wrong IP,
+    etc.) the override still proceeds on schedule from the server's side
+    — the PC just won't have shown a warning first. Returns
+    (success: bool, message: str).
+    """
+    from django.conf import settings
+    import json
+    import urllib.request
+    import urllib.error
+
+    if not pc.ip_address:
+        return False, 'This PC has no IP address on file — cannot send a warning.'
+
+    port = getattr(settings, 'PC_AGENT_PORT', 5555)
+    secret = getattr(settings, 'PC_AGENT_SHARED_SECRET', '')
+    timeout = getattr(settings, 'PC_AGENT_TIMEOUT_SECONDS', 4)
+    url = f'http://{pc.ip_address}:{port}/override-warning'
+    payload = json.dumps({'secret': secret, 'seconds': seconds, 'admin_name': admin_name}).encode('utf-8')
+    request = urllib.request.Request(
+        url, data=payload, headers={'Content-Type': 'application/json'}, method='POST',
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            if 200 <= response.status < 300:
+                return True, f'Warning sent to agent at {pc.ip_address}.'
+            return False, f'Agent at {pc.ip_address} responded with status {response.status}.'
+    except urllib.error.HTTPError as e:
+        if e.code == 403:
+            return False, f'Agent at {pc.ip_address} rejected the request — check PC_AGENT_SHARED_SECRET matches on both sides.'
+        return False, f'Agent at {pc.ip_address} returned an error: {e.code} {e.reason}'
+    except urllib.error.URLError as e:
+        return False, f'Could not reach agent at {pc.ip_address}:{port} — is the agent running on that PC? ({e.reason})'
+    except Exception as e:
+        return False, f'Warning request to {pc.ip_address} failed: {e}'
+
+
 def refresh_pc_statuses(pcs):
     """
     Pings every PC in `pcs` that has an IP address on file, in parallel,

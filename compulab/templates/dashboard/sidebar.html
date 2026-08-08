@@ -78,14 +78,30 @@ html[data-theme="light"] .nav.role-instructor { --accent-tint: rgba(15,118,110,0
     background: #fff;
     flex: none;
 }
-  .nav-brand-text {
-    font-family: var(--mono);
-    font-weight: 700;
-    font-size: 13px;
-    letter-spacing: 0.06em;
-    color: var(--text-0);
-  }
-  .nav-brand-text b { color: var(--accent); font-weight: 600; }
+.nav-brand-text {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  color: var(--text-0);
+}
+
+.nav-brand-text b {
+  display: flex;
+  flex-direction: column;
+  color: var(--text-0);
+  font-weight: 600;
+}
+
+.nav-brand-text b > span {
+  display: block;
+}
+
+.brand-letter {
+  color: #FFD700;
+}
+
 
   .nav-section {
     display: flex;
@@ -108,9 +124,8 @@ html[data-theme="light"] .nav.role-instructor { --accent-tint: rgba(15,118,110,0
   .nav-section:first-of-type { margin-top: 4px; }
 
   .brand-letter {
-    color: #FFD700; /* Gold */
+  color: #FFD700; /* Gold */
 }
-
   .nav-item {
     position: relative;
     display: flex;
@@ -246,13 +261,16 @@ html[data-theme="light"] .nav.role-instructor { --accent-tint: rgba(15,118,110,0
 {% if request.user.role == 'admin' %}
 <nav class="nav role-admin">
   <div class="nav-brand">
-    <img src="{% static 'img/logo.jpg' %}" alt="Danao Technological College" class="nav-brand-mark">
-    <span class="nav-brand-text">
-    <b>
-        <span class="brand-letter">D</span>ANAO
-        <span class="brand-letter">T</span>ECHNOLOGICAL
-        <span class="brand-letter">C</span>OLLEGE
-    </b>
+    <img src="{% static 'img/logo.jpg' %}"
+         alt="Danao Technological College"
+         class="nav-brand-mark">
+
+   <span class="nav-brand-text">
+  <b>
+    <span><span class="brand-letter">D</span>anao</span>
+    <span><span class="brand-letter">T</span>echnological</span>
+    <span><span class="brand-letter">C</span>ollege</span>
+  </b>
 </span>
   </div>
 
@@ -315,15 +333,7 @@ html[data-theme="light"] .nav.role-instructor { --accent-tint: rgba(15,118,110,0
     <svg class="nav-icon"><use href="#icon-chart"/></svg>
     <span class="nav-label">Reporting & analytics</span>
   </a>
-  <a class="nav-item {% if request.resolver_match.url_name == 'alerts' %}active{% endif %}"
-     href="{% url 'alerts' %}">
-    <span class="nav-led"></span>
-    <svg class="nav-icon"><use href="#icon-bell"/></svg>
-    <span class="nav-label">Notifications & alerts</span>
-    {% if unread_notifications_count %}
-      <span class="nav-badge">{{ unread_notifications_count }}</span>
-    {% endif %}
-  </a>
+  
 
   <div class="nav-spacer"></div>
   <form method="post" action="{% url 'logout' %}" class="nav-logout-form" onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Log out?', text: 'You will need to log in again to access your dashboard.', icon: 'question', confirmButtonText: 'Yes, log out', confirmButtonColor: '#ff5d5d'}); return false;">
@@ -339,8 +349,17 @@ html[data-theme="light"] .nav.role-instructor { --accent-tint: rgba(15,118,110,0
 {% elif request.user.role == 'incharge' %}
 <nav class="nav role-incharge">
   <div class="nav-brand">
-    <img src="{% static 'img/logo.jpg' %}" alt="Danao Technological College" class="nav-brand-mark">
-    <span class="nav-brand-text"><b>DANAO TECHNOLOGICAL COLLEGE</b></span>
+    <img src="{% static 'img/logo.jpg' %}"
+         alt="Danao Technological College"
+         class="nav-brand-mark">
+
+   <span class="nav-brand-text">
+  <b>
+    <span><span class="brand-letter">D</span>anao</span>
+    <span><span class="brand-letter">T</span>echnological</span>
+    <span><span class="brand-letter">C</span>ollege</span>
+  </b>
+</span>
   </div>
 
   <div class="nav-section">Overview</div>
@@ -429,8 +448,17 @@ html[data-theme="light"] .nav.role-instructor { --accent-tint: rgba(15,118,110,0
 {% elif request.user.role == 'instructor' %}
 <nav class="nav role-instructor">
   <div class="nav-brand">
-    <img src="{% static 'img/logo.jpg' %}" alt="Danao Technological College" class="nav-brand-mark">
-    <span class="nav-brand-text"><b>DANAO TECHNOLOGICAL COLLEGE</b></span>
+    <img src="{% static 'img/logo.jpg' %}"
+         alt="Danao Technological College"
+         class="nav-brand-mark">
+
+   <span class="nav-brand-text">
+  <b>
+    <span><span class="brand-letter">D</span>anao</span>
+    <span><span class="brand-letter">T</span>echnological</span>
+    <span><span class="brand-letter">C</span>ollege</span>
+  </b>
+</span>
   </div>
 
   <div class="nav-section">Overview</div>
@@ -461,16 +489,7 @@ html[data-theme="light"] .nav.role-instructor { --accent-tint: rgba(15,118,110,0
     <span class="nav-label">Class rosters</span>
   </a>
 
-  <div class="nav-section">Updates</div>
-  <a class="nav-item {% if request.resolver_match.url_name == 'inst_alerts' %}active{% endif %}"
-     href="{% url 'inst_alerts' %}">
-    <span class="nav-led"></span>
-    <svg class="nav-icon"><use href="#icon-bell"/></svg>
-    <span class="nav-label">Notifications</span>
-    {% if unread_notifications_count %}
-      <span class="nav-badge">{{ unread_notifications_count }}</span>
-    {% endif %}
-  </a>
+
 
   <div class="nav-spacer"></div>
   <form method="post" action="{% url 'logout' %}" class="nav-logout-form" onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Log out?', text: 'You will need to log in again to access your dashboard.', icon: 'question', confirmButtonText: 'Yes, log out', confirmButtonColor: '#ff5d5d'}); return false;">

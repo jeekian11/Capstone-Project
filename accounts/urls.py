@@ -20,6 +20,7 @@ urlpatterns = [
     path('logs/', views.LogHistoryView.as_view(), name='log_history'),
     path('logs/export/', views.export_logs_pdf, name='log_export_pdf'),
     path('attendance/', views.AttendanceView.as_view(), name='attendance'),
+    path('attendance/class/<str:roster_key>/', views.AttendanceView.as_view(), name='attendance_class_log'),
     path('attendance/summary/export/', views.attendance_summary_export, name='attendance_summary_export'),
     path('attendance/session/<int:pk>/mark/', views.session_attendance_mark, name='session_attendance_mark'),
     path('api/search-requesters/', views.search_requesters, name='search_requesters'),

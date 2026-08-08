@@ -33,12 +33,14 @@
           <td>{{ row.session.subject }}</td>
           <td>{{ row.session.lab.name }}</td>
           <td>{{ row.session.start_time|time:"H:i" }} - {{ row.session.end_time|time:"H:i" }}</td>
-          <td>{{ row.present_count }}</td>
-          <td>{{ row.absent_count }}</td>
+          <td>{% if row.not_started %}<span style="color:#8b98a3;">—</span>{% else %}{{ row.present_count }}{% endif %}</td>
+          <td>{% if row.not_started %}<span style="color:#8b98a3;">—</span>{% else %}{{ row.absent_count }}{% endif %}</td>
           <td>
             {{ row.expected_count }}
             {% if row.manually_marked %}
               <span style="color:#3B6D11;font-size:11px;">(manually marked)</span>
+            {% elif row.not_started %}
+              <span style="color:#8b98a3;font-size:11px;">(not started yet)</span>
             {% elif not row.has_roster %}
               <span style="color:#8b98a3;font-size:11px;">(estimate - no roster)</span>
             {% endif %}
@@ -59,56 +61,151 @@
   {% endif %}
 </div>
 
-<!-- 2) View attendance logs -->
-<div class="card">
-  <div class="section-title">View attendance logs</div>
-  <form method="get" class="form-row" style="grid-template-columns: 1fr 1fr 1fr auto; align-items:end; gap:10px;">
-    <input type="hidden" name="summary_date" value="{{ summary_date|date:'Y-m-d' }}">
-    <div class="form-group" style="margin-bottom:0">
-      <label class="form-label">Date</label>
-      <input type="date" name="log_date" class="form-control" value="{{ log_date }}">
-    </div>
-    <div class="form-group" style="margin-bottom:0">
-      <label class="form-label">Student (ID or name)</label>
-      <input type="text" name="log_student" class="form-control" placeholder="e.g. 2023-0001 or Dela Cruz" value="{{ log_student }}">
-    </div>
-    <div class="form-group" style="margin-bottom:0">
-      <label class="form-label">Session</label>
-      <select name="log_session" class="form-control">
-        <option value="">All sessions</option>
-        {% for s in my_sessions %}
-          <option value="{{ s.pk }}" {% if log_session == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.date|date:"M d" }} - {{ s.subject }} ({{ s.lab.name }})</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="form-group" style="margin-bottom:0">
-      <button type="submit" class="action-btn primary">Filter</button>
-    </div>
-  </form>
+<!-- 2) View attendance logs — organized by class: this section shows a
+     grid of class cards, one per roster the instructor teaches; clicking
+     a card is the only way to open that class's log. -->
+{% if not selected_roster_key %}
 
-  <table class="table" style="margin-top:14px;">
-    <thead>
-      <tr><th>Date</th><th>Session</th><th>Student ID</th><th>Student name</th><th>Status</th><th>PC</th><th>Time in</th></tr>
-    </thead>
-    <tbody>
-      {% for row in log_rows %}
-        <tr>
-          <td>{{ row.date|date:"M d, Y" }}</td>
-          <td>{{ row.session.subject }}</td>
-          <td>{{ row.id_number }}</td>
-          <td>{{ row.name }}</td>
-          <td><span class="status-pill pill-{% if row.status == 'present' %}resolved{% else %}open{% endif %}">{{ row.status|capfirst }}</span></td>
-          <td>{{ row.pc }}</td>
-          <td>{{ row.time|time:"H:i"|default:"-" }}</td>
-        </tr>
+  <div class="card">
+    <div class="section-title">View attendance logs</div>
+    <div class="sub" style="margin-top:-2px;">Select a class to open its attendance log</div>
+
+    <div class="class-roster-grid">
+      {% for c in class_cards %}
+        <a class="card class-roster-card" href="{% url 'attendance_class_log' c.roster_key %}">
+          <div class="class-roster-card-name">{{ c.name }}</div>
+          <div class="sub" style="margin-top:2px;">
+            {{ c.session_count }} session{{ c.session_count|pluralize }} logged
+          </div>
+          <div class="sub" style="margin-top:2px;">
+            Last: {{ c.latest_session.date|date:"M d, Y" }} &middot; {{ c.latest_session.lab.name }}
+          </div>
+        </a>
       {% empty %}
-        <tr><td colspan="7"><p class="empty">No attendance records match these filters.</p></td></tr>
+        <p class="empty">You have no sessions yet — attendance logs will appear here once your classes are scheduled.</p>
       {% endfor %}
-    </tbody>
-  </table>
-  <p style="font-size:12px; color:#8b98a3; margin-top:10px;">
+    </div>
+  </div>
+
+{% else %}
+
+  <div class="card">
+    <div class="page-header" style="margin-bottom:0;">
+      <div>
+        <a href="{% url 'attendance' %}" class="action-btn small" style="margin-bottom:8px; display:inline-flex;">&laquo; All classes</a>
+        <div class="section-title" style="margin-top:8px;">{{ selected_roster_label }} &mdash; attendance log</div>
+      </div>
+    </div>
+    <form method="get" class="form-row" style="grid-template-columns: 1fr 1fr 1.3fr auto; align-items:end; gap:10px; margin-top:10px;">
+      <input type="hidden" name="summary_date" value="{{ summary_date|date:'Y-m-d' }}">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Date</label>
+        <input type="date" name="log_date" class="form-control" value="{{ log_date }}">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Student (ID or name)</label>
+        <input type="text" name="log_student" class="form-control" placeholder="e.g. 2023-0001 or Dela Cruz" value="{{ log_student }}">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Session (optional)</label>
+        <select name="log_session" class="form-control">
+          <option value="">All sessions in this class</option>
+          {% for s in selected_session_choices %}
+            <option value="{{ s.pk }}" {% if log_session == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.date|date:"M d, Y" }} - {{ s.start_time|time:"H:i" }} ({{ s.lab.name }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <button type="submit" class="action-btn primary">Filter</button>
+      </div>
+    </form>
+  </div>
+
+  {% if not log_filtered %}
+    <p style="font-size:12px; color:#8b98a3; margin:-4px 0 10px;">
+      Showing this class's last {{ log_window_days }} days of sessions. Use the filters above to search further back.
+    </p>
+  {% endif %}
+
+  <!-- Records grouped one card per session, instead of one long mixed
+       table, so it's easy to scan a specific session's attendance at a
+       glance and stays readable as the number of sessions grows. Paginated
+       (see log_groups.has_other_pages below) so a busy semester doesn't
+       dump everything onto one endless page. -->
+  {% for group in log_groups %}
+    <div class="card attendance-log-group">
+      <div class="attendance-log-group-header">
+        <div>
+          <div class="section-title" style="margin-bottom:2px;">{{ group.session.subject }}</div>
+          <div class="sub" style="margin-top:0;">
+            {{ group.session.date|date:"M d, Y" }} &middot; {{ group.session.start_time|time:"H:i" }}–{{ group.session.end_time|time:"H:i" }} &middot; {{ group.session.lab.name }}
+          </div>
+        </div>
+        <div class="attendance-log-group-counts">
+          {% if group.not_started %}
+            <span class="status-pill pill-assigned">Not started yet</span>
+          {% else %}
+            <span class="status-pill pill-resolved">{{ group.present_count }} present</span>
+            <span class="status-pill pill-open">{{ group.absent_count }} absent{% if not group.has_roster %} (est.){% endif %}</span>
+            {% if group.manually_marked %}<span class="status-pill pill-assigned">manually marked</span>{% endif %}
+          {% endif %}
+        </div>
+      </div>
+
+      <table class="table" style="margin-top:12px;">
+        <thead>
+          <tr><th>Student ID</th><th>Student name</th><th>Status</th><th>PC</th><th>Time in</th></tr>
+        </thead>
+        <tbody>
+          {% for row in group.rows %}
+            <tr>
+              <td data-label="Student ID">{{ row.id_number }}</td>
+              <td data-label="Student name">{{ row.name }}</td>
+              <td data-label="Status"><span class="status-pill pill-{% if row.status == 'present' %}resolved{% else %}open{% endif %}">{{ row.status|capfirst }}</span></td>
+              <td data-label="PC">{{ row.pc }}</td>
+              <td data-label="Time in">{{ row.time|time:"H:i"|default:"-" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5"><p class="empty">No attendance records for this session.</p></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% empty %}
+    <div class="card"><p class="empty">No attendance records match these filters.</p></div>
+  {% endfor %}
+
+  {% if log_groups.has_other_pages %}
+    <div style="display:flex; justify-content:center; align-items:center; gap:14px; margin:10px 0 18px;">
+      {% if log_groups.has_previous %}
+        <a href="?summary_date={{ summary_date|date:'Y-m-d' }}&log_date={{ log_date }}&log_student={{ log_student }}&log_session={{ log_session }}&page={{ log_groups.previous_page_number }}" class="action-btn small">&laquo; Prev</a>
+      {% endif %}
+      <span style="font-size:12px; color:#8b98a3;">Page {{ log_groups.number }} of {{ log_groups.paginator.num_pages }}</span>
+      {% if log_groups.has_next %}
+        <a href="?summary_date={{ summary_date|date:'Y-m-d' }}&log_date={{ log_date }}&log_student={{ log_student }}&log_session={{ log_session }}&page={{ log_groups.next_page_number }}" class="action-btn small">Next &raquo;</a>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <p style="font-size:12px; color:#8b98a3; margin-top:2px;">
     Attendance is derived from lab PC unlock activity during each session's scheduled time. Attach a class roster to a session for exact absentee names instead of an estimated count.
   </p>
-</div>
+
+{% endif %}
+
+<style>
+  .class-roster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 12px; }
+  .class-roster-card { display: block; text-decoration: none; color: inherit; cursor: pointer; }
+  .class-roster-card-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .attendance-log-group-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+  .attendance-log-group-counts { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  @media (max-width: 640px) {
+    .attendance-log-group .table thead { display: none; }
+    .attendance-log-group .table tr { display: block; padding: 10px 0; border-bottom: 1px solid var(--border-soft); }
+    .attendance-log-group .table tr:last-child { border-bottom: none; }
+    .attendance-log-group .table td { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 4px 0; border-bottom: none; text-align: right; }
+    .attendance-log-group .table td::before { content: attr(data-label); color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: .03em; text-align: left; }
+  }
+</style>
 
 {% endblock %}

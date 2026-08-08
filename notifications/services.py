@@ -14,8 +14,11 @@ calling Notification.objects.create() directly, so that:
 """
 from django.contrib.auth import get_user_model
 from notifications.models import Notification, AlertSettings
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
 from django.conf import settings
+from django.template.loader import render_to_string
+from django.templatetags.static import static
+from django.urls import reverse
 
 User = get_user_model()
 
@@ -57,7 +60,7 @@ def incharge_for_lab(lab):
     return User.objects.filter(is_active=True, role='incharge', assigned_lab=lab)
 
 
-def notify(users, title, message, notification_type, lab=None):
+def notify(users, title, message, notification_type, lab=None, send_plain_email=True):
     if not _event_enabled(notification_type):
         return []
     seen = set()
@@ -83,7 +86,9 @@ def notify(users, title, message, notification_type, lab=None):
         })
 
         # --- BAGONG PARTE: magpadala rin ng totoong email ---
-        if user.email:
+        # (skipped when the caller is sending its own styled email instead,
+        # e.g. the reservation-code emails below)
+        if send_plain_email and user.email:
             try:
                 send_mail(
                     subject=title,
@@ -98,6 +103,33 @@ def notify(users, title, message, notification_type, lab=None):
 
     return created
 
+
+
+def _send_reservation_code_email(user, title, intro, subject, lab, date, time_label, code):
+    """Sends the branded 'reservation code' email (approval or roster
+    upcoming-session reminder). Separate from notify()'s plain send_mail
+    step because this one needs structured context (subject/lab/date/
+    time/code laid out in a card) rather than a single message string.
+    Silently no-ops for users without an email on file (e.g. students)."""
+    if not user or not user.email:
+        return
+    logo_url = f'{settings.SITE_URL}{static("img/logo.jpg")}'
+    context = {
+        'user': user, 'title': title, 'intro': intro, 'subject': subject,
+        'lab': lab, 'date': date, 'time_label': time_label, 'code': code,
+        'logo_url': logo_url,
+    }
+    text_body = render_to_string('emails/reservation_code.txt', context)
+    html_body = render_to_string('emails/reservation_code.html', context)
+    try:
+        message = EmailMultiAlternatives(
+            subject=title, body=text_body,
+            from_email=settings.DEFAULT_FROM_EMAIL, to=[user.email],
+        )
+        message.attach_alternative(html_body, 'text/html')
+        message.send(fail_silently=True)
+    except Exception:
+        pass  # never let an email hiccup block the notification itself
 
 
 def _lab_recipients(lab, include_admins=True):
@@ -131,8 +163,16 @@ def notify_reservation_approved(session_request, code):
         recipients,
         'Lab request approved',
         f'Your request for {req.subject} on {req.date} has been approved. Reservation code: {code}',
-        'reservation_approved', lab=req.lab,
+        'reservation_approved', lab=req.lab, send_plain_email=False,
     )
+    if _event_enabled('reservation_approved'):
+        _send_reservation_code_email(
+            req.instructor, 'Lab request approved',
+            'Your reservation request has been approved.',
+            req.subject, req.lab.name, req.date,
+            f'{req.start_time.strftime("%H:%M")}–{req.end_time.strftime("%H:%M")}',
+            code,
+        )
 
 
 def notify_reservation_declined(session_request):
@@ -173,8 +213,16 @@ def notify_roster_session_scheduled(session, code):
         'Upcoming class session — reservation code',
         f'{session.subject} in {session.lab.name} starts at {session.start_time.strftime("%H:%M")} '
         f'today ({session.date}), from your class roster schedule. Reservation code: {code}',
-        'roster_session_scheduled', lab=session.lab,
+        'roster_session_scheduled', lab=session.lab, send_plain_email=False,
     )
+    if _event_enabled('roster_session_scheduled'):
+        _send_reservation_code_email(
+            session.instructor, 'Upcoming class session — reservation code',
+            'This class starts soon — from your class roster schedule.',
+            session.subject, session.lab.name, session.date,
+            session.start_time.strftime("%H:%M"),
+            code,
+        )
 
 
 def notify_roster_submitted(roster):
@@ -323,3 +371,33 @@ def notify_failed_login(identifier, attempt_count):
         f'{attempt_count} failed login attempts were detected for account "{identifier}".',
         'login_security_alert',
     )
+
+
+def send_password_changed_email(user):
+    """Sends the branded 'Password Change Confirmed' email — fired after
+    ANY successful password change, however it happened (self-service
+    reset via the Forgot Password flow, or an admin resetting it from
+    User & Role Management). This is a security notification, not a
+    toggleable one, so unlike notify() above it's not gated by
+    AlertSettings and always fires as long as the account has an email
+    on file (Students never do, so this is a no-op for them). Failures
+    are swallowed the same way notify()'s email step is, so a bad SMTP
+    config never blocks the password change itself from succeeding."""
+    if not user.email:
+        return
+    login_url = f'{settings.SITE_URL}{reverse("login")}'
+    logo_url = f'{settings.SITE_URL}{static("img/logo.jpg")}'
+    context = {'user': user, 'login_url': login_url, 'logo_url': logo_url}
+    text_body = render_to_string('emails/password_changed.txt', context)
+    html_body = render_to_string('emails/password_changed.html', context)
+    try:
+        message = EmailMultiAlternatives(
+            subject='Password Change Confirmed — SCLAMS',
+            body=text_body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[user.email],
+        )
+        message.attach_alternative(html_body, 'text/html')
+        message.send(fail_silently=True)
+    except Exception:
+        pass  # never let an email hiccup block the password change itself

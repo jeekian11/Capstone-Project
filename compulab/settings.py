@@ -10,17 +10,33 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    load_dotenv = None
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Loads compulab/.env (SITE_URL, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD,
+# DJANGO_SECRET_KEY — see .env.example) into os.environ, so real secrets
+# never have to be hardcoded or committed to git. Requires
+# `pip install python-dotenv` — see requirements.txt.
+if load_dotenv is not None:
+    load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-z$q0s-rr3%osqk_q^tm=*xm$z(k7so(m&e5@li_znp6v-)2(9g'
+SECRET_KEY = os.environ.get(
+    'DJANGO_SECRET_KEY',
+    'django-insecure-z$q0s-rr3%osqk_q^tm=*xm$z(k7so(m&e5@li_znp6v-)2(9g'
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -53,12 +69,24 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
     'labs',
     'scheduling',
     'issues',
     'notifications',
     'cloud_sync',
 ]
+
+# SITE_DOMAIN (used by send_verification_email() to build absolute links
+# reachable from a phone, not just the admin's own machine) is derived
+# from SITE_URL below — see .env.example. Update .env's SITE_URL if your
+# LAN IP changes (see `ipconfig`), not this file.
+SITE_ID = 1
+
+# How many seconds an Admin/In-Charge Override gives the CURRENT user of an
+# in-use PC to see the on-screen warning and save their work, before the
+# PC auto-locks and access is handed to the new student/instructor.
+OVERRIDE_WARNING_SECONDS = 30
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -151,18 +179,30 @@ MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 
-# No real SMTP server configured yet, so notification emails print to the
-# console instead of trying (and failing) to connect somewhere real.
-# Swap this for 'django.core.mail.backends.smtp.EmailBackend' plus
-# EMAIL_HOST / EMAIL_PORT / EMAIL_HOST_USER / EMAIL_HOST_PASSWORD once you
-# have real email credentials for production.
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'iandivinenniepes11@gmail.com'
-EMAIL_HOST_PASSWORD = 'mwsubgzezuxfxocx'
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+# Gmail SMTP. Credentials come from compulab/.env (never hardcoded here,
+# never committed to git) — see .env.example for the 16-character Gmail
+# "App Password" setup steps. Falls back to the console backend (prints
+# emails to the terminal instead of sending) if EMAIL_HOST_USER isn't set,
+# so local dev still works without real credentials.
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.gmail.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or 'noreply@compulab.local'
+
+# Used to build absolute links in emails (password reset, password-changed
+# confirmation, etc.) from outside a request — e.g. a background task with
+# no `request` object to call request.build_absolute_uri() on. Set in
+# compulab/.env; see .env.example for how to pick the right value.
+SITE_URL = os.environ.get('SITE_URL', 'http://127.0.0.1:8000').rstrip('/')
+# host:port only, no scheme — kept for send_verification_email(), which
+# builds its own http(s):// prefix based on whether the request was secure.
+SITE_DOMAIN = SITE_URL.split('://', 1)[-1]
 
 AUTH_USER_MODEL = 'accounts.User'
 LOGIN_URL = '/accounts/login/'

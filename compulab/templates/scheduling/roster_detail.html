@@ -80,6 +80,14 @@
 .cr-table tr:last-child td{border-bottom:none;}
 .cr-empty{color:var(--cr-faint); font-size:13px; text-align:center; padding:20px 0;}
 
+.cr-pagination{display:flex; align-items:center; justify-content:space-between; margin-top:14px; font-size:12.5px; color:var(--cr-dim);}
+.cr-pagination .cr-pages{display:flex; gap:6px;}
+.cr-pagination a, .cr-pagination span.cr-page{display:flex; align-items:center; justify-content:center; min-width:28px; height:28px; border-radius:7px; border:1px solid var(--cr-border); color:var(--cr-text); font-size:12.5px;}
+.cr-pagination a:hover{border-color:var(--cr-faint); text-decoration:none;}
+.cr-pagination span.cr-page.current{background:var(--cr-green); border-color:var(--cr-green); color:#0a0e12; font-weight:700;}
+html[data-theme="light"] .cr-pagination span.cr-page.current{ color:#fff; }
+.cr-pagination span.cr-page.disabled{color:var(--cr-faint); border-color:var(--cr-border);}
+
 .cr-result-row{display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border:1px solid var(--cr-border); border-radius:8px; margin-bottom:6px;}
 .cr-result-row:last-child{margin-bottom:0;}
 .cr-result-info{font-size:13px;}
@@ -158,12 +166,15 @@ html[data-theme="light"] .cr-add-btn{ color:#fff; }
           {% if roster.status == 'active' %}&#128230; Archive Roster{% else %}&#8635; Reactivate Roster{% endif %}
         </button>
       </form>
+
+      {% if can_review_roster %}
       <form method="post" action="{% url 'roster_delete' roster.pk %}"
             onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this roster?', text: 'This action cannot be undone. {{ roster.name|escapejs }}{% with n=roster.students.count %}{% if n %} and its {{ n }} student{{ n|pluralize }}{% endif %}{% endwith %} will be removed.', confirmButtonText: 'Yes, delete roster'}); return false;"
             style="display:inline">
         {% csrf_token %}
         <button type="submit" class="cr-icon-btn danger" title="Delete roster permanently"><svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
       </form>
+      {% endif %}
     </div>
   </div>
 
@@ -275,12 +286,12 @@ html[data-theme="light"] .cr-add-btn{ color:#fff; }
   </div>
 
   <div class="cr-card">
-    <div class="cr-section-title">Reservation History<span class="count">{{ linked_sessions|length }}</span></div>
+    <div class="cr-section-title">Reservation History<span class="count">{{ sessions_paginator.count }}</span></div>
     <div class="cr-table-wrap">
     <table class="cr-table">
       <thead><tr><th>Date</th><th>Laboratory</th><th>Subject / Activity</th><th>Time</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>
-        {% for s in linked_sessions %}
+        {% for s in sessions_page_obj %}
           <tr>
             <td>{{ s.date|date:"F j, Y" }}</td>
             <td>{{ s.lab.name|default:"—" }}</td>
@@ -309,6 +320,33 @@ html[data-theme="light"] .cr-add-btn{ color:#fff; }
       </tbody>
     </table>
     </div>
+
+    {% if sessions_is_paginated %}
+      <div class="cr-pagination">
+        <div>
+          Showing {{ sessions_page_obj.start_index }} to {{ sessions_page_obj.end_index }} of {{ sessions_paginator.count }} entries
+        </div>
+        <div class="cr-pages">
+          {% if sessions_page_obj.has_previous %}
+            <a href="?page={{ sessions_page_obj.previous_page_number }}">&lsaquo;</a>
+          {% else %}
+            <span class="cr-page disabled">&lsaquo;</span>
+          {% endif %}
+          {% for num in sessions_paginator.page_range %}
+            {% if num == sessions_page_obj.number %}
+              <span class="cr-page current">{{ num }}</span>
+            {% else %}
+              <a href="?page={{ num }}">{{ num }}</a>
+            {% endif %}
+          {% endfor %}
+          {% if sessions_page_obj.has_next %}
+            <a href="?page={{ sessions_page_obj.next_page_number }}">&rsaquo;</a>
+          {% else %}
+            <span class="cr-page disabled">&rsaquo;</span>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
   </div>
 
 </div>

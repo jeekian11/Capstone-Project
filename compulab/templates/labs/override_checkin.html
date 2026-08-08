@@ -29,21 +29,39 @@
 
 {% if selected_lab %}
 <div class="card" style="max-width:640px; margin-top:14px;">
-  {% if available_pcs %}
+  {% if available_pcs or busy_pcs %}
     <form method="post"
-          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Override check-in?', text: 'This grants the selected account access to this computer right now, bypassing the normal reservation code.', icon: 'warning', confirmButtonText: 'Yes, check them in', confirmButtonColor: '#f2a93b'});">
+          onsubmit="event.preventDefault(); compulabOverrideSubmit(this);">
       {% csrf_token %}
       <input type="hidden" name="lab" value="{{ selected_lab }}">
+      <input type="hidden" name="confirm_override" value="1">
 
       <div class="form-group">
-        <label class="form-label" for="pc">Available computer</label>
+        <label class="form-label" for="pc">Computer</label>
         <select name="pc" id="pc" class="form-control" required>
           <option value="">Select a computer…</option>
-          {% for pc in available_pcs %}
-            <option value="{{ pc.pk }}">{{ pc.pc_id }}</option>
-          {% endfor %}
+          {% if available_pcs %}
+          <optgroup label="Available">
+            {% for pc in available_pcs %}
+              <option value="{{ pc.pk }}" data-busy="0">{{ pc.pc_id }}</option>
+            {% endfor %}
+          </optgroup>
+          {% endif %}
+          {% if busy_pcs %}
+          <optgroup label="Currently in use">
+            {% for pc in busy_pcs %}
+              <option value="{{ pc.pk }}" data-busy="1"
+                      data-current-user="{{ pc.current_user.display_name|default:pc.current_guest_name|default:'someone' }}">
+                {{ pc.pc_id }} — in use by {{ pc.current_user.display_name|default:pc.current_guest_name|default:"someone" }}
+              </option>
+            {% endfor %}
+          </optgroup>
+          {% endif %}
         </select>
-        <span class="helptext">Only computers currently online and not already in use are listed — this is the same availability check the walk-in path uses.</span>
+        <span class="helptext">
+          Picking a computer already "In use" will warn its current user on screen and switch it over
+          to the new account after a {{ override_warning_seconds|default:15 }}-second countdown, instead of granting access immediately.
+        </span>
       </div>
 
       <div class="form-group" style="position:relative;">
@@ -63,10 +81,38 @@
       </div>
     </form>
   {% else %}
-    <p class="empty">This laboratory has no available computers right now — nothing online and free to override into. Check <a href="{% url 'pc_status' %}?lab={{ selected_lab }}">PC Status</a> for this lab.</p>
+    <p class="empty">This laboratory has no computers to override right now — none online, free, or in use. Check <a href="{% url 'pc_status' %}?lab={{ selected_lab }}">PC Status</a> for this lab.</p>
   {% endif %}
 </div>
 {% endif %}
+
+<script>
+function compulabOverrideSubmit(form) {
+  var pcSelect = form.querySelector('#pc');
+  var opt = pcSelect.options[pcSelect.selectedIndex];
+  var isBusy = opt && opt.getAttribute('data-busy') === '1';
+  var currentUser = opt ? opt.getAttribute('data-current-user') : '';
+  var seconds = '{{ override_warning_seconds|default:15 }}';
+
+  var opts = isBusy
+    ? {
+        title: 'Override an in-use computer?',
+        text: 'This computer is currently used by ' + currentUser + '. They will see a warning on screen and be logged out automatically after ' + seconds + ' seconds, then the new account will be granted access.',
+        icon: 'warning',
+        confirmButtonText: 'Yes, override it',
+        confirmButtonColor: '#e05555',
+      }
+    : {
+        title: 'Override check-in?',
+        text: 'This grants the selected account access to this computer right now, bypassing the normal reservation code.',
+        icon: 'warning',
+        confirmButtonText: 'Yes, check them in',
+        confirmButtonColor: '#f2a93b',
+      };
+
+  compulabConfirmSubmit(form, opts);
+}
+</script>
 
 <script>
 (function() {

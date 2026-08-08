@@ -8,8 +8,19 @@
     <h1>Mark attendance</h1>
     <div class="sub">{{ session.subject }} · {{ session.lab.name }} · {{ session.date|date:"M d, Y" }} ({{ session.start_time|time:"H:i" }} - {{ session.end_time|time:"H:i" }})</div>
   </div>
-  <a href="{% url 'attendance' %}?summary_date={{ session.date|date:'Y-m-d' }}" class="action-btn">Back to attendance</a>
+  {% if session.roster_id %}
+    <a href="{% url 'roster_detail' session.roster_id %}" class="action-btn">Back</a>
+  {% else %}
+    <a href="{% url 'attendance' %}?summary_date={{ session.date|date:'Y-m-d' }}" class="action-btn">Back to attendance</a>
+  {% endif %}
 </div>
+
+{% if not_started %}
+  <div class="card" style="background:#FFF8E1; border-color:#F0D98C;">
+    <strong>This session hasn't started yet.</strong>
+    <span style="color:#7a6a2e;">No student is marked present or absent below — there's nothing to detect until class starts. You can still mark someone manually if needed.</span>
+  </div>
+{% endif %}
 
 <div class="card">
   <div class="section-title">Present / absent, per student</div>

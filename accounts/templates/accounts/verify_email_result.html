@@ -1,21 +1,170 @@
 {% extends "auth_base.html" %}
+{% load static %}
+
 {% block title %}Verify Email{% endblock %}
 
 {% block content %}
-<div class="auth-card" style="max-width:420px; text-align:center; margin:0 auto;">
-  {% if success %}
-    <h2 style="color:#2ecc71;">Email Verified ✓</h2>
-    <p style="color:#888; font-size:13px; line-height:1.6;">
-      Your email has been confirmed. You can now log in to your account.
-    </p>
-    <a href="{% url 'login' %}" class="btn" style="display:inline-block; margin-top:12px;">Go to Login</a>
-  {% else %}
-    <h2 style="color:#e74c3c;">Verification Failed</h2>
-    <p style="color:#888; font-size:13px; line-height:1.6;">
-      This verification link is invalid or has expired. Please contact your admin
-      to have a new verification email sent.
-    </p>
-    <a href="{% url 'login' %}" class="btn" style="display:inline-block; margin-top:12px;">Back to Login</a>
-  {% endif %}
+
+<style>
+  :root{
+    --ink:#132118; --muted:#5c6a61; --faint:#93a099;
+    --green:#1b7a4d; --green-dark:#0f4f30; --green-bright:#2fae76;
+    --green-soft:rgba(27,122,77,0.10); --green-line:rgba(27,122,77,0.22);
+    --red:#c94a4a; --red-soft:rgba(201,74,74,0.10); --red-line:rgba(201,74,74,0.24);
+    --paper:#f6f8f5; --border:#e2e8e1;
+    --font-display:'Space Grotesk',sans-serif;
+    --font-body:'Inter',sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
+  }
+
+  .vr-wrap{
+    min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    padding:32px;
+    font-family:var(--font-body);
+    position:relative;
+    overflow:hidden;
+  }
+
+  .vr-wrap::before{
+    content:"";
+    position:absolute; inset:0;
+    background-image:url("{% static 'img/login-bg.jpg' %}");
+    background-size:cover;
+    background-position:center;
+    background-attachment:fixed;
+    filter:saturate(1.08) brightness(1.0) contrast(1.0);
+    z-index:0;
+  }
+
+  .vr-wrap::after{
+    content:"";
+    position:absolute; inset:0;
+    background:linear-gradient(
+      160deg,
+      rgba(10,20,14,0.35) 0%,
+      rgba(10,20,14,0.15) 45%,
+      rgba(10,20,14,0.35) 100%
+    );
+    z-index:0;
+  }
+
+  .vr-card{
+    position:relative;
+    z-index:1;
+    width:100%; max-width:400px;
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:0 30px 70px rgba(6,16,10,0.5), 0 4px 18px rgba(6,16,10,0.22);
+    background:rgba(255,255,255,0.92);
+    -webkit-backdrop-filter:blur(24px) saturate(150%);
+    backdrop-filter:blur(24px) saturate(150%);
+    padding:36px 32px 32px;
+    text-align:center;
+  }
+
+  .vr-brand{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    margin-bottom:22px;
+  }
+  .vr-brand img{
+    width:36px; height:36px; border-radius:50%;
+    object-fit:contain; border:2px solid rgba(255,255,255,0.7);
+    box-shadow:0 4px 12px rgba(0,0,0,0.15);
+  }
+  .vr-brand span{
+    font-family:var(--font-display); font-weight:600; font-size:12.5px;
+    color:var(--ink); text-align:left; line-height:1.25;
+  }
+
+  .vr-icon{
+    width:56px; height:56px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    margin:0 auto 18px;
+  }
+  .vr-icon.ok{ background:var(--green-soft); border:1px solid var(--green-line); }
+  .vr-icon.fail{ background:var(--red-soft); border:1px solid var(--red-line); }
+
+  .vr-eyebrow{
+    font-family:var(--font-mono); font-size:10px; font-weight:500;
+    letter-spacing:0.08em; text-transform:uppercase;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    margin-bottom:10px;
+  }
+  .vr-eyebrow::before{
+    content:""; width:5px; height:5px; border-radius:50%; flex-shrink:0;
+  }
+  .vr-eyebrow.ok{ color:var(--green); }
+  .vr-eyebrow.ok::before{ background:var(--green-bright); }
+  .vr-eyebrow.fail{ color:var(--red); }
+  .vr-eyebrow.fail::before{ background:var(--red); }
+
+  .vr-card h2{
+    font-family:var(--font-display); font-weight:600; font-size:19px;
+    color:var(--ink); letter-spacing:-0.01em; margin:0 0 10px;
+  }
+  .vr-card p{
+    font-size:12.5px; color:var(--muted); line-height:1.65; margin:0 0 24px;
+  }
+
+  .vr-btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    width:100%; padding:11px 14px; border:none; border-radius:9px;
+    background:linear-gradient(135deg,var(--green),var(--green-dark)); color:#fff;
+    font-family:var(--font-body); font-size:13.5px; font-weight:600;
+    text-decoration:none; cursor:pointer;
+    transition:opacity 0.15s ease, transform 0.15s ease;
+  }
+  .vr-btn:hover{ opacity:0.92; transform:translateY(-1px); }
+  .vr-btn:focus-visible{ outline:2px solid var(--green-bright); outline-offset:2px; }
+
+  @media (max-width:400px){
+    .vr-wrap{ padding:16px; }
+    .vr-card{ padding:30px 24px 26px; border-radius:16px; }
+  }
+</style>
+
+<div class="vr-wrap">
+  <div class="vr-card">
+
+    <div class="vr-brand">
+      <img src="{% static 'img/logo.jpg' %}" alt="Danao Technological College">
+      <span>Danao Technological<br>College</span>
+    </div>
+
+    {% if success %}
+      <div class="vr-icon ok">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M5 13l4.5 4.5L19 8" stroke="#1b7a4d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="vr-eyebrow ok">Account verification</div>
+      <h2>Email Verified</h2>
+      <p>Your email has been confirmed. You can now log in to your CompuLab account.</p>
+      <a href="{% url 'login' %}" class="vr-btn">
+        Go to Login
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    {% else %}
+      <div class="vr-icon fail">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M7 7l10 10M17 7L7 17" stroke="#c94a4a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="vr-eyebrow fail">Account verification</div>
+      <h2>Verification Failed</h2>
+      <p>This verification link is invalid or has expired. Please contact your admin to have a new verification email sent.</p>
+      <a href="{% url 'login' %}" class="vr-btn">
+        Back to Login
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    {% endif %}
+
+  </div>
 </div>
+
 {% endblock %}
