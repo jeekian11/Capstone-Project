@@ -260,7 +260,7 @@
             {% for row in timeline %}
               <tr>
                 <td style="white-space:nowrap;">{{ row.time|date:"g:i A" }}</td>
-                <td>{% if row.student %}{{ row.student.display_name }}<span class="pal-role-pill {{ row.student.role }}">{{ row.student.get_role_display }}</span>{% else %}—{% endif %}</td>
+                <td>{% if row.student %}{{ row.student.display_name }}<span class="pal-role-pill {{ row.student.role }}">{{ row.student.get_role_display }}</span>{% elif row.guest_name %}{{ row.guest_name }} <span class="helptext">(Guest — unverified)</span>{% else %}—{% endif %}</td>
                 <td>{{ row.pc.pc_id }}</td>
                 <td>{{ row.duration_display }}</td>
                 <td><span class="pal-activity-pill {{ row.status }}">{% if row.status == 'active' %}Active{% else %}Completed{% endif %}</span></td>
@@ -357,11 +357,11 @@
       {% if selected_session %}
         <div class="pal-detail-row">
           <span class="pal-detail-label">Name</span>
-          <span class="pal-detail-val">{% if selected_session.student %}{{ selected_session.student.display_name }}{% else %}—{% endif %}</span>
+          <span class="pal-detail-val">{% if selected_session.student %}{{ selected_session.student.display_name }}{% elif selected_session.guest_name %}{{ selected_session.guest_name }} (Guest){% else %}—{% endif %}</span>
         </div>
         <div class="pal-detail-row">
           <span class="pal-detail-label">Role</span>
-          <span class="pal-detail-val">{% if selected_session.student %}<span class="pal-role-pill {{ selected_session.student.role }}">{{ selected_session.student.get_role_display }}</span>{% else %}—{% endif %}</span>
+          <span class="pal-detail-val">{% if selected_session.student %}<span class="pal-role-pill {{ selected_session.student.role }}">{{ selected_session.student.get_role_display }}</span>{% elif selected_session.guest_name %}<span class="helptext">Unverified guest</span>{% else %}—{% endif %}</span>
         </div>
         <div class="pal-detail-row">
           <span class="pal-detail-label">ID Number</span>

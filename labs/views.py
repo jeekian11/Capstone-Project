@@ -582,20 +582,15 @@ def pc_agent_activity_api(request):
     if pc is None:
         return JsonResponse({'ok': False, 'error': 'PC not registered'}, status=200)
 
-    # Only log activity for a PC the server thinks is actually being used
-    # by an authenticated account. pc.current_user is None both for (a) a
-    # stray call that lands right as a normal session ends, and (b) a PC
-    # that's currently unlocked via Manual Unlock or the offline emergency
-    # tool — those set current_session to whatever reservation happens to
-    # overlap the unlock, but never set current_user, precisely because
-    # there is no login and no verified identity behind that access.
-    # Manual Unlock is emergency-only and must never generate a PC
-    # Activity Log trail or get attributed to any user (including a
-    # student whose earlier, unrelated session happens to still overlap
-    # that reservation slot) — so we skip on current_user alone rather
-    # than requiring current_session to also be empty.
-    if pc.current_user is None:
-        return JsonResponse({'ok': True, 'skipped': 'no authenticated user for this PC'})
+    # Log activity for a PC the server thinks is actually in active use —
+    # either by an authenticated account (pc.current_user), or by a Manual
+    # Unlock / offline-tool walk-in guest (pc.current_guest_name, typed and
+    # unverified — see manual_unlock_log_api). Both are blank/None for a PC
+    # that isn't currently unlocked for anyone (e.g. a stray call landing
+    # right as a session just ended) — skip in that case, there's no one to
+    # attribute the sample to.
+    if pc.current_user is None and not pc.current_guest_name:
+        return JsonResponse({'ok': True, 'skipped': 'no active session for this PC'})
 
     window_title = (payload.get('window_title') or '').strip()[:500]
     page_url = (payload.get('page_url') or '').strip()[:500]
@@ -603,10 +598,21 @@ def pc_agent_activity_api(request):
     PCActivityLog.objects.create(
         pc=pc,
         student=pc.current_user,
+        guest_name=pc.current_guest_name or '',
         session=pc.current_session,
         window_title=window_title,
         page_url=page_url,
     )
+
+    # Bump last_active on every real activity ping, not just at
+    # login/unlock time. Without this, last_active only ever reflects when
+    # the session STARTED — so a PC still being genuinely used could get
+    # wrongly swept up by release_expired_pc_sessions()'s fallback check
+    # (last_active + STALE_PC_FALLBACK_HOURS) for guest/no-session PCs,
+    # even while someone is actively on it. update_fields keeps this a
+    # cheap single-column write, safe to do on every ping.
+    pc.last_active = timezone.now()
+    pc.save(update_fields=['last_active'])
 
     return JsonResponse({'ok': True})
 
@@ -1742,6 +1748,57 @@ def refresh_pc_status_view(request):
             request,
             f"Checked {summary['checked']} PC(s): {summary['online']} online, {summary['offline']} offline."
         )
+    return redirect(request.META.get('HTTP_REFERER', 'pc_status'))
+
+
+def pc_force_release(request, pk):
+    """
+    Immediate, manual version of labs.network.release_expired_pc_sessions()
+    — for when Admin/In-Charge can see a PC is obviously stuck showing
+    "in use by <name>" (agent crashed, PC lost power, etc.) and don't want
+    to wait for the background safety net's grace period, and don't want
+    to go through Override (which requires picking a new account to grant
+    access to). This just clears the tracking fields outright: no warning
+    is sent to the PC's screen, because unlike Override there's no new
+    user waiting to take over — we're just correcting stale server-side
+    bookkeeping, not actually kicking anyone off a PC they're using.
+    """
+    if request.method != 'POST':
+        raise PermissionDenied
+    if request.user.role not in ['admin', 'incharge']:
+        raise PermissionDenied
+
+    from accounts.models import ActivityLog
+
+    pc = get_object_or_404(PC.objects.select_related('lab', 'current_user'), pk=pk)
+    if request.user.role == 'incharge' and request.user.assigned_lab_id != pc.lab_id:
+        raise PermissionDenied
+
+    if pc.status != 'in_use' and not pc.current_user_id and not pc.current_guest_name:
+        messages.info(request, f'{pc.pc_id} is not currently marked in use — nothing to release.')
+        return redirect(request.META.get('HTTP_REFERER', 'pc_status'))
+
+    outgoing_name = pc.current_user.display_name if pc.current_user else (pc.current_guest_name or 'someone')
+
+    ActivityLog.objects.create(
+        actor=request.user,
+        action='pc_lock',
+        target_identifier=pc.current_user.id_number if pc.current_user else '',
+        pc=pc,
+        details=(
+            f"{pc.pc_id} ({pc.lab.name}) force-released by {request.user.display_name}: "
+            f"was stuck showing \"in use by {outgoing_name}\" — cleared manually rather than "
+            f"waiting for the automatic stale-session check."
+        ),
+    )
+
+    pc.status = 'online'
+    pc.current_user = None
+    pc.current_session = None
+    pc.current_guest_name = ''
+    pc.save(update_fields=['status', 'current_user', 'current_session', 'current_guest_name'])
+
+    messages.success(request, f'{pc.pc_id} released — was stuck showing "in use by {outgoing_name}".')
     return redirect(request.META.get('HTTP_REFERER', 'pc_status'))
 
 

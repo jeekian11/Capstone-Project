@@ -401,15 +401,6 @@ html[data-theme="light"] .nav.role-instructor { --accent-tint: rgba(15,118,110,0
     <svg class="nav-icon"><use href="#icon-chart"/></svg>
     <span class="nav-label">View reports</span>
   </a>
-  <a class="nav-item {% if request.resolver_match.url_name == 'alerts' %}active{% endif %}"
-     href="{% url 'alerts' %}">
-    <span class="nav-led"></span>
-    <svg class="nav-icon"><use href="#icon-bell"/></svg>
-    <span class="nav-label">Notifications & alerts</span>
-    {% if unread_notifications_count %}
-      <span class="nav-badge">{{ unread_notifications_count }}</span>
-    {% endif %}
-  </a>
 
   <div class="nav-section">Operations</div>
   <a class="nav-item {% if request.resolver_match.url_name == 'issues' %}active{% endif %}"

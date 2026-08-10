@@ -27,6 +27,7 @@ urlpatterns = [
     path('pc-status/', views.PCStatusView.as_view(), name='pc_status'),
     path('pc-status/api/', views.pc_status_api, name='pc_status_api'),
     path('pc-status/refresh/', views.refresh_pc_status_view, name='pc_status_refresh'),
+    path('pc-status/<int:pk>/force-release/', views.pc_force_release, name='pc_force_release'),
     path('pc-status/export/', reports.export_pc_status_report, name='pc_status_export'),
     path('pc-status/override-checkin/', views.OverrideCheckInView.as_view(), name='override_checkin'),
     path('pc-status/manual-unlock/', views.ManualUnlockView.as_view(), name='manual_unlock'),

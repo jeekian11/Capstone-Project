@@ -236,6 +236,24 @@ PC_UNLOCK_COMMAND = None
 # start_background_status_checker(), started from labs/apps.py.
 PC_STATUS_CHECK_INTERVAL_SECONDS = 20
 
+# Safety net for PCs stuck showing "in use by <name>" when the agent never
+# reported the session as over (agent crash, power loss, dropped
+# connection — see labs/network.py's release_expired_pc_sessions(), run on
+# the same loop as the status checker above).
+#
+# STALE_PC_GRACE_MINUTES: for a PC with a reservation on file, how many
+# minutes past that reservation's end time to wait before force-releasing
+# it. Keep this a bit generous — it should always be well past
+# OVERRIDE_WARNING_SECONDS and any reasonable clock drift.
+STALE_PC_GRACE_MINUTES = 15
+#
+# STALE_PC_FALLBACK_HOURS: for a PC with no reservation on file (Manual
+# Unlock walk-in, or an Override with no active session) there's no end
+# time to check against, so this is used against last_active instead. Kept
+# long/conservative since we're guessing rather than checking a real
+# schedule.
+STALE_PC_FALLBACK_HOURS = 4
+
 # Hour (0-23, local time / Asia/Manila) that PCActivityLog gets backed up
 # to media/activity_log_backups/*.xlsx and then fully wiped every day.
 # Change to e.g. 3 to run at 3 AM instead of midnight.

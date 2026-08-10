@@ -380,7 +380,7 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
                 <td>{{ pc.lab.name }}</td>
                 <td><span class="ld-pill {{ pc.status }}" data-role="status-pill">{{ pc.get_status_display }}</span></td>
                 <td data-role="current-user">{% if pc.current_user %}{{ pc.current_user.display_name }}{% elif pc.current_guest_name %}{{ pc.current_guest_name }} <span class="helptext">(Guest)</span>{% else %}—{% endif %}</td>
-                <td>{% if pc.current_session %}{{ pc.current_session.get_requester_type_display }}{% else %}—{% endif %}</td>
+                <td>{% if pc.current_guest_name %}Guest / Walk-in{% elif pc.current_session %}{{ pc.current_session.get_requester_type_display }}{% else %}—{% endif %}</td>
                 <td>{% if pc.login_time %}{{ pc.login_time|time:"g:i A" }}{% else %}—{% endif %}</td>
                 <td>{% if pc.login_time %}{{ pc.login_time|timesince }}{% else %}—{% endif %}</td>
                 <td>{{ pc.last_active|timesince|default:"—" }}{% if pc.last_active %} ago{% endif %}</td>
@@ -389,6 +389,19 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
                   <a href="{% url 'pc_update' pc.pk %}" class="ld-btn js-modal-link" style="padding:5px 10px; font-size:11.5px;">Update</a>
                   {% if request.user.role == 'admin' %}
                     <a href="{% url 'pc_edit' pc.pk %}" class="ld-btn js-modal-link" style="padding:5px 10px; font-size:11.5px;">Edit</a>
+                  {% endif %}
+                  {% if pc.status == 'in_use' %}
+                    <form method="post" action="{% url 'pc_force_release' pc.pk %}" style="display:inline;"
+                          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {
+                            title: 'Force-release {{ pc.pc_id }}?',
+                            text: 'Use this only if the PC is stuck showing \'in use\' but nobody is actually on it (agent crash, power loss, etc.). This does NOT send any warning to the PC screen.',
+                            icon: 'warning',
+                            confirmButtonText: 'Yes, release it',
+                            confirmButtonColor: '#e0a83e'
+                          }); return false;">
+                      {% csrf_token %}
+                      <button type="submit" class="ld-btn" style="padding:5px 10px; font-size:11.5px;">Force Release</button>
+                    </form>
                   {% endif %}
                 </td>
               </tr>

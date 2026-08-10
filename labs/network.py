@@ -11,6 +11,8 @@ import subprocess
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import timedelta
+from django.conf import settings
 from django.utils import timezone
 
 
@@ -219,6 +221,99 @@ def refresh_pc_statuses(pcs):
     return summary
 
 
+def release_expired_pc_sessions():
+    """
+    Safety net for PCs stuck showing "in use" long after they should have
+    auto-relocked. Normally a PC's current_user/current_session get cleared
+    by the agent calling pc-agent-end-session/pc-agent-logout when its own
+    local Tkinter timer fires (see lab_pc_agent/agent.py's _auto_relock).
+    That's a client-side, best-effort call with no retry (see
+    notify_end_session_sync) — so if the agent crashes, the PC loses power,
+    or the network hiccups at exactly the wrong moment, the server never
+    hears about it and the stale "in use by <name>" sticks around forever.
+    refresh_pc_statuses() only catches the case where the PC stops
+    responding to ping entirely; a PC that's still up and reachable but
+    whose agent silently failed to report back is NOT caught by that check,
+    which is what this function is for.
+
+    Two cases, each with its own grace period:
+      1. PC has a current_session on file — release once
+         session.end datetime + STALE_PC_GRACE_MINUTES has passed. This is
+         the common case (a real reservation that should have ended).
+      2. PC is in_use/current_user or current_guest_name set but has NO
+         current_session (e.g. Manual Unlock, or an Override where no
+         active_session existed) — there's no defined end time to check
+         against, so fall back to last_active + STALE_PC_FALLBACK_HOURS
+         instead, a much longer grace period since we're guessing.
+
+    Each release is logged to ActivityLog (actor=None, since this is the
+    system doing it, not a person) so it's visible in the same audit trail
+    as a normal lock/unlock, distinguishable by its details text.
+
+    Returns the number of PCs released.
+    """
+    from labs.models import PC
+    from accounts.models import ActivityLog
+
+    grace_minutes = getattr(settings, 'STALE_PC_GRACE_MINUTES', 15)
+    fallback_hours = getattr(settings, 'STALE_PC_FALLBACK_HOURS', 4)
+
+    now = timezone.localtime()
+    released = 0
+
+    stuck_pcs = PC.objects.filter(status='in_use').select_related(
+        'lab', 'current_user', 'current_session'
+    )
+
+    for pc in stuck_pcs:
+        session = pc.current_session
+        is_expired = False
+
+        if session is not None:
+            # session.date/end_time are plain date/time fields (no
+            # timezone info of their own) — combine them into a naive
+            # datetime first, then attach the server's configured
+            # timezone so it compares correctly against `now`.
+            naive_end = timezone.datetime.combine(session.date, session.end_time)
+            session_end = timezone.make_aware(naive_end, timezone.get_current_timezone())
+            if now >= session_end + timedelta(minutes=grace_minutes):
+                is_expired = True
+        elif pc.current_user_id or pc.current_guest_name:
+            # No session on file to check an end time against (Manual
+            # Unlock / an Override with no active_session) — fall back to
+            # a longer, more conservative grace period off last_active.
+            if pc.last_active and now >= pc.last_active + timedelta(hours=fallback_hours):
+                is_expired = True
+
+        if not is_expired:
+            continue
+
+        outgoing_name = pc.current_user.display_name if pc.current_user else (pc.current_guest_name or 'someone')
+
+        ActivityLog.objects.create(
+            actor=None,
+            action='pc_lock',
+            target_identifier=pc.current_user.id_number if pc.current_user else '',
+            pc=pc,
+            details=(
+                f"{pc.pc_id} ({pc.lab.name}) auto-released by the system — still showed "
+                f"\"in use by {outgoing_name}\" well past when the session should have "
+                f"ended, and the agent never reported the session as over (likely a "
+                f"crash, power loss, or dropped connection on the lab PC). No warning "
+                f"was shown on that PC's screen since this runs entirely on the server."
+            ),
+        )
+
+        pc.status = 'online'
+        pc.current_user = None
+        pc.current_session = None
+        pc.current_guest_name = ''
+        pc.save(update_fields=['status', 'current_user', 'current_session', 'current_guest_name'])
+        released += 1
+
+    return released
+
+
 _checker_started = False  # guards against starting the loop twice in one process
 
 
@@ -227,6 +322,9 @@ def start_background_status_checker():
     Starts a daemon thread that keeps pinging every PC with an IP address on
     file, on a loop, for as long as the server is running — so PC statuses
     stay accurate automatically and nobody has to click "Check status now".
+    Also runs release_expired_pc_sessions() on the same loop, so PCs stuck
+    showing a stale "in use by <name>" (see that function's docstring) get
+    cleared automatically too, without needing a ping/reachability signal.
 
     Safe to call more than once: only the first call actually starts a
     thread. Meant to be called once from labs.apps.LabsConfig.ready().
@@ -253,6 +351,7 @@ def start_background_status_checker():
             try:
                 pcs = PC.objects.exclude(ip_address__isnull=True)
                 refresh_pc_statuses(pcs)
+                release_expired_pc_sessions()
             except Exception:
                 # A transient DB hiccup or ping failure shouldn't kill the
                 # background loop — just try again next interval.
