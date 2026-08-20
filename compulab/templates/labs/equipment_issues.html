@@ -9,8 +9,9 @@
     <div class="sub">Equipment issue reports</div>
   </div>
   <div style="display:flex; gap:8px">
-    <a href="{% url 'inventory' %}" class="action-btn">Back</a>
-    <a href="{% url 'equipment_issue_report' %}" class="action-btn primary js-modal-link">+ Report issue</a>
+    
+    <a href="{% url 'equipment_issue_report' %}" class="action-btn primary js-modal-link"><svg class="btn-icon"><use href="#icon-plus"/></svg>Report issue</a>
+    <a href="{% url 'inventory' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg> Back</a>
   </div>
 </div>
 
@@ -26,7 +27,7 @@
           <td>{{ equipment_issue.reporter.get_full_name|default:"—" }}</td>
           <td>{{ equipment_issue.date_reported|date:"M d, Y" }}</td>
           <td><span class="status-pill pill-{{ equipment_issue.status }}">{{ equipment_issue.get_status_display }}</span></td>
-          <td><a href="{% url 'equipment_issue_detail' equipment_issue.pk %}" class="action-btn small js-modal-link">View</a></td>
+          <td><a href="{% url 'equipment_issue_detail' equipment_issue.pk %}" class="action-btn small js-modal-link"><svg class="btn-icon"><use href="#icon-eye"/></svg> View</a></td>
         </tr>
       {% empty %}
         <tr><td colspan="5"><p class="empty">No issues reported yet.</p></td></tr>

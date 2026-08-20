@@ -111,8 +111,8 @@
     </div>
 
     <div class="form-actions">
-      <button type="submit" class="action-btn primary">Save changes</button>
-      <a href="{% url 'view_schedule' %}?lab={{ session.lab_id }}&date={{ session.date|date:'Y-m-d' }}" class="action-btn">Cancel</a>
+      <button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-edit"/></svg> Save changes</button>
+      <a href="{% url 'view_schedule' %}?lab={{ session.lab_id }}&date={{ session.date|date:'Y-m-d' }}" class="action-btn"><svg class="btn-icon"><use href="#icon-x"/></svg> Cancel</a>
     </div>
   </form>
 </div>
@@ -145,7 +145,7 @@ function submitSessionEdit(form) {
             'but it WILL stop that many people from being able to check in again (e.g. after a restart) until the limit is raised back up.',
       icon: 'warning',
       confirmButtonText: 'Yes, lower it anyway',
-      confirmButtonColor: '#ff5d5d',
+      confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--red').trim(),
     });
   } else {
     compulabConfirmSubmit(form, {
@@ -153,7 +153,7 @@ function submitSessionEdit(form) {
       text: 'Details for this session will be updated.',
       icon: 'question',
       confirmButtonText: 'Yes, save',
-      confirmButtonColor: '#3ed6c4',
+      confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim(),
     });
   }
 }

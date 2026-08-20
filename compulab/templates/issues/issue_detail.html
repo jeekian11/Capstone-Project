@@ -8,7 +8,7 @@
     <h1>{{ issue.title }}</h1>
     <div class="sub">{{ issue.lab.name }} {% if issue.pc %}· {{ issue.pc.pc_id }}{% endif %}</div>
   </div>
-  <a href="{% url 'issue_update' issue.pk %}" class="action-btn js-modal-link">Update issue</a>
+  <a href="{% url 'issue_update' issue.pk %}" class="action-btn js-modal-link"><svg class="btn-icon"><use href="#icon-edit"/></svg> Update issue</a>
 </div>
 
 <div class="two-col">
@@ -47,7 +47,7 @@
   <div class="card">
     <div class="section-title">Assign to technician</div>
     <form method="post" action="{% url 'issue_assign' issue.pk %}"
-          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Update assignment?', text: 'The technician assignment and status for this issue will be updated.', icon: 'question', confirmButtonText: 'Yes, update', confirmButtonColor: '#3ed6c4'}); return false;">
+          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Update assignment?', text: 'The technician assignment and status for this issue will be updated.', icon: 'question', confirmButtonText: 'Yes, update', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;">
       {% csrf_token %}
       <div class="form-group">
         <label class="form-label" for="assigned_technician">Technician</label>
@@ -59,7 +59,7 @@
         </select>
       </div>
       <div class="form-actions">
-        <button type="submit" class="action-btn primary">Update assignment</button>
+        <button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-edit"/></svg> Update assignment</button>
       </div>
     </form>
   </div>
@@ -67,14 +67,14 @@
   <div class="card">
     <div class="section-title">Mark as resolved</div>
     <form method="post" action="{% url 'issue_resolve' issue.pk %}"
-          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Mark as resolved?', text: 'This issue will be marked as resolved.', icon: 'question', confirmButtonText: 'Yes, mark resolved', confirmButtonColor: '#3ed6c4'}); return false;">
+          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Mark as resolved?', text: 'This issue will be marked as resolved.', icon: 'question', confirmButtonText: 'Yes, mark resolved', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;">
       {% csrf_token %}
       <div class="form-group">
         <label class="form-label" for="resolution_notes">Resolution notes</label>
         <textarea name="resolution_notes" id="resolution_notes" class="form-control" rows="4" placeholder="What was done to resolve this?" required></textarea>
       </div>
       <div class="form-actions">
-        <button type="submit" class="action-btn primary">Mark as resolved</button>
+        <button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-check"/></svg> Mark as resolved</button>
       </div>
     </form>
   </div>
@@ -82,7 +82,7 @@
 {% endif %}
 
 <div class="card">
-  <a href="{% url 'issues' %}" class="action-btn">← Back to issues</a>
+  <a href="{% url 'issues' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg> ← Back to issues</a>
 </div>
 
 {% endblock %}

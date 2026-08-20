@@ -12,7 +12,7 @@
 
 <div class="card" style="max-width:560px">
   <form method="post" novalidate id="compose-form"
-        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Send this notification?', text: 'This will be sent to the recipients you selected.', icon: 'question', confirmButtonText: 'Yes, send', confirmButtonColor: '#3ed6c4'}); return false;">
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Send this notification?', text: 'This will be sent to the recipients you selected.', icon: 'question', confirmButtonText: 'Yes, send', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div class="form-errors">{{ form.non_field_errors }}</div>
@@ -103,8 +103,8 @@
     </div>
 
     <div class="form-actions">
-      <button type="submit" class="action-btn primary">Send</button>
-      <a href="{% url 'notifications' %}" class="action-btn">Cancel</a>
+      <button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-send"/></svg> Send</button>
+      <a href="{% url 'notifications' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-x"/></svg> Cancel</a>
     </div>
   </form>
 </div>

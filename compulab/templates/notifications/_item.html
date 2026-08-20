@@ -1,5 +1,5 @@
 {% load static %}
-<div class="notif-item {% if not notif.read %}unread{% endif %}">
+<div class="notif-item {% if not notif.read and notif.user_id == request.user.id %}unread{% endif %}">
   {% if notif.user_id == request.user.id or request.user.role == 'admin' %}
     <input type="checkbox" class="js-row-check" value="{{ notif.pk }}" style="align-self:flex-start; margin-top:2px; margin-right:2px;">
   {% endif %}
@@ -65,7 +65,7 @@
             </form>
           {% endif %}
           <form method="post" action="{% url 'delete_notification' notif.pk %}"
-                onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this notification?', text: 'This cannot be undone.', icon: 'warning', confirmButtonText: 'Yes, delete', confirmButtonColor: '#ff5d5d'}); return false;">
+                onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this notification?', text: 'This cannot be undone.', icon: 'warning', confirmButtonText: 'Yes, delete', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--red').trim()}); return false;">
             {% csrf_token %}
             <button type="submit" class="notif-menu-item danger">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
@@ -74,7 +74,7 @@
           </form>
         {% elif request.user.role == 'admin' %}
           <form method="post" action="{% url 'delete_notification' notif.pk %}"
-                onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this notification?', text: 'This cannot be undone.', icon: 'warning', confirmButtonText: 'Yes, delete', confirmButtonColor: '#ff5d5d'}); return false;">
+                onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this notification?', text: 'This cannot be undone.', icon: 'warning', confirmButtonText: 'Yes, delete', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--red').trim()}); return false;">
             {% csrf_token %}
             <button type="submit" class="notif-menu-item danger">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>

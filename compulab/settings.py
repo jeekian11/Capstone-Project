@@ -241,6 +241,16 @@ PC_STATUS_CHECK_INTERVAL_SECONDS = 20
 # connection — see labs/network.py's release_expired_pc_sessions(), run on
 # the same loop as the status checker above).
 #
+# STALE_HEARTBEAT_MINUTES: while a PC is genuinely unlocked, its agent
+# reports real activity roughly every 8 seconds (activity_report_interval_
+# seconds in agent_config.json), which keeps PC.last_active moving. If that
+# stops for this many minutes while the PC is still marked in_use, its
+# agent almost certainly crashed/was closed — release it, regardless of
+# whether there's a reservation on file or how long is left on it. This is
+# the main, fast check; the two below are slower fallbacks for when it
+# doesn't apply (e.g. activity reporting disabled on that PC).
+STALE_HEARTBEAT_MINUTES = 5
+#
 # STALE_PC_GRACE_MINUTES: for a PC with a reservation on file, how many
 # minutes past that reservation's end time to wait before force-releasing
 # it. Keep this a bit generous — it should always be well past

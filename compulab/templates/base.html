@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en" data-theme="{{ request.user.theme|default:'dark' }}">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -58,6 +58,16 @@
       --purple-dim: rgba(167,139,250,0.14);
       --gold: #facc15;
       --gold-dim: rgba(250,204,21,0.14);
+      /* Dedicated "Under Maintenance" status color — intentionally NOT
+         re-themed in light mode like the other status colors below.
+         It's always rendered on its own pale tint background (never
+         directly on the page background), so it doesn't need muting for
+         contrast, and staying constant keeps it visually matching the
+         original reference design in both themes. Kept separate from
+         --gold, which lightens to a muted brown in light mode for the
+         "Student" role pill's own contrast needs. */
+      --maintenance: #facc15;
+      --maintenance-dim: rgba(250,204,21,0.14);
       --font-display: 'Space Grotesk', sans-serif;
       --font-body: 'Inter', sans-serif;
       --font-mono: 'JetBrains Mono', monospace;
@@ -79,8 +89,8 @@
        switching the values here re-themes the entire app with no other
        changes needed. */
     html[data-theme="light"] {
-      --topbar-accent: #0f766e;
-      --topbar-accent-tint: rgba(15,118,110,0.10);
+      --topbar-accent: #3b5bfd;
+      --topbar-accent-tint: rgba(59,91,253,0.10);
       --topbar-ink-1: #ffffff;
       --topbar-text-1: #111827;
       --topbar-text-2: #5b6572;
@@ -111,15 +121,15 @@
       --gold: #b45309;
       --gold-dim: rgba(180,83,9,0.12);
 
-      /* sidebar stays dark navy in light mode, matching the mockup — kept
-         independent from --shell-ink-0/1 so the topbar/user-chip hovers
-         (which still use those) are unaffected */
-      --sidebar-bg: #0c1e3a;
-      --sidebar-bg-hover: #16294c;
-      --sidebar-line: rgba(255,255,255,0.09);
-      --sidebar-text: #ffffff;
-      --sidebar-text-dim: #aab6cc;
-      --sidebar-text-faint: #6d7c9b;
+      /* sidebar goes white in light mode — kept independent from
+         --shell-ink-0/1 so the topbar/user-chip hovers (which still use
+         those) are unaffected */
+      --sidebar-bg: #ffffff;
+      --sidebar-bg-hover: #f3f4f6;
+      --sidebar-line: #e5e7eb;
+      --sidebar-text: #111827;
+      --sidebar-text-dim: #4b5563;
+      --sidebar-text-faint: #6b7280;
     }
     html[data-theme="light"] body {
       background:
@@ -184,7 +194,21 @@
     .content { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px; min-width: 0; }
     .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; min-width: 0; }
     .metrics > * { min-width: 0; }
-    .metric { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; position: relative; overflow: hidden; }
+    .metric {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 1px 2px rgba(0,0,0,0.28), 0 8px 16px -10px rgba(0,0,0,0.5);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.15s ease, z-index 0s;
+    }
+    .metric:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 4px 8px rgba(0,0,0,0.32), 0 14px 24px -10px rgba(0,0,0,0.55);
+      z-index: 2;
+    }
     .metric::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: var(--bar-color, var(--text-faint)); }
     .metric-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
     .metric-val { font-family: var(--font-display); font-size: 24px; font-weight: 600; color: var(--text); }
@@ -194,8 +218,74 @@
     .metric.green { --bar-color: var(--green); }
     .metric.red { --bar-color: var(--red); }
     .metric.amber { --bar-color: var(--amber); }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; color: var(--text); transition: border-color 0.15s ease; min-width: 0; }
-    .card:hover { border-color: var(--border-soft); }
+    /* icon-badge metric layout — matches the PC Power Status page's card
+       design (colored rounded icon square + label/value stack) so any
+       page can opt into the same look by adding a .metric-icon element
+       instead of relying on the plain left-bar style above. */
+    .metric.with-icon { display: flex; align-items: center; gap: 12px; }
+    .metric.with-icon::before { display: none; }
+    .metric-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+    .metric-icon svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .metric-icon.ic-green { background: linear-gradient(160deg, color-mix(in srgb, var(--green) 30%, white) 0%, color-mix(in srgb, var(--green) 60%, white) 55%, color-mix(in srgb, var(--green) 85%, black 10%) 100%); box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--green) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color: color-mix(in srgb, var(--green) 55%, black 35%); }
+    .metric-icon.ic-blue { background: linear-gradient(160deg, color-mix(in srgb, var(--blue) 30%, white) 0%, color-mix(in srgb, var(--blue) 60%, white) 55%, color-mix(in srgb, var(--blue) 85%, black 10%) 100%); box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--blue) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color: color-mix(in srgb, var(--blue) 55%, black 35%); }
+    .metric-icon.ic-amber { background: linear-gradient(160deg, color-mix(in srgb, var(--amber) 30%, white) 0%, color-mix(in srgb, var(--amber) 60%, white) 55%, color-mix(in srgb, var(--amber) 85%, black 10%) 100%); box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--amber) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color: color-mix(in srgb, var(--amber) 55%, black 35%); }
+    .metric-icon.ic-red { background: linear-gradient(160deg, color-mix(in srgb, var(--red) 30%, white) 0%, color-mix(in srgb, var(--red) 60%, white) 55%, color-mix(in srgb, var(--red) 85%, black 10%) 100%); box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--red) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color: color-mix(in srgb, var(--red) 55%, black 35%); }
+    .metric-icon.ic-purple { background: linear-gradient(160deg, color-mix(in srgb, var(--purple) 30%, white) 0%, color-mix(in srgb, var(--purple) 60%, white) 55%, color-mix(in srgb, var(--purple) 85%, black 10%) 100%); box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--purple) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color: color-mix(in srgb, var(--purple) 55%, black 35%); }
+    .metric-icon.ic-gold { background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 30%, white) 0%, color-mix(in srgb, var(--gold) 60%, white) 55%, color-mix(in srgb, var(--gold) 85%, black 10%) 100%); box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--gold) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color: color-mix(in srgb, var(--gold) 55%, black 35%); }
+    .metric-icon.ic-teal { background: linear-gradient(160deg, color-mix(in srgb, #2dd4bf 30%, white) 0%, color-mix(in srgb, #2dd4bf 60%, white) 55%, color-mix(in srgb, #2dd4bf 85%, black 10%) 100%); box-shadow: inset 0 -3px 0 color-mix(in srgb, #2dd4bf 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color: color-mix(in srgb, #2dd4bf 55%, black 35%); }
+    .metric-sub { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+
+    /* System-wide: give any stat/metric card a colored left accent that
+       matches the color of its icon badge (ic-green, ic-blue, etc.), so
+       every "Total X" style card across the app looks consistent without
+       each page having to declare its own border rule. */
+    [class*="metric"]:not([class*="metrics"]):has(.ic-green) { border-left: 4px solid var(--green) !important; }
+    [class*="metric"]:not([class*="metrics"]):has(.ic-blue) { border-left: 4px solid var(--blue) !important; }
+    [class*="metric"]:not([class*="metrics"]):has(.ic-purple) { border-left: 4px solid var(--purple) !important; }
+    [class*="metric"]:not([class*="metrics"]):has(.ic-orange) { border-left: 4px solid var(--amber) !important; }
+    [class*="metric"]:not([class*="metrics"]):has(.ic-amber) { border-left: 4px solid var(--amber) !important; }
+    [class*="metric"]:not([class*="metrics"]):has(.ic-red) { border-left: 4px solid var(--red) !important; }
+    [class*="metric"]:not([class*="metrics"]):has(.ic-gold) { border-left: 4px solid var(--gold) !important; }
+    [class*="metric"]:not([class*="metrics"]):has(.ic-teal) { border-left: 4px solid #2dd4bf !important; }
+
+    /* Pages that color their metric card via a plain modifier class
+       (in-metric/is-metric + amber/blue/purple/green/teal) instead of an
+       ic-* icon class get the same left accent here. */
+    .in-metric.amber, .is-metric.amber { border-left: 4px solid var(--amber) !important; }
+    .in-metric.blue, .is-metric.blue { border-left: 4px solid var(--blue) !important; }
+    .in-metric.purple, .is-metric.purple { border-left: 4px solid var(--purple) !important; }
+    .in-metric.green, .is-metric.green { border-left: 4px solid var(--green) !important; }
+    .in-metric.teal, .is-metric.teal { border-left: 4px solid #2dd4bf !important; }
+    .in-metric.red, .is-metric.red { border-left: 4px solid var(--red) !important; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+      color: var(--text);
+      min-width: 0;
+      position: relative;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 1px 2px rgba(0,0,0,0.28), 0 8px 18px -12px rgba(0,0,0,0.5);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.15s ease, z-index 0s;
+    }
+    .card:hover {
+      border-color: var(--border-soft);
+      transform: translateY(-3px);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 4px 8px rgba(0,0,0,0.32), 0 14px 26px -12px rgba(0,0,0,0.55);
+      z-index: 2;
+    }
+    /* Light theme uses much softer, shorter shadows — dark-mode shadow
+       values would just look like dirty smudges on a white/light surface. */
+    html[data-theme="light"] .metric,
+    html[data-theme="light"] .card {
+      box-shadow: 0 1px 0 rgba(255,255,255,0.6) inset, 0 1px 2px rgba(15,23,42,0.06), 0 8px 16px -12px rgba(15,23,42,0.14);
+    }
+    html[data-theme="light"] .metric:hover,
+    html[data-theme="light"] .card:hover {
+      box-shadow: 0 1px 0 rgba(255,255,255,0.7) inset, 0 4px 10px rgba(15,23,42,0.08), 0 14px 22px -12px rgba(15,23,42,0.18);
+    }
     .section-title { font-family: var(--font-display); font-size: 13px; font-weight: 600; margin-bottom: 12px; color: var(--text); }
     .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; min-width: 0; }
     .two-col > * { min-width: 0; }
@@ -237,7 +327,7 @@
     .action-btn.danger { background: var(--red-dim); border-color: rgba(255,93,93,0.35); color: var(--red-soft); }
     .action-btn.small { padding: 5px 12px; font-size: 12px; }
     .action-btn.icon-only { padding: 6px; width: 30px; height: 30px; justify-content: center; }
-    .action-btn.icon-only svg { width: 15px; height: 15px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .action-btn svg.btn-icon, .action-btn.icon-only svg { width: 15px; height: 15px; flex: none; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 
     .status-pill { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 500; text-transform: capitalize; }
     .pill-open, .pill-pending, .pill-offline, .pill-faulty, .pill-high, .pill-delete, .pill-rejected { background: var(--red-dim); color: var(--red-soft); }
@@ -802,5 +892,6 @@ document.addEventListener('keydown', function (e) {
 
 </script>
 <script src="{% static 'js/bulk-delete.js' %}"></script>
+{% block extra_scripts %}{% endblock %}
 </body>
 </html>

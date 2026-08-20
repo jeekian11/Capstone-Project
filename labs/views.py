@@ -345,31 +345,71 @@ def verify_reservation_and_check_in(remote_addr, id_number, code):
 
     success, detail = unlock_pc(pc)
 
+    # Human-readable label + resolved account, worked out either way so it
+    # can be used both in the success path below and in the ActivityLog
+    # entry for a failed unlock.
+    if is_primary_requester:
+        checkin_type = 'requester'
+        checked_in_user = session.instructor
+        checked_in_name = session.requester_name
+    elif roster_student and roster_student.student_id:
+        checkin_type = 'roster'
+        checked_in_user = roster_student.student
+        checked_in_name = roster_student.full_name
+    elif roster_student:
+        checkin_type = 'roster'
+        checked_in_user = None  # roster entry isn't linked to a registered account
+        checked_in_name = roster_student.full_name
+    elif is_group_booking:
+        checkin_type = 'group'
+        checked_in_user = User.objects.filter(id_number__iexact=id_number).first() or session.instructor
+        checked_in_name = f'{session.requester_name} — group member'
+    elif is_capacity_booking:
+        checkin_type = session.requester_type  # 'walk_in' or 'override' — same labels used by the live check-in features
+        checked_in_user = User.objects.filter(id_number__iexact=id_number).first() or session.instructor
+        label = 'Walk-in' if session.requester_type == 'walk_in' else 'Override'
+        checked_in_name = f'{id_number} — {label} reservation ({session.requester_name})'
+    else:
+        checkin_type = 'walk_in'
+        checked_in_user = walk_in_account
+        checked_in_name = f"{walk_in_account.display_name} — walk-in"
+
+    if not success:
+        # The unlock signal never actually reached this PC's agent — most
+        # likely nobody has started the agent on that machine yet (or its
+        # IP on file no longer matches). The person's ID/reservation WAS
+        # verified, but nobody can be sitting at a screen that's still
+        # locked, so don't record a check-in or mark the PC "in use" for a
+        # session that doesn't really exist. Previously this recorded the
+        # check-in and flipped the PC to "in use" regardless of `success`,
+        # which is exactly how a PC could end up stuck showing "in use by
+        # <name>" even though nobody ever actually got in — including from
+        # this same machine's own browser, if its agent wasn't running.
+        ActivityLog.objects.create(
+            actor=None,
+            action='pc_unlock',
+            target_identifier=id_number,
+            pc=pc,
+            details=(
+                f"{checked_in_name} ({id_number}) was verified for {pc.pc_id} ({pc.lab.name}) via "
+                f"reservation {session.reservation_code}, but the unlock command didn't run: {detail}. "
+                "No check-in was recorded and the PC was left as-is."
+            ),
+        )
+        return {
+            'ok': False,
+            'error': (
+                f"You were verified, but {pc.pc_id} couldn't be unlocked ({detail}). "
+                "Ask your Lab In-Charge to check that the PC agent is running there, then try again."
+            ),
+        }
+
     # Every successful check-in — not just group bookings — is now recorded
     # as a SessionCheckIn, tagged with how they got in (requester/roster/
     # group/walk-in) and the actual resolved account. This is the canonical
     # "who really used a PC during this reservation" transaction log, used
     # by the Attendance Report to show walk-ins as their own section instead
     # of folding them into the requester's name.
-    if is_primary_requester:
-        checkin_type = 'requester'
-        checked_in_user = session.instructor
-    elif roster_student and roster_student.student_id:
-        checkin_type = 'roster'
-        checked_in_user = roster_student.student
-    elif roster_student:
-        checkin_type = 'roster'
-        checked_in_user = None  # roster entry isn't linked to a registered account
-    elif is_group_booking:
-        checkin_type = 'group'
-        checked_in_user = User.objects.filter(id_number__iexact=id_number).first() or session.instructor
-    elif is_capacity_booking:
-        checkin_type = session.requester_type  # 'walk_in' or 'override' — same labels used by the live check-in features
-        checked_in_user = User.objects.filter(id_number__iexact=id_number).first() or session.instructor
-    else:
-        checkin_type = 'walk_in'
-        checked_in_user = walk_in_account
-
     SessionCheckIn.objects.update_or_create(
         session=session, id_number=id_number,
         defaults={'checkin_type': checkin_type, 'student': checked_in_user, 'pc': pc},
@@ -381,29 +421,12 @@ def verify_reservation_and_check_in(remote_addr, id_number, code):
     pc.current_session = session
     pc.save(update_fields=['status', 'last_active', 'current_user', 'current_session'])
 
-    # Human-readable label for messages/logs.
-    if checkin_type == 'roster':
-        checked_in_name = roster_student.full_name
-    elif checkin_type == 'requester':
-        checked_in_name = session.requester_name
-    elif checkin_type == 'group':
-        checked_in_name = f'{session.requester_name} — group member'
-    elif is_capacity_booking:
-        label = 'Walk-in' if session.requester_type == 'walk_in' else 'Override'
-        checked_in_name = f'{id_number} — {label} reservation ({session.requester_name})'
-    else:
-        checked_in_name = f"{walk_in_account.display_name} — walk-in"
-
     ActivityLog.objects.create(
         actor=checked_in_user,
         action='pc_unlock',
         target_identifier=id_number,
         pc=pc,
-        details=(
-            f"{checked_in_name} ({id_number}) checked in with reservation {session.reservation_code} — unlocked {pc.pc_id} ({pc.lab.name})."
-            if success else
-            f"{checked_in_name} ({id_number}) was verified for {pc.pc_id} ({pc.lab.name}) via reservation {session.reservation_code}, but the unlock command didn't run: {detail}"
-        )
+        details=f"{checked_in_name} ({id_number}) checked in with reservation {session.reservation_code} — unlocked {pc.pc_id} ({pc.lab.name})."
     )
 
     return {
@@ -455,10 +478,7 @@ class ReservationPCLoginView(FormView):
 
         pc = result['pc']
         session = result['session']
-        if result['unlock_success']:
-            messages.success(self.request, f"Welcome, {result['checked_in_name']}. Unlocking {pc.pc_id}...")
-        else:
-            messages.warning(self.request, f'You were verified, but {pc.pc_id} could not be unlocked automatically. Ask your Laboratory In-Charge for help.')
+        messages.success(self.request, f"Welcome, {result['checked_in_name']}. Unlocking {pc.pc_id}...")
 
         return redirect('pc_login')
 
@@ -713,11 +733,18 @@ def pc_agent_logout_api(request):
     previous_user = pc.current_user
     reason = payload.get('reason', 'manual')  # 'manual' or 'expired'
 
-    pc.status = 'locked'
+    # 'locked' is not one of PC.STATUS's choices (only online/offline/in_use/
+    # maintenance/issue exist) — using it here left the PC uncounted in every
+    # status metric and unstyled on the status pill. 'online' ("Available")
+    # is what every sibling endpoint (pc_agent_end_session_api, force-release,
+    # the stale-session sweeper) already uses for "screen locked, nobody on
+    # it, ready for the next person" — so match that here too.
+    pc.status = 'online'
     pc.current_user = None
+    pc.current_session = None
     pc.current_guest_name = ''
     pc.last_active = timezone.now()
-    pc.save(update_fields=['status', 'current_user', 'current_guest_name', 'last_active'])
+    pc.save(update_fields=['status', 'current_user', 'current_session', 'current_guest_name', 'last_active'])
 
     ActivityLog.objects.create(
         actor=previous_user,
@@ -929,8 +956,33 @@ class PCStatusView(RoleRequiredMixin, TemplateView):
         if in_use_ids:
             for log in ActivityLog.objects.filter(action='pc_unlock', pc_id__in=in_use_ids).order_by('pc_id', '-created_at'):
                 latest_unlocks.setdefault(log.pc_id, log.created_at)
+
+        # Reservation Type per PC — prefer the actual SessionCheckIn record
+        # over pc.current_session. pc.current_session only gets set when
+        # there happens to be a Session covering the current lab/time, which
+        # an Admin/In-Charge Override often has none of (or, worse, could
+        # coincidentally overlap an unrelated Session), so relying on it
+        # alone left the Override Check-in row's Reservation Type blank.
+        from scheduling.models import SessionCheckIn
+        CHECKIN_TYPE_LABELS = {'walk_in': 'Walk-in', 'override': 'Override', 'guest': 'Guest / Walk-in'}
+        latest_checkin_types = {}
+        if in_use_ids:
+            for ci in SessionCheckIn.objects.filter(
+                pc_id__in=in_use_ids, checked_out_at__isnull=True
+            ).order_by('pc_id', '-checked_in_at'):
+                latest_checkin_types.setdefault(ci.pc_id, ci.checkin_type)
+
         for pc in page_obj.object_list:
             pc.login_time = latest_unlocks.get(pc.pk)
+            label = CHECKIN_TYPE_LABELS.get(latest_checkin_types.get(pc.pk))
+            if label:
+                pc.reservation_type_label = label
+            elif pc.current_guest_name:
+                pc.reservation_type_label = 'Guest / Walk-in'
+            elif pc.current_session:
+                pc.reservation_type_label = pc.current_session.get_requester_type_display()
+            else:
+                pc.reservation_type_label = None
 
         # ---- live lab usage bars (in-use / total per lab) ----
         usage_labs = labs_qs.filter(pk=lab_id) if lab_id else labs_qs
@@ -1364,13 +1416,14 @@ def _build_pc_sessions(logs, now, gap):
     """
     sessions = []
     run = []
-    prev_pc_id = prev_student_id = prev_time = None
+    prev_pc_id = prev_student_id = prev_guest_name = prev_time = None
 
     def flush(run):
         if not run:
             return
         first, last = run[0], run[-1]
         pc, student = first.pc, first.student
+        guest_name = first.guest_name
 
         blocks = []
         bstart = btitle = bend = burl = None
@@ -1401,7 +1454,7 @@ def _build_pc_sessions(logs, now, gap):
         key = f'{pc.pk}-{int(first.captured_at.timestamp())}'
 
         rows = [{
-            'time': first.captured_at, 'student': student, 'pc': pc,
+            'time': first.captured_at, 'student': student, 'guest_name': guest_name, 'pc': pc,
             'activity': 'Logged In', 'application': 'Windows Login',
             'duration': None, 'duration_display': '—', 'status': status, 'session_key': key,
         }]
@@ -1410,7 +1463,7 @@ def _build_pc_sessions(logs, now, gap):
             block_dur = b['end'] - b['start']
             has_dur = block_dur.total_seconds() > 0
             rows.append({
-                'time': b['start'], 'student': student, 'pc': pc,
+                'time': b['start'], 'student': student, 'guest_name': guest_name, 'pc': pc,
                 'activity': 'Opened Application',
                 'application': b['title'] or '(Untitled window)',
                 'duration': block_dur if has_dur else None,
@@ -1420,14 +1473,14 @@ def _build_pc_sessions(logs, now, gap):
             })
         if not is_ongoing:
             rows.append({
-                'time': last.captured_at, 'student': student, 'pc': pc,
+                'time': last.captured_at, 'student': student, 'guest_name': guest_name, 'pc': pc,
                 'activity': 'Logged Out', 'application': 'Windows Logout',
                 'duration': duration, 'duration_display': _pc_activity_fmt_duration(duration),
                 'status': 'completed', 'session_key': key,
             })
 
         sessions.append({
-            'key': key, 'pc': pc, 'student': student,
+            'key': key, 'pc': pc, 'student': student, 'guest_name': guest_name,
             'login_time': first.captured_at,
             'logout_time': None if is_ongoing else last.captured_at,
             'duration': duration, 'status': status,
@@ -1440,6 +1493,7 @@ def _build_pc_sessions(logs, now, gap):
             prev_pc_id is not None and (
                 log.pc_id != prev_pc_id
                 or log.student_id != prev_student_id
+                or log.guest_name != prev_guest_name
                 or (log.captured_at - prev_time) > gap
             )
         )
@@ -1447,7 +1501,7 @@ def _build_pc_sessions(logs, now, gap):
             flush(run)
             run = []
         run.append(log)
-        prev_pc_id, prev_student_id, prev_time = log.pc_id, log.student_id, log.captured_at
+        prev_pc_id, prev_student_id, prev_guest_name, prev_time = log.pc_id, log.student_id, log.guest_name, log.captured_at
     flush(run)
 
     return sessions
@@ -1483,6 +1537,7 @@ def _pc_activity_filter_logs(request, base_qs):
             Q(student__first_name__icontains=q) |
             Q(student__last_name__icontains=q) |
             Q(student__id_number__icontains=q) |
+            Q(guest_name__icontains=q) |
             Q(pc__pc_id__icontains=q)
         )
     filters = {
@@ -1528,6 +1583,7 @@ class PCActivityLogView(RoleRequiredMixin, TemplateView):
         timeline = [{
             'time': s['login_time'],
             'student': s['student'],
+            'guest_name': s['guest_name'],
             'pc': s['pc'],
             'duration_display': _pc_activity_fmt_duration(s['duration']) if s['duration'] else '—',
             'status': s['status'],
@@ -1708,6 +1764,7 @@ def pc_status_api(request):
     pcs = PC.objects.select_related('current_user').values(
         'pc_id', 'status', 'lab__name', 'last_active',
         'current_user__id_number', 'current_user__first_name', 'current_user__last_name',
+        'current_guest_name',
     )
     return JsonResponse({'pcs': list(pcs)})
 
@@ -1721,6 +1778,17 @@ class PCUpdateView(RoleRequiredMixin, ModalFormMixin, UpdateView):
 
     def form_valid(self, form):
         previous_status = PC.objects.get(pk=self.object.pk).status
+        # This form only exposes the `status` field, but current_user/
+        # current_session/current_guest_name are meaningless once status
+        # is manually changed away from 'in_use' — leaving them behind was
+        # exactly why the "Current User" column (and other places that
+        # check current_user/current_guest_name without also checking
+        # status) kept showing someone's name even after an Admin/In-Charge
+        # had already corrected the status here.
+        if previous_status == 'in_use' and form.instance.status != 'in_use':
+            form.instance.current_user = None
+            form.instance.current_session = None
+            form.instance.current_guest_name = ''
         response = super().form_valid(form)
         if self.object.status in ('maintenance', 'issue') and previous_status not in ('maintenance', 'issue'):
             notify_service.notify_pc_maintenance(self.object, self.object.get_status_display())
@@ -1742,12 +1810,18 @@ def refresh_pc_status_view(request):
     summary = refresh_pc_statuses(pcs)
     total_with_ip = pcs.count()
     if total_with_ip == 0:
-        messages.warning(request, "No PCs have an IP address on file yet — add one in each PC's settings so its real status can be checked.")
+        note = "No PCs have an IP address on file yet — add one in each PC's settings so its real status can be checked."
+        if is_modal_request(request):
+            return JsonResponse({'ok': True, 'checked': 0, 'online': 0, 'offline': 0, 'message': note, 'level': 'warning'})
+        messages.warning(request, note)
     else:
-        messages.success(
-            request,
-            f"Checked {summary['checked']} PC(s): {summary['online']} online, {summary['offline']} offline."
-        )
+        note = f"Checked {summary['checked']} PC(s): {summary['online']} online, {summary['offline']} offline."
+        if is_modal_request(request):
+            return JsonResponse({
+                'ok': True, 'checked': summary['checked'], 'online': summary['online'],
+                'offline': summary['offline'], 'message': note, 'level': 'success',
+            })
+        messages.success(request, note)
     return redirect(request.META.get('HTTP_REFERER', 'pc_status'))
 
 
@@ -2467,8 +2541,16 @@ class AlertsView(RoleRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         from notifications.filters import stat_counts, CATEGORY_CHOICES
+        from notifications.models import Notification
         ctx = super().get_context_data(**kwargs)
         ctx['stats'] = stat_counts(self.get_base_queryset())
+        # "Unread" must reflect only notifications addressed to THIS user —
+        # for Admin, get_base_queryset() above returns every user's
+        # notifications (for visibility/moderation), but Admin can only
+        # ever mark their own as read (see mark_read/mark_all_read in
+        # notifications/views.py). Counting everyone else's unread here
+        # made the number impossible to ever clear via "Mark all as read".
+        ctx['stats']['unread'] = Notification.objects.filter(user=self.request.user, read=False).count()
         ctx['category_choices'] = CATEGORY_CHOICES
         ctx['selected_category'] = self.request.GET.get('category', 'all')
         ctx['q'] = self.request.GET.get('q', '')

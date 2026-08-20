@@ -52,7 +52,7 @@
   </ul>
 
   <form method="post" enctype="multipart/form-data" novalidate
-        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Import PCs from this file?', text: 'Every valid row will add a new PC record under its matching lab. Rows with an unknown lab or an already-existing PC ID in that lab are skipped, not overwritten.', icon: 'question', confirmButtonText: 'Yes, import', confirmButtonColor: '#3ed6c4'}); return false;">
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Import PCs from this file?', text: 'Every valid row will add a new PC record under its matching lab. Rows with an unknown lab or an already-existing PC ID in that lab are skipped, not overwritten.', icon: 'question', confirmButtonText: 'Yes, import', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;">
     {% csrf_token %}
 
     {% if form.non_field_errors %}
@@ -77,11 +77,11 @@
 
     <div class="form-actions">
       <button type="submit" class="action-btn primary">
-        Upload and Import
+        <svg class="btn-icon"><use href="#icon-upload"/></svg> Upload and Import
       </button>
 
       <a href="{% url 'lab_list' %}" class="action-btn secondary">
-       Cancel
+       <svg class="btn-icon"><use href="#icon-x"/></svg> Cancel
       </a>
     </div>
 

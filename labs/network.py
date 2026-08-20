@@ -182,7 +182,7 @@ def refresh_pc_statuses(pcs):
             continue
         summary['checked'] += 1
         new_status = 'online' if reachable else 'offline'
-        update_fields = ['status', 'last_active']
+        update_fields = ['status']
         previous_status = pc.status
 
         if reachable:
@@ -190,17 +190,37 @@ def refresh_pc_statuses(pcs):
             # "online" — only step in when the machine looks plain online/offline
             if pc.status in ('online', 'offline') or pc.status is None:
                 pc.status = new_status
-            pc.last_active = now
+                # Only bump last_active here for idle/plain machines. A
+                # successful ping only proves the machine is powered on and
+                # reachable on the network — it says nothing about whether
+                # anyone is actually using it (e.g. it could be sitting at
+                # its own lock screen). If we kept stamping last_active=now
+                # for every reachable ping regardless of status, an 'in_use'
+                # PC's stale-session clock (last_active + STALE_PC_FALLBACK_
+                # HOURS, see release_expired_pc_sessions()) would never
+                # advance as long as the machine stayed powered on — exactly
+                # how a PC nobody is using can keep showing "in use by
+                # <name>" indefinitely. The only thing allowed to refresh
+                # last_active while a PC is 'in_use' is a real activity
+                # ping from the agent (pc_agent_activity_api), which only
+                # fires while the PC is genuinely unlocked and being used.
+                pc.last_active = now
+                update_fields.append('last_active')
+            # 'in_use', 'maintenance', and 'issue' are left alone here —
+            # reachability alone doesn't tell us anything new about them.
         else:
             if pc.status == 'in_use':
                 # A PC that was signed in by a student just stopped
-                # answering — most likely it was shut down or restarted, so
-                # the student's session is over. Drop it back to offline and
-                # clear who was using it, rather than leaving a stale name
+                # answering — most likely it was shut down, lost power, or
+                # crashed, so the session is over. Drop it back to offline
+                # and clear everything tying it to that user/guest/
+                # reservation, rather than leaving a stale name and session
                 # on the status page.
                 pc.status = 'offline'
                 pc.current_user = None
-                update_fields.append('current_user')
+                pc.current_session = None
+                pc.current_guest_name = ''
+                update_fields += ['current_user', 'current_session', 'current_guest_name']
             elif pc.status in ('online', 'offline') or pc.status is None:
                 pc.status = new_status
             # an 'issue'-flagged PC is left alone either way
@@ -236,11 +256,30 @@ def release_expired_pc_sessions():
     whose agent silently failed to report back is NOT caught by that check,
     which is what this function is for.
 
-    Two cases, each with its own grace period:
-      1. PC has a current_session on file — release once
+    Three cases, checked in order, each with its own grace period — the
+    first one that applies wins:
+      1. The agent's activity heartbeat has gone quiet for
+         STALE_HEARTBEAT_MINUTES. While a PC is genuinely unlocked and in
+         use, its agent reports real activity roughly every 8 seconds (see
+         agent.py's start_activity_reporting / pc_agent_activity_api),
+         which bumps PC.last_active every time. If that heartbeat stops
+         while the PC is still marked in_use, the machine itself is most
+         likely fine (still powered on, still on the network — see
+         refresh_pc_statuses() above for the separate "PC itself went
+         unreachable" case) but its *agent process* crashed, was killed,
+         or otherwise stopped running. This is the fast, general-purpose
+         check — it doesn't need a reservation on file and doesn't need to
+         wait for a scheduled end time, so it catches an agent dying
+         partway through an otherwise-long reservation instead of leaving
+         the PC stuck for the rest of it. Depends on
+         activity_report_interval_seconds staying enabled (non-zero) in
+         each PC's agent_config.json — a lab that deliberately disables
+         activity reporting for privacy loses this fast check and falls
+         back to cases 2/3 below.
+      2. PC has a current_session on file — release once
          session.end datetime + STALE_PC_GRACE_MINUTES has passed. This is
          the common case (a real reservation that should have ended).
-      2. PC is in_use/current_user or current_guest_name set but has NO
+      3. PC is in_use/current_user or current_guest_name set but has NO
          current_session (e.g. Manual Unlock, or an Override where no
          active_session existed) — there's no defined end time to check
          against, so fall back to last_active + STALE_PC_FALLBACK_HOURS
@@ -255,6 +294,7 @@ def release_expired_pc_sessions():
     from labs.models import PC
     from accounts.models import ActivityLog
 
+    heartbeat_minutes = getattr(settings, 'STALE_HEARTBEAT_MINUTES', 5)
     grace_minutes = getattr(settings, 'STALE_PC_GRACE_MINUTES', 15)
     fallback_hours = getattr(settings, 'STALE_PC_FALLBACK_HOURS', 4)
 
@@ -268,8 +308,17 @@ def release_expired_pc_sessions():
     for pc in stuck_pcs:
         session = pc.current_session
         is_expired = False
+        expiry_reason = ''
 
-        if session is not None:
+        if pc.last_active and now >= pc.last_active + timedelta(minutes=heartbeat_minutes):
+            is_expired = True
+            expiry_reason = (
+                f"no activity heartbeat from its agent in over {heartbeat_minutes} minutes "
+                f"(last heard from at {timezone.localtime(pc.last_active).strftime('%H:%M:%S')}), "
+                f"even though the PC itself is still reachable — the agent almost certainly "
+                f"crashed or was closed"
+            )
+        elif session is not None:
             # session.date/end_time are plain date/time fields (no
             # timezone info of their own) — combine them into a naive
             # datetime first, then attach the server's configured
@@ -278,12 +327,14 @@ def release_expired_pc_sessions():
             session_end = timezone.make_aware(naive_end, timezone.get_current_timezone())
             if now >= session_end + timedelta(minutes=grace_minutes):
                 is_expired = True
+                expiry_reason = "well past when the reservation should have ended"
         elif pc.current_user_id or pc.current_guest_name:
             # No session on file to check an end time against (Manual
             # Unlock / an Override with no active_session) — fall back to
             # a longer, more conservative grace period off last_active.
             if pc.last_active and now >= pc.last_active + timedelta(hours=fallback_hours):
                 is_expired = True
+                expiry_reason = f"inactive for over {fallback_hours} hours with no reservation on file to check against"
 
         if not is_expired:
             continue
@@ -297,10 +348,10 @@ def release_expired_pc_sessions():
             pc=pc,
             details=(
                 f"{pc.pc_id} ({pc.lab.name}) auto-released by the system — still showed "
-                f"\"in use by {outgoing_name}\" well past when the session should have "
-                f"ended, and the agent never reported the session as over (likely a "
-                f"crash, power loss, or dropped connection on the lab PC). No warning "
-                f"was shown on that PC's screen since this runs entirely on the server."
+                f"\"in use by {outgoing_name}\", {expiry_reason}, and the agent never reported "
+                f"the session as over (likely a crash, power loss, or dropped connection on the "
+                f"lab PC). No warning was shown on that PC's screen since this runs entirely on "
+                f"the server."
             ),
         )
 

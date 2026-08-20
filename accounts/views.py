@@ -324,6 +324,32 @@ class InstructorDashboardView(RoleRequiredMixin, TemplateView):
             instructor=self.request.user, date=today
         ).count()
 
+        # ---- today's classes, with computed ongoing/upcoming status, for
+        # the "Today's Classes" panel (each row gets a Take Attendance /
+        # View Roster action) ----
+        current_time = now.time()
+        todays_classes = []
+        for s in Session.objects.filter(
+            instructor=self.request.user, date=today
+        ).select_related('lab', 'roster').order_by('start_time'):
+            if current_time > s.end_time:
+                s.computed_status = 'completed'
+            elif s.start_time <= current_time <= s.end_time:
+                s.computed_status = 'ongoing'
+            else:
+                s.computed_status = 'upcoming'
+            todays_classes.append(s)
+        ctx['todays_classes'] = todays_classes
+
+        # ---- upcoming lab reservations (strictly after today) — separate
+        # panel from Today's Classes ----
+        ctx['upcoming_reservations'] = Session.objects.filter(
+            instructor=self.request.user, date__gt=today
+        ).select_related('lab', 'roster').order_by('date', 'start_time')[:4]
+        ctx['upcoming_lab_reservation_count'] = Session.objects.filter(
+            instructor=self.request.user, date__gt=today
+        ).count()
+
         ctx['pending_requests_count'] = SessionRequest.objects.filter(
             instructor=self.request.user, status='pending'
         ).count()
@@ -334,6 +360,24 @@ class InstructorDashboardView(RoleRequiredMixin, TemplateView):
             instructor=self.request.user, date__range=[week_start, week_end]
         ).values('lab_id').distinct().count()
 
+        # ---- total classes / total students — this instructor's active
+        # class rosters, and the distinct students enrolled across them ----
+        from scheduling.models import ClassRoster, RosterStudent
+        active_rosters = ClassRoster.objects.filter(
+            instructor=self.request.user, status='active'
+        )
+        ctx['total_classes_count'] = active_rosters.count()
+        ctx['total_students_count'] = RosterStudent.objects.filter(
+            roster__in=active_rosters
+        ).values('id_number').distinct().count()
+
+        # ---- attendance today — count of today's sessions that have a
+        # roster attached (i.e. there's an actual "take attendance" action
+        # to do; sessions without a roster have no expected headcount) ----
+        ctx['attendance_today_count'] = Session.objects.filter(
+            instructor=self.request.user, date=today, roster__isnull=False
+        ).count()
+
         ctx['notifications'] = Notification.objects.filter(
             user=self.request.user
         ).order_by('-created_at')[:6]
@@ -341,19 +385,22 @@ class InstructorDashboardView(RoleRequiredMixin, TemplateView):
             user=self.request.user, read=False
         ).count()
 
-        # ---- today's attendance % — same pc_unlock-vs-roster logic as the
-        # real Attendance Report (labs/reports.py:_attendance_data), just
-        # collapsed to a single percentage across all of today's rostered
-        # sessions instead of a per-session breakdown. Sessions without a
-        # roster attached aren't counted — there's no reliable "expected"
-        # headcount for those. ----
+        # ---- today's attendance % and Present/Absent breakdown — same
+        # pc_unlock-vs-roster logic as the real Attendance Report
+        # (labs/reports.py:_attendance_data), collapsed across all of
+        # today's rostered sessions. Sessions without a roster aren't
+        # counted — there's no reliable "expected" headcount for those.
+        # Note: the system only tracks Present/Absent (no Late/Excused
+        # status exists in ManualAttendanceRecord), so the summary is a
+        # 2-way breakdown. ----
         from datetime import datetime as _dt
         from accounts.models import ActivityLog
-        todays_sessions = Session.objects.filter(
+        from scheduling.models import ManualAttendanceRecord
+        todays_rostered_sessions = Session.objects.filter(
             instructor=self.request.user, date=today, roster__isnull=False
         ).select_related('roster', 'lab')
         total_expected = total_present = 0
-        for s in todays_sessions:
+        for s in todays_rostered_sessions:
             roster_ids = set(s.roster.students.values_list('id_number', flat=True))
             if not roster_ids:
                 continue
@@ -364,9 +411,20 @@ class InstructorDashboardView(RoleRequiredMixin, TemplateView):
                 created_at__gte=start_dt, created_at__lte=end_dt,
                 target_identifier__in=roster_ids,
             ).values_list('target_identifier', flat=True))
-            total_expected += len(roster_ids)
-            total_present += len(present_ids)
+            # manual overrides take precedence over the PC-unlock estimate
+            manual = {
+                m.id_number: m.status for m in
+                ManualAttendanceRecord.objects.filter(session=s, id_number__in=roster_ids)
+            }
+            for sid in roster_ids:
+                status = manual.get(sid, 'present' if sid in present_ids else 'absent')
+                total_expected += 1
+                if status == 'present':
+                    total_present += 1
         ctx['todays_attendance_pct'] = round(total_present / total_expected * 100) if total_expected else None
+        ctx['todays_attendance_present'] = total_present
+        ctx['todays_attendance_absent'] = total_expected - total_present
+        ctx['todays_attendance_total'] = total_expected
 
         # ---- weekly overview chart: classes/reservations/requests per day
         # this week (Sun–Sat) ----
@@ -811,17 +869,53 @@ def session_attendance_mark(request, pk):
 
     if request.method == 'POST':
         if request.POST.get('action') == 'add_student':
+            from django.contrib.auth import get_user_model
+            from scheduling.models import RosterStudent
+            UserModel = get_user_model()
+
             id_number = request.POST.get('new_id_number', '').strip()
-            full_name = request.POST.get('new_full_name', '').strip()
             status = request.POST.get('new_status', 'present')
-            if id_number:
-                ManualAttendanceRecord.objects.update_or_create(
-                    session=session, id_number=id_number,
-                    defaults={'full_name': full_name, 'status': status, 'marked_by': request.user},
-                )
-                messages.success(request, f'{full_name or id_number} marked {status}.')
-            else:
+
+            if not id_number:
                 messages.error(request, 'Student ID is required.')
+                return redirect('session_attendance_mark', pk=session.pk)
+
+            student_account = UserModel.objects.filter(
+                id_number=id_number, role='student',
+            ).first()
+            if not student_account:
+                messages.error(
+                    request,
+                    f'No registered student account found with ID "{id_number}". '
+                    'Add the student in User Management first.',
+                )
+                return redirect('session_attendance_mark', pk=session.pk)
+
+            if not session.roster or not RosterStudent.objects.filter(
+                roster=session.roster, student=student_account,
+            ).exists():
+                messages.error(
+                    request,
+                    f'{student_account.display_name} is not enrolled in this class\'s roster. '
+                    'Add them to the class roster first.',
+                )
+                return redirect('session_attendance_mark', pk=session.pk)
+
+            full_name = student_account.get_full_name() or student_account.display_name
+            ManualAttendanceRecord.objects.update_or_create(
+                session=session, id_number=id_number,
+                defaults={'full_name': full_name, 'status': status, 'marked_by': request.user},
+            )
+            messages.success(request, f'{full_name} marked {status}.')
+        elif request.POST.get('action') == 'remove_student':
+            id_number = request.POST.get('remove_id_number', '').strip()
+            deleted, _ = ManualAttendanceRecord.objects.filter(
+                session=session, id_number=id_number,
+            ).delete()
+            if deleted:
+                messages.success(request, 'Manual attendance entry removed.')
+            else:
+                messages.error(request, 'That entry was not found.')
         else:
             for c in _mark_candidates(session):
                 status = request.POST.get(f"status_{c['id_number']}")
@@ -845,9 +939,17 @@ def session_attendance_mark(request, pk):
     start_dt = datetime.combine(session.date, session.start_time)
     start_dt = tz.make_aware(start_dt) if tz.is_naive(start_dt) else start_dt
 
+    roster_students = []
+    if session.roster:
+        roster_students = [
+            {'id_number': rs.id_number, 'full_name': rs.full_name}
+            for rs in session.roster.students.filter(student__isnull=False).order_by('full_name')
+        ]
+
     return render(request, 'accounts/session_attendance_mark.html', {
         'session': session, 'candidates': candidates, 'ad_hoc': ad_hoc,
         'not_started': tz.now() < start_dt,
+        'roster_students': roster_students,
     })
 
 
@@ -906,7 +1008,7 @@ def _instructor_log_groups(user, day=None, session_id=None, student=None, roster
         # No explicit filter: recent window, and never sessions still in
         # the future (they can't have attendance yet — see `not_started`).
         sessions = sessions.filter(date__lte=today, date__gte=today - timedelta(days=LOG_DEFAULT_WINDOW_DAYS))
-    sessions = sessions.order_by('-date', 'start_time')
+    sessions = sessions.order_by('date', 'start_time')
 
     needle = student.strip().lower() if student else None
     groups = []
@@ -1102,6 +1204,15 @@ def user_deactivate(request, pk):
     _require_admin(request)
     target = get_object_or_404(User, pk=pk)
     if request.method == 'POST':
+        # Same reasoning as UserDeleteView.form_valid() below: deactivating
+        # the account you're currently logged in as would revoke your own
+        # session mid-request (is_active=False fails every later
+        # permission/login check) and there'd be no other admin action
+        # left to undo it from inside the app — so this is blocked
+        # outright rather than allowed to lock you out.
+        if target.pk == request.user.pk:
+            messages.error(request, "You can't deactivate your own account while logged into it.")
+            return redirect('users')
         target.is_active = False
         target.save()
         ActivityLog.objects.create(

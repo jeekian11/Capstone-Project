@@ -9,7 +9,7 @@
     <div class="sub">Manually grant a registered student or instructor access to an available computer — recorded separately as an Override transaction for monitoring and attendance.</div>
   </div>
   <a href="{% url 'pc_status' %}" class="action-btn"
-     onclick="if (this.closest('#appModalBody')) { event.preventDefault(); closeAppModal(); }">Back to PC Status</a>
+     onclick="if (this.closest('#appModalBody')) { event.preventDefault(); closeAppModal(); }"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg> Back to PC Status</a>
 </div>
 
 <div class="card" style="max-width:640px">
@@ -75,9 +75,9 @@
       </div>
 
       <div class="form-actions">
-        <button type="submit" class="action-btn primary">Override Check-in</button>
+        <button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-check"/></svg> Override Check-in</button>
         <a href="{% url 'pc_status' %}" class="action-btn"
-           onclick="if (this.closest('#appModalBody')) { event.preventDefault(); closeAppModal(); }">Cancel</a>
+           onclick="if (this.closest('#appModalBody')) { event.preventDefault(); closeAppModal(); }"><svg class="btn-icon"><use href="#icon-x"/></svg> Cancel</a>
       </div>
     </form>
   {% else %}
@@ -100,14 +100,14 @@ function compulabOverrideSubmit(form) {
         text: 'This computer is currently used by ' + currentUser + '. They will see a warning on screen and be logged out automatically after ' + seconds + ' seconds, then the new account will be granted access.',
         icon: 'warning',
         confirmButtonText: 'Yes, override it',
-        confirmButtonColor: '#e05555',
+        confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--red').trim(),
       }
     : {
         title: 'Override check-in?',
         text: 'This grants the selected account access to this computer right now, bypassing the normal reservation code.',
         icon: 'warning',
         confirmButtonText: 'Yes, check them in',
-        confirmButtonColor: '#f2a93b',
+        confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--amber').trim(),
       };
 
   compulabConfirmSubmit(form, opts);

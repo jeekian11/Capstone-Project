@@ -28,10 +28,10 @@
 .inv-metric-label{ font-size:11.5px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; color:var(--text-dim); overflow-wrap:anywhere; }
 .inv-metric-val{ font-family:var(--font-display); font-size:22px; font-weight:700; letter-spacing:-.01em; margin-top:2px; overflow-wrap:anywhere; }
 .inv-metric-sub{ font-size:11px; color:var(--text-faint); margin-top:2px; }
-.ic-blue{ background:var(--blue); color:#0a0e12; }
-.ic-green{ background:var(--green); color:#0a0e12; }
-.ic-amber{ background:var(--amber); color:#0a0e12; }
-.ic-red{ background:var(--red); color:#0a0e12; }
+.ic-blue{ background:linear-gradient(160deg, color-mix(in srgb, var(--blue) 30%, white) 0%, color-mix(in srgb, var(--blue) 60%, white) 55%, color-mix(in srgb, var(--blue) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--blue) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--blue) 55%, black 35%); }
+.ic-green{ background:linear-gradient(160deg, color-mix(in srgb, var(--green) 30%, white) 0%, color-mix(in srgb, var(--green) 60%, white) 55%, color-mix(in srgb, var(--green) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--green) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--green) 55%, black 35%); }
+.ic-amber{ background:linear-gradient(160deg, color-mix(in srgb, var(--amber) 30%, white) 0%, color-mix(in srgb, var(--amber) 60%, white) 55%, color-mix(in srgb, var(--amber) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--amber) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--amber) 55%, black 35%); }
+.ic-red{ background:linear-gradient(160deg, color-mix(in srgb, var(--red) 30%, white) 0%, color-mix(in srgb, var(--red) 60%, white) 55%, color-mix(in srgb, var(--red) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--red) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--red) 55%, black 35%); }
 .ic-purple{ background:#a78bfa; color:#0a0e12; }
 @media (max-width:1200px) and (min-width:641px){ .inv-metrics{ grid-template-columns:repeat(3,1fr); } }
 @media (max-width:640px){
@@ -133,11 +133,11 @@
       <div class="sub">Manage and track all laboratory equipment and supplies.</div>
     </div>
     <div style="display:flex; gap:8px; flex-wrap:wrap;">
-      <a href="{% url 'inventory_status_list' %}" class="action-btn">Equipment Status</a>
-      <a href="{% url 'maintenance_logs' %}" class="action-btn">Maintenance Logs</a>
-      <a href="{% url 'equipment_issues' %}" class="action-btn">Reported Issues</a>
+      <a href="{% url 'inventory_status_list' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-cpu"/></svg> Equipment Status</a>
+      <a href="{% url 'maintenance_logs' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-wrench"/></svg> Maintenance Logs</a>
+      <a href="{% url 'equipment_issues' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-bell"/></svg> Reported Issues</a>
       {% if request.user.role == 'admin' %}
-        <a href="{% url 'inventory_create' %}" class="action-btn primary js-modal-link">+ Add Equipment</a>
+        <a href="{% url 'inventory_create' %}" class="action-btn primary js-modal-link"><svg class="btn-icon"><use href="#icon-plus"/></svg>Add Equipment</a>
       {% endif %}
     </div>
   </div>
@@ -238,9 +238,9 @@
         </select>
       </div>
       {% if filters_active %}
-        <div><a href="{% url 'inventory' %}" class="action-btn">Clear</a></div>
+        <div><a href="{% url 'inventory' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-x"/></svg> Clear</a></div>
       {% endif %}
-      <div><button type="submit" class="action-btn primary"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;"><use href="#icon-search"/></svg> Filter</button></div>
+      <div><button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-filter"/></svg> Filter</button></div>
     </form>
   </div>
 

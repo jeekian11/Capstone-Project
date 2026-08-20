@@ -8,7 +8,7 @@
     <h1>{{ req.subject }}</h1>
     <div class="sub">Requested by {{ req.requester_name }} ({{ req.get_requester_type_display }})</div>
   </div>
-  <a href="{% url 'manage_requests' %}" class="action-btn">← Back to pending requests</a>
+  <a href="{% url 'manage_requests' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg> ← Back to pending requests</a>
 </div>
 
 {% if req.status == 'approved' and req.reservation_code %}
@@ -67,20 +67,20 @@
   {% if req.status == 'pending' %}
     <div class="form-actions" style="margin-top:20px">
       <form method="post" action="{% url 'approve_request' req.pk %}" style="display:inline"
-            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Approve this reservation?', text: 'A reservation code will be generated and the lab PC will accept it.', icon: 'question', confirmButtonText: 'Yes, approve', confirmButtonColor: '#3ed6c4'}); return false;">
+            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Approve this reservation?', text: 'A reservation code will be generated and the lab PC will accept it.', icon: 'question', confirmButtonText: 'Yes, approve', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;">
         {% csrf_token %}
-        <button type="submit" class="action-btn primary">Approve</button>
+        <button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-check"/></svg> Approve</button>
       </form>
       <form method="post" action="{% url 'decline_request' req.pk %}" style="display:inline"
             onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Reject this reservation?', text: 'The requester will be notified that this request was declined.', confirmButtonText: 'Yes, reject'}); return false;">
         {% csrf_token %}
-        <button type="submit" class="action-btn danger">Reject</button>
+        <button type="submit" class="action-btn danger"><svg class="btn-icon"><use href="#icon-x"/></svg> Reject</button>
       </form>
       <a href="{% url 'request_edit' req.pk %}" class="action-btn icon-only js-modal-link" title="Edit request"><svg><use href="#icon-edit"/></svg></a>
     </div>
   {% else %}
     <div class="form-actions" style="margin-top:20px">
-      <a href="{% url 'request_export_pdf' req.pk %}" class="action-btn">Export PDF</a>
+      <a href="{% url 'request_export_pdf' req.pk %}" class="action-btn"><svg class="btn-icon"><use href="#icon-pdf-doc"/></svg> Export PDF</a>
     </div>
   {% endif %}
 </div>

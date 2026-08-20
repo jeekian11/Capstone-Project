@@ -16,7 +16,7 @@
     <p style="font-size:13px; color:#666; line-height:1.6; margin-bottom:16px;">
       Select a lab and date to look up the sessions scheduled for it, and export the results as PDF or Excel.
     </p>
-    <a href="{% url 'view_schedule' %}" class="action-btn primary">View schedule</a>
+    <a href="{% url 'view_schedule' %}" class="action-btn primary"><svg class="btn-icon"><use href="#icon-eye"/></svg> View schedule</a>
   </div>
 
   <div class="card">
@@ -24,8 +24,9 @@
     <p style="font-size:13px; color:#666; line-height:1.6; margin-bottom:16px;">
       Review pending lab requests from instructors, then approve, reject, or export each one.
     </p>
-    <a href="{% url 'manage_requests' %}" class="action-btn primary">Manage requests</a>
+    <a href="{% url 'manage_requests' %}" class="action-btn primary"><svg class="btn-icon"><use href="#icon-calendar"/></svg> Manage requests</a>
   </div>
 </div>
 
 {% endblock %}
+  

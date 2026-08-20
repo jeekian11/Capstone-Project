@@ -11,9 +11,9 @@
   </div>
   <div style="display:flex; gap:8px">
     <form method="post" action="{% url 'mark_all_read' %}"
-          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Mark all as read?', text: 'All of your notifications will be marked as read.', icon: 'question', confirmButtonText: 'Yes, mark all read', confirmButtonColor: '#3ed6c4'}); return false;">
+          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Mark all as read?', text: 'All of your notifications will be marked as read.', icon: 'question', confirmButtonText: 'Yes, mark all read', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;">
       {% csrf_token %}
-      <button type="submit" class="action-btn">Mark all as read</button>
+      <button type="submit" class="action-btn"><svg class="btn-icon"><use href="#icon-check"/></svg> Mark all as read</button>
     </form>
   </div>
 </div>

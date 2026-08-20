@@ -6,13 +6,12 @@
 <div class="page-header">
   <div>
     <h1>Log a reservation</h1>
-    <div class="sub">For requests made in person or verbally by an instructor or student</div>
   </div>
 </div>
 
 <div class="card" style="max-width:640px">
   <form method="post" novalidate
-        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Log this reservation?', text: 'A new reservation request will be submitted.', icon: 'question', confirmButtonText: 'Yes, log it', confirmButtonColor: '#3ed6c4'}); return false;">
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Log this reservation?', text: 'A new reservation request will be submitted.', icon: 'question', confirmButtonText: 'Yes, log it', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div class="form-errors">{{ form.non_field_errors }}</div>
@@ -32,7 +31,6 @@
              placeholder="Type a name or ID number to find a registered account...">
       <div id="requester-search-results" class="search-results"
            style="display:none; position:absolute; z-index:10; background:var(--surface-raised); color:var(--text); border:1px solid var(--border); border-radius:6px; width:100%; max-height:220px; overflow-y:auto; box-shadow:0 4px 12px rgba(0,0,0,0.25);"></div>
-      <span class="helptext">Pick a registered account to auto-fill the fields below — Full Name, ID, and Department / Year Level.</span>
       <div id="requester-extra-info" class="helptext" style="display:none; font-weight:600; margin-top:4px;"></div>
     </div>
 
@@ -40,7 +38,6 @@
       <div class="form-group">
         <label class="form-label" for="{{ form.requester_id_number.id_for_label }}">Student / instructor ID</label>
         {{ form.requester_id_number }}
-        <span class="helptext">Must match an account already registered by an Admin under Users — unregistered IDs can't hold a reservation.</span>
         {% if form.requester_id_number.errors %}<div class="form-errors">{{ form.requester_id_number.errors|join:", " }}</div>{% endif %}
       </div>
     </div>
@@ -72,7 +69,7 @@
       <div class="form-group" id="student-count-group">
         <label class="form-label" for="{{ form.student_count.id_for_label }}">Number of students</label>
         {{ form.student_count }}
-        <span class="helptext" id="student-count-help">For <strong>Group of students</strong>, this also caps how many distinct IDs can check in with the shared code.</span>
+       
         {% if form.student_count.errors %}<div class="form-errors">{{ form.student_count.errors|join:", " }}</div>{% endif %}
       </div>
       <div class="form-group" id="pcs-requested-group" style="display:none;">
@@ -106,8 +103,8 @@
     </div>
 
     <div class="form-actions">
-      <button type="submit" class="action-btn primary">Log reservation</button>
-      <a href="{% url 'manage_requests' %}" class="action-btn">Cancel</a>
+      <button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-calendar"/></svg> Log reservation</button>
+      <a href="{% url 'manage_requests' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-x"/></svg> Cancel</a>
     </div>
   </form>
 </div>

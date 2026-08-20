@@ -24,13 +24,14 @@
   --ld-blue:var(--blue); --ld-blue-tint:var(--blue-dim);
   --ld-orange:var(--amber); --ld-orange-tint:var(--amber-dim);
   --ld-red:var(--red); --ld-red-tint:var(--red-dim);
+  --ld-gold:var(--maintenance); --ld-gold-tint:var(--maintenance-dim);
   font-family:'Inter',sans-serif; background:var(--ld-bg); color:var(--ld-text);
   margin:-20px; padding:20px; min-height:100%;
 }
 .ld h1,.ld h2,.ld h3{font-family:'Space Grotesk',sans-serif;}
 .ld a{color:var(--ld-blue); text-decoration:none;}
 .ld a:hover{text-decoration:underline;}
-.ld-card{background:var(--ld-card); border:1px solid var(--ld-border); border-radius:14px; padding:18px 20px; box-shadow:0 1px 2px rgba(0,0,0,.2);}
+.ld-card{background:var(--ld-card); border:1px solid var(--ld-border); border-radius:14px; padding:18px 20px; box-shadow:0 1px 2px rgba(0,0,0,.2); box-sizing:border-box;}
 
 .ld-metrics{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:20px;}
 .ld-metric{display:flex; align-items:center; gap:12px;}
@@ -40,12 +41,20 @@
 .ld-metric-val{font-size:22px; font-weight:700; letter-spacing:-0.01em; margin-top:2px;}
 .ld-metric-sub{font-size:11.5px; color:var(--ld-faint); margin-top:2px;}
 .ld-metric-icon{box-shadow:0 2px 8px rgba(0,0,0,.25);}
-.ic-purple{background:var(--ld-purple); color:#fff;}
-.ic-green{background:var(--ld-green); color:#0a0e12;}
-.ic-blue{background:var(--ld-blue); color:#fff;}
-.ic-orange{background:var(--ld-orange); color:#0a0e12;}
-.ic-red{background:var(--ld-red); color:#fff;}
-.ic-amber{background:var(--ld-orange); color:#0a0e12;}
+.ic-purple{background:linear-gradient(160deg, color-mix(in srgb, var(--ld-purple) 30%, white) 0%, color-mix(in srgb, var(--ld-purple) 60%, white) 55%, color-mix(in srgb, var(--ld-purple) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--ld-purple) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--ld-purple) 55%, black 35%);}
+.ic-green{background:linear-gradient(160deg, color-mix(in srgb, var(--ld-green) 30%, white) 0%, color-mix(in srgb, var(--ld-green) 60%, white) 55%, color-mix(in srgb, var(--ld-green) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--ld-green) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--ld-green) 55%, black 35%);}
+.ic-blue{background:linear-gradient(160deg, color-mix(in srgb, var(--ld-blue) 30%, white) 0%, color-mix(in srgb, var(--ld-blue) 60%, white) 55%, color-mix(in srgb, var(--ld-blue) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--ld-blue) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--ld-blue) 55%, black 35%);}
+.ic-orange{background:linear-gradient(160deg, color-mix(in srgb, var(--ld-orange) 30%, white) 0%, color-mix(in srgb, var(--ld-orange) 60%, white) 55%, color-mix(in srgb, var(--ld-orange) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--ld-orange) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--ld-orange) 55%, black 35%);}
+.ic-red{background:linear-gradient(160deg, color-mix(in srgb, var(--ld-red) 30%, white) 0%, color-mix(in srgb, var(--ld-red) 60%, white) 55%, color-mix(in srgb, var(--ld-red) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--ld-red) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--ld-red) 55%, black 35%);}
+.ic-amber{background:linear-gradient(160deg, color-mix(in srgb, var(--ld-orange) 30%, white) 0%, color-mix(in srgb, var(--ld-orange) 60%, white) 55%, color-mix(in srgb, var(--ld-orange) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--ld-orange) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--ld-orange) 55%, black 35%);}
+
+.ld-card[class*=" b-"],.ld-card[class^="b-"]{border-left-width:4px; border-left-style:solid;}
+.ld-card.b-green{border-left-color:var(--ld-green);}
+.ld-card.b-blue{border-left-color:var(--ld-blue);}
+.ld-card.b-amber{border-left-color:var(--ld-orange);}
+.ld-card.b-red{border-left-color:var(--ld-red);}
+.ld-card.b-gold{border-left-color:var(--ld-gold);}
+.ld-card.b-purple{border-left-color:var(--ld-purple);}
 
 .ld-header-status{display:flex; align-items:center; gap:18px; font-size:12.5px; color:var(--ld-dim);}
 .ld-header-status .lu-val{color:var(--ld-text); font-weight:600;}
@@ -59,8 +68,22 @@
 .ld-btn.primary{background:var(--ld-blue); border-color:var(--ld-blue); color:#0a0e12; font-weight:600;}
 .ld-btn:hover{border-color:var(--ld-faint);}
 
-.ld-row-3{display:grid; grid-template-columns:1.1fr 1fr 1fr; gap:16px; margin-bottom:16px;}
-.ld-row-main{display:grid; grid-template-columns:1fr 300px; gap:16px; margin-bottom:16px;}
+/* ROW OF 3 CARDS: stretch so all three match the tallest card's height,
+   and make each card a column flex box so its own content can anchor
+   top/bottom consistently regardless of how much content it has. */
+.ld-row-3{display:grid; grid-template-columns:1.1fr 1fr 1fr; gap:16px; margin-bottom:16px; align-items:stretch;}
+.ld-row-3 > .ld-card{display:flex; flex-direction:column; height:100%;}
+/* PC List now always takes the full row width — for BOTH admin and
+   in-charge — instead of sharing space with a fixed 220px "Lab
+   Information" sidebar. The old side-by-side split meant admin (who has
+   no lab pre-selected) saw a full-width table while in-charge (whose lab
+   is always pre-selected) was permanently squeezed into a narrower
+   column. Lab Information is now shown as a compact inline strip in the
+   PC List's own header instead of a competing column, so the table's
+   width stays flexible/full for every role and filter state. */
+.ld-row-main{margin-bottom:16px;}
+.ld-lab-info-strip{display:flex; flex-wrap:wrap; gap:6px 18px; font-size:11.5px; color:var(--ld-dim); margin:-6px 0 14px;}
+.ld-lab-info-strip span b{color:var(--ld-text); font-weight:600; margin-left:4px;}
 .ld-section-title{font-size:13px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--ld-text); margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;}
 .ld-section-title a{font-size:12px; font-weight:500; text-transform:none; letter-spacing:0;}
 
@@ -71,7 +94,12 @@
 .ld-usage-bar{height:8px; border-radius:4px; background:var(--ld-bg); overflow:hidden;}
 .ld-usage-fill{height:100%; background:var(--ld-green); border-radius:4px;}
 
-.ld-donut-wrap{display:flex; align-items:center; gap:20px;}
+/* Push the trailing "View all laboratories" link to the bottom of the
+   card so its baseline lines up with the bottom of the neighboring
+   cards even when there are few labs. */
+.ld-row-3 .ld-usage-list-footer{margin-top:auto; padding-top:12px;}
+
+.ld-donut-wrap{display:flex; align-items:center; gap:20px; flex:1;}
 .ld-donut-legend{flex:1; display:flex; flex-direction:column; gap:10px;}
 .ld-donut-legend-item{display:flex; align-items:center; gap:8px; font-size:12px;}
 .ld-donut-dot{width:9px; height:9px; border-radius:50%; flex-shrink:0;}
@@ -96,8 +124,14 @@
 .ld-pill.online{background:var(--ld-green); color:#0a0e12;}
 .ld-pill.in_use{background:var(--ld-orange); color:#0a0e12;}
 .ld-pill.offline{background:var(--ld-red); color:#fff;}
-.ld-pill.maintenance{background:#facc15; color:#0a0e12;}
+.ld-pill.maintenance{background:var(--ld-gold); color:#0a0e12;}
 .ld-pill.issue{background:var(--ld-purple); color:#fff;}
+
+/* Bleed the scrollable table area out to the card's own edges so the
+   horizontal scrollbar/content reaches "hanggang gilid" instead of
+   stopping short inside the card padding. */
+.ld-table-bleed{overflow-x:auto; margin:0 -20px; padding:0 20px;}
+.ld-table-bleed .ld-table{min-width:100%;}
 
 .ld-quick-action{display:flex; align-items:center; gap:10px; padding:10px 0; font-size:13px; color:var(--ld-text); border-bottom:1px solid var(--ld-border);}
 .ld-quick-action:last-child{border-bottom:none;}
@@ -111,13 +145,9 @@
 .ld-page-btns{display:flex; gap:6px;}
 .ld-page-btn{width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; border:1px solid var(--ld-border); color:var(--ld-text); font-size:12px;}
 .ld-page-btn.active{background:var(--ld-blue); border-color:var(--ld-blue); color:#0a0e12; font-weight:700;}
-html[data-theme="light"] .ic-green,
-html[data-theme="light"] .ic-orange,
-html[data-theme="light"] .ic-amber,
 html[data-theme="light"] .ld-btn.primary,
 html[data-theme="light"] .ld-pill.online,
 html[data-theme="light"] .ld-pill.in_use,
-html[data-theme="light"] .ld-pill.maintenance,
 html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
 .ld-page-btn.disabled{opacity:.35; pointer-events:none;}
 
@@ -125,7 +155,6 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
 
 @media (max-width:1200px) and (min-width:861px){
   .ld-row-3{grid-template-columns:1fr;}
-  .ld-row-main{grid-template-columns:1fr;}
   .ld-filter-form{grid-template-columns:1fr 1fr;}
 }
 /* Shrink sizing on tablets; below that there's no room for 3 side-by-side
@@ -133,6 +162,7 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
 @media (max-width:860px){
   .ld{ margin:-14px; padding:14px; }
   .ld-card{ padding:12px 14px; border-radius:12px; }
+  .ld-table-bleed{ margin:0 -14px; padding:0 14px; }
   .ld-metrics{ grid-template-columns:repeat(2,1fr); gap:8px; }
   .ld-metric-icon{ width:28px; height:28px; }
   .ld-metric-icon svg{ width:14px; height:14px; }
@@ -141,7 +171,8 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
   .ld-metric-sub{ font-size:9px; }
   .ld-filter-form{ grid-template-columns:1fr 1fr; gap:8px; }
   .ld-row-3{ grid-template-columns:1fr; gap:10px; }
-  .ld-row-main{ grid-template-columns:1fr; gap:8px; }
+  .ld-row-main{ margin-bottom:8px; }
+  .ld-lab-info-strip{ gap:4px 14px; margin-top:-2px; margin-bottom:12px; }
   .ld-donut-wrap{ flex-direction:column; align-items:stretch; }
   .ld-section-title{ font-size:11px; }
   .ld-table{ font-size:10.5px; }
@@ -153,33 +184,21 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
   <div class="page-header" style="margin-bottom:18px;">
     <div>
       <h1 style="font-size:20px; font-weight:600; margin:0;">PC Power Status</h1>
-      <div class="sub" style="color:var(--ld-dim); font-size:13px; margin-top:4px;">
-        Real-time monitoring of all computers in the laboratory &middot;
-        background check every {{ auto_check_interval_seconds }}s, live view refreshes every 10s
-      </div>
     </div>
-    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
-      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+        
         <a href="{% url 'override_checkin' %}" class="ld-btn js-modal-link">Override Check-in</a>
         <a href="{% url 'manual_unlock' %}" class="ld-btn js-modal-link">Manual Unlock (Guest)</a>
-        <form method="post" action="{% url 'pc_status_refresh' %}"
-              onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Check all PC status now?', text: 'This will ping every PC across all labs right away — it may take a few seconds.', icon: 'question', confirmButtonText: 'Yes, check now', confirmButtonColor: '#3ed6c4'}); return false;">
+        <form method="post" action="{% url 'pc_status_refresh' %}" id="pcStatusRefreshForm"
+              onsubmit="event.preventDefault(); confirmAndCheckPcStatusNow(this); return false;">
           {% csrf_token %}
-          <button type="submit" class="ld-btn primary">Check now</button>
+          <button type="submit" class="ld-btn primary" id="pcStatusRefreshBtn">Check now</button>
         </form>
-      </div>
-      <div class="ld-header-status">
-        <span>Last Updated: <span class="lu-val" id="ldLastUpdated">—</span></span>
-        <span class="ld-auto-refresh">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Auto Refresh Every 10 seconds
-        </span>
-      </div>
     </div>
   </div>
 
   <div class="ld-metrics">
-    <div class="ld-card ld-metric">
+    <div class="ld-card ld-metric b-green">
       <div class="ld-metric-icon ic-green">
         <svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="4" width="19" height="12" rx="1.5" stroke="currentColor" stroke-width="1.8"/><path d="M9 20h6M12 16v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       </div>
@@ -189,7 +208,7 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
         <div class="ld-metric-sub">{{ online_pcs_pct }}% of total</div>
       </div>
     </div>
-    <div class="ld-card ld-metric">
+    <div class="ld-card ld-metric b-blue">
       <div class="ld-metric-icon ic-blue">
         <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8.5 8.5a5 5 0 1 0 7 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       </div>
@@ -199,7 +218,7 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
         <div class="ld-metric-sub">{{ available_pct }}% of total</div>
       </div>
     </div>
-    <div class="ld-card ld-metric">
+    <div class="ld-card ld-metric b-amber">
       <div class="ld-metric-icon ic-amber">
         <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       </div>
@@ -209,7 +228,7 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
         <div class="ld-metric-sub">{{ in_use_pct }}% of total</div>
       </div>
     </div>
-    <div class="ld-card ld-metric">
+    <div class="ld-card ld-metric b-red">
       <div class="ld-metric-icon ic-red">
         <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8.5 8.5a5 5 0 1 0 7 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       </div>
@@ -219,8 +238,8 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
         <div class="ld-metric-sub">{{ offline_pct }}% of total</div>
       </div>
     </div>
-    <div class="ld-card ld-metric">
-      <div class="ld-metric-icon" style="background:rgba(250,204,21,0.14); color:#facc15;">
+    <div class="ld-card ld-metric b-gold">
+      <div class="ld-metric-icon" style="background:var(--ld-gold-tint); color:var(--ld-gold);">
         <svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 0 0 1.4 0l1.6-1.6a1 1 0 0 1 1.4 0l.2.2a1 1 0 0 1 0 1.4l-1.6 1.6a1 1 0 0 0 0 1.4l.5.5a1 1 0 0 0 1.4 0l1.6-1.6a1 1 0 0 1 1.4 0l.2.2a1 1 0 0 1 0 1.4l-3.6 3.6a3 3 0 0 1-4-4l3.5-3.1Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="m11 13-6.5 6.5a1.5 1.5 0 0 1-2.1-2.1L9 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
       <div>
@@ -229,7 +248,7 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
         <div class="ld-metric-sub">{{ maintenance_pct }}% of total</div>
       </div>
     </div>
-    <div class="ld-card ld-metric">
+    <div class="ld-card ld-metric b-purple">
       <div class="ld-metric-icon ic-purple">
         <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
@@ -269,7 +288,7 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
         <label class="ld-label" for="q">Search</label>
         <input type="text" name="q" id="q" class="ld-input" placeholder="Search PC ID or student name..." value="{{ search_query }}">
       </div>
-      <div><button type="submit" class="ld-btn primary">Filter</button></div>
+      <div><button type="submit" class="ld-btn primary"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#icon-filter"/></svg> Filter</button></div>
       {% if filtered %}
         <div><a href="{% url 'pc_status' %}" class="ld-btn">Clear</a></div>
       {% endif %}
@@ -288,6 +307,7 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
     {% for entry in labs_usage %}
       <div class="ld-card" style="margin-bottom:16px;">
         <div class="ld-section-title">{{ entry.lab.name }}<span style="color:var(--ld-dim); font-weight:500; text-transform:none;">{{ entry.logs|length }} check-in{{ entry.logs|length|pluralize }}</span></div>
+        <div class="ld-table-bleed">
         <table class="ld-table">
           <thead><tr><th>PC ID</th><th>Used by</th><th>ID number</th><th>Time</th></tr></thead>
           <tbody>
@@ -301,6 +321,7 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
             {% endfor %}
           </tbody>
         </table>
+        </div>
       </div>
     {% empty %}
       <div class="ld-card"><p class="ld-empty">No PCs were used on {{ selected_day }}{% if selected_lab %} for this lab{% endif %}.</p></div>
@@ -311,18 +332,20 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
   <div class="ld-row-3">
     <div class="ld-card">
       <div class="ld-section-title">Live Lab Usage</div>
-      {% for entry in lab_usage %}
-        <div class="ld-usage-row">
-          <div class="ld-usage-top">
-            <span>{{ entry.lab.name }}</span>
-            <span class="cnt">{{ entry.in_use }} / {{ entry.total }}</span>
+      <div>
+        {% for entry in lab_usage %}
+          <div class="ld-usage-row">
+            <div class="ld-usage-top">
+              <span>{{ entry.lab.name }}</span>
+              <span class="cnt">{{ entry.in_use }} / {{ entry.total }}</span>
+            </div>
+            <div class="ld-usage-bar"><div class="ld-usage-fill" style="width:{{ entry.pct }}%;"></div></div>
           </div>
-          <div class="ld-usage-bar"><div class="ld-usage-fill" style="width:{{ entry.pct }}%;"></div></div>
-        </div>
-      {% empty %}
-        <p class="ld-empty">No labs set up yet.</p>
-      {% endfor %}
-      <div style="margin-top:12px;"><a href="{% url 'lab_list' %}">View all laboratories →</a></div>
+        {% empty %}
+          <p class="ld-empty">No labs set up yet.</p>
+        {% endfor %}
+      </div>
+      <div class="ld-usage-list-footer"><a href="{% url 'lab_list' %}">View all laboratories →</a></div>
     </div>
 
     <div class="ld-card">
@@ -330,32 +353,39 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
       <div class="ld-donut-wrap">
         <div style="width:110px; height:110px; flex-shrink:0;"><canvas id="statusDonut"></canvas></div>
         <div class="ld-donut-legend">
-          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:#f2a93b"></span><span class="lbl">In Use</span><span class="val">{{ in_use_pct }}% ({{ in_use_count }})</span></div>
-          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:#5b9dff"></span><span class="lbl">Available</span><span class="val">{{ available_pct }}% ({{ available_count }})</span></div>
-          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:#ff5d5d"></span><span class="lbl">Offline</span><span class="val">{{ offline_pct }}% ({{ offline_count }})</span></div>
-          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:#facc15"></span><span class="lbl">Under Maintenance</span><span class="val">{{ maintenance_pct }}% ({{ maintenance_count }})</span></div>
-          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:#a78bfa"></span><span class="lbl">Has Issue</span><span class="val">{{ issue_pct }}% ({{ issue_count }})</span></div>
+          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:var(--ld-orange)"></span><span class="lbl">In Use</span><span class="val">{{ in_use_pct }}% ({{ in_use_count }})</span></div>
+          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:var(--ld-blue)"></span><span class="lbl">Available</span><span class="val">{{ available_pct }}% ({{ available_count }})</span></div>
+          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:var(--ld-red)"></span><span class="lbl">Offline</span><span class="val">{{ offline_pct }}% ({{ offline_count }})</span></div>
+          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:var(--ld-gold)"></span><span class="lbl">Under Maintenance</span><span class="val">{{ maintenance_pct }}% ({{ maintenance_count }})</span></div>
+          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:var(--ld-purple)"></span><span class="lbl">Has Issue</span><span class="val">{{ issue_pct }}% ({{ issue_count }})</span></div>
         </div>
       </div>
     </div>
 
-    <div class="ld-card">
-      <div class="ld-section-title">Recent Activities<a href="{% url 'pc_activity_log' %}">View all</a></div>
-      {% for a in recent_activities %}
-        <div class="ld-feed-item">
-          <div class="ld-feed-icon ic-blue">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </div>
-          <div style="flex:1; min-width:0;">
-            <div class="ld-feed-title">{{ a.pc.pc_id }} unlocked by {% firstof a.actor.display_name a.target_identifier "—" %}</div>
-            <div class="ld-feed-sub">{{ a.pc.lab.name }}</div>
-          </div>
-          <div class="ld-feed-time">{{ a.created_at|timesince }} ago</div>
+     <div class="ld-card">
+        <div class="ld-section-title">Quick Actions</div>
+        <div>
+          <a href="#" class="ld-quick-action" onclick="event.preventDefault(); confirmAndCheckPcStatusNow(document.getElementById('pcStatusRefreshForm'));">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Check All PCs
+          </a>
+          <a href="{% url 'pc_activity_log' %}" class="ld-quick-action">
+            <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.8"/></svg>
+            View Activity Log
+          </a>
+          <a href="{% url 'pc_status_export' %}?lab={{ selected_lab }}&status={{ selected_status }}&q={{ search_query }}&format=pdf" class="ld-quick-action">
+            <svg viewBox="0 0 24 24"><use href="#icon-pdf-doc"/></svg>
+            Export Report (PDF)
+          </a>
+          <a href="{% url 'pc_status_export' %}?lab={{ selected_lab }}&status={{ selected_status }}&q={{ search_query }}&format=excel" class="ld-quick-action">
+            <svg viewBox="0 0 24 24"><use href="#icon-excel-doc"/></svg>
+            Export Report (Excel)
+          </a>
         </div>
-      {% empty %}
-        <p class="ld-empty">No recent activity yet.</p>
-      {% endfor %}
-    </div>
+        <div style="margin-top:8px; font-size:11px; color:var(--ld-faint); line-height:1.5;">
+          Wake-on-LAN, remote shutdown and restart aren't wired up yet — they'd need an always-on agent on each PC. Ask if you'd like that built next.
+        </div>
+      </div>
   </div>
 
   <div class="ld-row-main">
@@ -364,8 +394,15 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
         PC List{% if selected_lab_obj %} — {{ selected_lab_obj.name }}{% endif %}
         <span style="color:var(--ld-dim); font-weight:500; text-transform:none;">{{ total_filtered }} PC{{ total_filtered|pluralize }}</span>
       </div>
+      {% if selected_lab_obj %}
+        <div class="ld-lab-info-strip">
+          <span>Laboratory<b>{{ selected_lab_obj.name }}</b></span>
+          <span>Total Computers<b>{{ selected_lab_total_pcs }}</b></span>
+          <span>Location<b>{{ selected_lab_obj.location|default:"—" }}</b></span>
+        </div>
+      {% endif %}
       {% if page_obj.object_list %}
-        <div style="overflow-x:auto;">
+        <div class="ld-table-bleed">
         <table class="ld-table">
           <thead>
             <tr>
@@ -380,7 +417,7 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
                 <td>{{ pc.lab.name }}</td>
                 <td><span class="ld-pill {{ pc.status }}" data-role="status-pill">{{ pc.get_status_display }}</span></td>
                 <td data-role="current-user">{% if pc.current_user %}{{ pc.current_user.display_name }}{% elif pc.current_guest_name %}{{ pc.current_guest_name }} <span class="helptext">(Guest)</span>{% else %}—{% endif %}</td>
-                <td>{% if pc.current_guest_name %}Guest / Walk-in{% elif pc.current_session %}{{ pc.current_session.get_requester_type_display }}{% else %}—{% endif %}</td>
+                <td>{{ pc.reservation_type_label|default:"—" }}</td>
                 <td>{% if pc.login_time %}{{ pc.login_time|time:"g:i A" }}{% else %}—{% endif %}</td>
                 <td>{% if pc.login_time %}{{ pc.login_time|timesince }}{% else %}—{% endif %}</td>
                 <td>{{ pc.last_active|timesince|default:"—" }}{% if pc.last_active %} ago{% endif %}</td>
@@ -391,16 +428,9 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
                     <a href="{% url 'pc_edit' pc.pk %}" class="ld-btn js-modal-link" style="padding:5px 10px; font-size:11.5px;">Edit</a>
                   {% endif %}
                   {% if pc.status == 'in_use' %}
-                    <form method="post" action="{% url 'pc_force_release' pc.pk %}" style="display:inline;"
-                          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {
-                            title: 'Force-release {{ pc.pc_id }}?',
-                            text: 'Use this only if the PC is stuck showing \'in use\' but nobody is actually on it (agent crash, power loss, etc.). This does NOT send any warning to the PC screen.',
-                            icon: 'warning',
-                            confirmButtonText: 'Yes, release it',
-                            confirmButtonColor: '#e0a83e'
-                          }); return false;">
+                    <form method="post" action="{% url 'pc_force_release' pc.pk %}" style="display:inline;" onsubmit="return confirm('Release {{ pc.pc_id }}? This clears its current user/session — use this if it\'s stuck showing in use when nobody is actually on it.');">
                       {% csrf_token %}
-                      <button type="submit" class="ld-btn" style="padding:5px 10px; font-size:11.5px;">Force Release</button>
+                      <button type="submit" class="ld-btn" style="padding:5px 10px; font-size:11.5px; color:var(--ld-red);">Force Release</button>
                     </form>
                   {% endif %}
                 </td>
@@ -439,40 +469,6 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
         <p class="ld-empty">No PCs match this filter.</p>
       {% endif %}
     </div>
-
-    <div>
-      <div class="ld-card" style="margin-bottom:16px;">
-        <div class="ld-section-title">Quick Actions</div>
-        <a href="#" class="ld-quick-action" onclick="event.preventDefault(); document.querySelector('form[action=\'{% url 'pc_status_refresh' %}\']').requestSubmit();">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Check All PCs
-        </a>
-        <a href="{% url 'pc_activity_log' %}" class="ld-quick-action">
-          <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.8"/></svg>
-          View Activity Log
-        </a>
-        <a href="{% url 'pc_status_export' %}?lab={{ selected_lab }}&status={{ selected_status }}&q={{ search_query }}&format=pdf" class="ld-quick-action">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Export Report (PDF)
-        </a>
-        <a href="{% url 'pc_status_export' %}?lab={{ selected_lab }}&status={{ selected_status }}&q={{ search_query }}&format=excel" class="ld-quick-action">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Export Report (Excel)
-        </a>
-        <div style="margin-top:8px; font-size:11px; color:var(--ld-faint); line-height:1.5;">
-          Wake-on-LAN, remote shutdown and restart aren't wired up yet — they'd need an always-on agent on each PC. Ask if you'd like that built next.
-        </div>
-      </div>
-
-      {% if selected_lab_obj %}
-        <div class="ld-card">
-          <div class="ld-section-title">Lab Information</div>
-          <div class="ld-info-row"><span>Laboratory</span><span>{{ selected_lab_obj.name }}</span></div>
-          <div class="ld-info-row"><span>Total Computers</span><span>{{ selected_lab_total_pcs }}</span></div>
-          <div class="ld-info-row"><span>Location</span><span>{{ selected_lab_obj.location|default:"—" }}</span></div>
-        </div>
-      {% endif %}
-    </div>
   </div>
 
   {% endif %}
@@ -482,15 +478,20 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
 <script>
 (function () {
   {% if not day_mode %}
+  // Pull colors from the live theme tokens (not hardcoded hex) so the
+  // chart matches whichever theme — light or dark — is active.
+  var themeVar = function (name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  };
   Chart.defaults.font.family = 'Inter, sans-serif';
-  Chart.defaults.color = '#8b98a3';
+  Chart.defaults.color = themeVar('--text-dim');
   new Chart(document.getElementById('statusDonut'), {
     type: 'doughnut',
     data: {
       labels: ['In Use', 'Available', 'Offline', 'Under Maintenance', 'Has Issue'],
       datasets: [{
         data: [{{ in_use_count }}, {{ available_count }}, {{ offline_count }}, {{ maintenance_count }}, {{ issue_count }}],
-        backgroundColor: ['#f2a93b', '#5b9dff', '#ff5d5d', '#facc15', '#a78bfa'],
+        backgroundColor: [themeVar('--amber'), themeVar('--blue'), themeVar('--red'), themeVar('--maintenance'), themeVar('--purple')],
         borderWidth: 0,
       }]
     },
@@ -498,6 +499,77 @@ html[data-theme="light"] .ld-page-btn.active{ color:#fff; }
   });
   {% endif %}
 })();
+
+// Manual "Check now" — pings every PC right away over AJAX (no page
+// navigation), then re-pulls the live snapshot via refreshPcStatuses()
+// (see dashboard.js) so every row on screen — not just whatever the
+// background poller has caught up to yet — reflects the full check.
+// Because this never navigates, the page's scroll position is left
+// exactly where the user was.
+function confirmAndCheckPcStatusNow(form) {
+  var doCheck = function () {
+    var btn = document.getElementById('pcStatusRefreshBtn');
+    var originalLabel = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Checking…'; }
+
+    var formData = new FormData(form);
+    fetch(form.action, {
+      method: 'POST',
+      body: formData,
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (typeof refreshPcStatuses === 'function') refreshPcStatuses();
+        if (typeof Swal !== 'undefined') {
+          var theme = compulabSwalTheme();
+          Swal.fire({
+            toast: true, position: 'top-end',
+            icon: data.level || 'success',
+            title: data.message || 'Check complete.',
+            showConfirmButton: false, timer: 4000, timerProgressBar: true,
+            background: theme.background, color: theme.color,
+          });
+        }
+      })
+      .catch(function () {
+        if (typeof Swal !== 'undefined') {
+          var theme = compulabSwalTheme();
+          Swal.fire({
+            toast: true, position: 'top-end', icon: 'error',
+            title: 'Could not check PC status right now — please try again.',
+            showConfirmButton: false, timer: 4000, timerProgressBar: true,
+            background: theme.background, color: theme.color,
+          });
+        }
+      })
+      .finally(function () {
+        if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+      });
+  };
+
+  if (typeof Swal === 'undefined') {
+    if (confirm('Check all PC status now? This will ping every PC across all labs right away — it may take a few seconds.')) doCheck();
+    return;
+  }
+  var theme = compulabSwalTheme();
+  Swal.fire({
+    title: 'Check all PC status now?',
+    text: 'This will ping every PC across all labs right away — it may take a few seconds.',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, check now',
+    cancelButtonText: 'Cancel',
+    confirmButtonColor: themeVarSafe('--green'),
+    background: theme.background, color: theme.color,
+  }).then(function (result) {
+    if (result.isConfirmed) doCheck();
+  });
+}
+
+function themeVarSafe(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
 </script>
 
 <script src="{% static 'js/dashboard.js' %}"></script>

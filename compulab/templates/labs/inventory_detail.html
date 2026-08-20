@@ -9,7 +9,7 @@
     <div class="sub">{{ item.category }} · {{ item.lab.name }}</div>
   </div>
   {% if request.user.role == 'admin' %}
-    <a href="{% url 'inventory_update' item.pk %}" class="action-btn primary js-modal-link">Edit item</a>
+    <a href="{% url 'inventory_update' item.pk %}" class="action-btn primary js-modal-link"><svg class="btn-icon"><use href="#icon-edit"/></svg> Edit item</a>
   {% endif %}
 </div>
 
@@ -27,7 +27,7 @@
   <div class="card">
     <div class="section-title">Update status</div>
     <form method="post" action="{% url 'inventory_status_update' item.pk %}" style="display:flex; gap:8px; align-items:center;"
-          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Update item status?', text: 'The status of this inventory item will be changed.', icon: 'question', confirmButtonText: 'Yes, update', confirmButtonColor: '#3ed6c4'}); return false;">
+          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Update item status?', text: 'The status of this inventory item will be changed.', icon: 'question', confirmButtonText: 'Yes, update', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;">
       {% csrf_token %}
       <input type="hidden" name="next" value="detail">
       <select name="status" class="form-control" style="max-width:220px;">
@@ -35,14 +35,14 @@
         <option value="under_repair" {% if item.status == 'under_repair' %}selected{% endif %}>Under Repair</option>
         <option value="retired" {% if item.status == 'retired' %}selected{% endif %}>Retired</option>
       </select>
-      <button type="submit" class="action-btn primary">Update status</button>
+      <button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-check"/></svg> Update status</button>
     </form>
   </div>
 
   <div class="card">
     <div class="section-title">
       Open issues
-      <a href="{% url 'equipment_issue_report' %}?equipment={{ item.pk }}" class="action-btn small">Report issue</a>
+      <a href="{% url 'equipment_issue_report' %}?equipment={{ item.pk }}" class="action-btn small"><svg class="btn-icon"><use href="#icon-wrench"/></svg> Report issue</a>
     </div>
     {% for issue in open_issues %}
       <div class="alert-item" style="padding:10px 0; border-bottom:1px solid #f0f0f0;">
@@ -50,7 +50,7 @@
           <div style="font-weight:500; font-size:13px">{{ issue.description|truncatechars:80 }}</div>
           <div style="color:#888; font-size:12px">reported {{ issue.date_reported|timesince }} ago</div>
         </div>
-        <a href="{% url 'equipment_issue_detail' issue.pk %}" class="action-btn small js-modal-link">View</a>
+        <a href="{% url 'equipment_issue_detail' issue.pk %}" class="action-btn small js-modal-link"><svg class="btn-icon"><use href="#icon-eye"/></svg> View</a>
       </div>
     {% empty %}
       <p class="empty">No open issues for this item.</p>
@@ -61,7 +61,7 @@
 <div class="card">
   <div class="section-title">
     Recent maintenance
-    {% if request.user.role == 'admin' %}<a href="{% url 'maintenance_schedule' %}" class="action-btn small js-modal-link">Schedule maintenance</a>{% endif %}
+    {% if request.user.role == 'admin' %}<a href="{% url 'maintenance_schedule' %}" class="action-btn small js-modal-link"><svg class="btn-icon"><use href="#icon-wrench"/></svg> Schedule maintenance</a>{% endif %}
   </div>
   <table class="table">
     <thead><tr><th>Date</th><th>Technician</th><th>Status</th><th>Notes</th></tr></thead>
@@ -87,7 +87,7 @@
 </div>
 
 <div class="card">
-  <a href="{% url 'inventory' %}" class="action-btn">← Back to inventory</a>
+  <a href="{% url 'inventory' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg> ← Back to inventory</a>
 </div>
 
 {% endblock %}

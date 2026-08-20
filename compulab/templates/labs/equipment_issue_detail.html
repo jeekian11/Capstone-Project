@@ -28,20 +28,20 @@
   {% else %}
     <div class="section-title" style="margin-top:18px">Resolve this issue</div>
     <form method="post" action="{% url 'equipment_issue_resolve' equipment_issue.pk %}"
-          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Mark as resolved?', text: 'This equipment issue will be marked as resolved.', icon: 'question', confirmButtonText: 'Yes, mark resolved', confirmButtonColor: '#3ed6c4'}); return false;">
+          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Mark as resolved?', text: 'This equipment issue will be marked as resolved.', icon: 'question', confirmButtonText: 'Yes, mark resolved', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;">
       {% csrf_token %}
       <div class="form-group">
         <label class="form-label" for="resolution_notes">Resolution notes</label>
         <textarea name="resolution_notes" id="resolution_notes" class="form-control" rows="4" placeholder="What was done to resolve this?" required></textarea>
       </div>
       <div class="form-actions">
-        <button type="submit" class="action-btn primary">Mark as resolved</button>
+        <button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-check"/></svg> Mark as resolved</button>
       </div>
     </form>
   {% endif %}
 
   <div class="form-actions" style="margin-top:20px">
-    <a href="{% url 'equipment_issues' %}" class="action-btn">← Back to reported issues</a>
+    <a href="{% url 'equipment_issues' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg> ← Back to reported issues</a>
   </div>
 </div>
 

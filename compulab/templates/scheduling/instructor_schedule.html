@@ -16,10 +16,10 @@
 .is-metric{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; display:flex; align-items:flex-start; gap:12px; min-width:0;}
 .is-metric-icon{ width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .is-metric-icon svg{ width:18px; height:18px; }
-.is-metric.green .is-metric-icon{ background:rgba(62,214,196,0.14); color:var(--green,#3ed6c4); }
-.is-metric.blue .is-metric-icon{ background:var(--blue-dim,rgba(91,157,255,0.14)); color:var(--blue); }
-.is-metric.amber .is-metric-icon{ background:var(--amber-dim,rgba(242,169,59,0.14)); color:var(--amber); }
-.is-metric.purple .is-metric-icon{ background:var(--purple-dim,rgba(167,139,250,0.14)); color:var(--purple); }
+.is-metric.green .is-metric-icon{ background:linear-gradient(160deg, color-mix(in srgb, #2dd4bf 30%, white) 0%, color-mix(in srgb, #2dd4bf 60%, white) 55%, color-mix(in srgb, #2dd4bf 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, #2dd4bf 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, #2dd4bf 55%, black 35%); }
+.is-metric.blue .is-metric-icon{ background:linear-gradient(160deg, color-mix(in srgb, var(--blue) 30%, white) 0%, color-mix(in srgb, var(--blue) 60%, white) 55%, color-mix(in srgb, var(--blue) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--blue) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--blue) 55%, black 35%); }
+.is-metric.amber .is-metric-icon{ background:linear-gradient(160deg, color-mix(in srgb, var(--amber) 30%, white) 0%, color-mix(in srgb, var(--amber) 60%, white) 55%, color-mix(in srgb, var(--amber) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--amber) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--amber) 55%, black 35%); }
+.is-metric.purple .is-metric-icon{ background:linear-gradient(160deg, color-mix(in srgb, var(--purple) 30%, white) 0%, color-mix(in srgb, var(--purple) 60%, white) 55%, color-mix(in srgb, var(--purple) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--purple) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--purple) 55%, black 35%); }
 .is-metric-body{ min-width:0; }
 .is-metric-label{ font-size:12px; color:var(--text-dim); font-weight:500; }
 .is-metric-val{ font-family:var(--font-display); font-size:24px; font-weight:700; letter-spacing:-0.01em; color:var(--text); margin-top:2px; }
@@ -71,8 +71,63 @@
 #calendar .fc-toolbar-title{font-family:var(--font-display); font-size:16px; font-weight:600; color:var(--text);}
 #calendar .fc-col-header-cell-cushion, #calendar .fc-daygrid-day-number{color:var(--text-dim); text-decoration:none; font-size:12px;}
 #calendar .fc-event{border:none; font-size:11px; padding:1px 4px; cursor:pointer;}
+#calendar .fc-event,
+#calendar .fc-daygrid-event,
+#calendar .fc-h-event,
+#calendar .fc-daygrid-event-dot{
+  border:none !important;
+  box-shadow:none !important;
+}
+#calendar a,
+#calendar .fc-event,
+#calendar .fc-daygrid-event{
+  outline:none !important;
+}
+#calendar a:focus,
+#calendar a:focus-visible,
+#calendar .fc-event:focus,
+#calendar .fc-event:focus-visible{
+  outline:none !important;
+  box-shadow:none !important;
+}
 #calendar .fc-button{text-transform:capitalize; font-family:var(--font-body); font-size:12.5px; box-shadow:none !important;}
 #calendar a{color:inherit;}
+
+/* Today cell: rendered as an inset rounded "card" that sits apart from
+   the plain grid lines, with a bold accent-colored date number — plus a
+   small "TODAY" badge in the opposite corner from the date number so
+   they never overlap. Same treatment as the admin/in-charge Schedule
+   calendar. */
+#calendar .fc-daygrid-day.fc-day-today{
+  position:relative;
+  z-index:1;
+}
+#calendar .fc-daygrid-day.fc-day-today .fc-daygrid-day-frame{
+  margin:3px;
+  border-radius:8px;
+  background:var(--green-dim);
+  position:relative;
+}
+#calendar .fc-daygrid-day.fc-day-today .fc-daygrid-day-number{
+  color:var(--topbar-accent) !important;
+  font-weight:700;
+  font-size:15px;
+}
+.fc-today-badge{
+  position:absolute; top:5px; left:6px;
+  background:var(--topbar-accent); color:var(--topbar-ink-1);
+  font-size:8.5px; font-weight:700; letter-spacing:.04em;
+  padding:1px 6px; border-radius:8px; text-transform:uppercase;
+  z-index:2; pointer-events:none;
+}
+#calendar .fc-event.fc-event-today{
+  font-weight:700;
+  border:none !important;
+  box-shadow:none !important;
+}
+#calendar .fc-event.fc-event-past{
+  opacity:0.5;
+}
 
 .is-modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.55); display:none; align-items:center; justify-content:center; z-index:1000;}
 .is-modal-backdrop.open{display:flex;}
@@ -94,7 +149,7 @@
     <h1>Scheduling</h1>
     <div class="sub">Your reservations and requests — click a date to reserve, click a session for details</div>
   </div>
- <a href="{% url 'instructor_request_new' %}" class="action-btn primary js-modal-link">+ New Reservation</a> 
+ <a href="{% url 'instructor_request_new' %}" class="action-btn primary js-modal-link"><svg class="btn-icon"><use href="#icon-plus"/></svg>New Reservation</a> 
 </div>
 
 <div class="is-metrics">
@@ -159,7 +214,7 @@
     </div>
 
     <div class="is-panel">
-      <div class="is-panel-title">Upcoming (Next 7 Days) <a href="#" class="is-action">View all →</a></div>
+      <div class="is-panel-title">Upcoming (Next 7 Days)</a></div>
       {% for s in upcoming %}
         <div class="is-up-item">
           <div class="is-up-top"><span class="is-up-dot" style="background:#5b9dff;"></span><span class="is-up-title">{{ s.subject }}</span></div>
@@ -190,6 +245,10 @@ document.addEventListener('DOMContentLoaded', function () {
   var events = {{ calendar_events_json|safe }};
   var modal = document.getElementById('isModal');
 
+  function localDateKey(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
   var calendar = new FullCalendar.Calendar(calEl, {
     initialView: 'dayGridMonth',
     initialDate: '{{ initial_date }}',
@@ -197,6 +256,30 @@ document.addEventListener('DOMContentLoaded', function () {
     dayMaxEvents: false,
     headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listMonth' },
     events: events,
+    dayCellDidMount: function (arg) {
+      var today = new Date(); today.setHours(0, 0, 0, 0);
+      if (arg.date < today) {
+        arg.el.style.cursor = 'default';
+        var numEl0 = arg.el.querySelector('.fc-daygrid-day-number');
+        if (numEl0) { numEl0.style.opacity = '0.55'; }
+      }
+      if (arg.isToday) {
+        var badge = document.createElement('span');
+        badge.className = 'fc-today-badge';
+        badge.textContent = 'Today';
+        var frame = arg.el.querySelector('.fc-daygrid-day-frame') || arg.el;
+        frame.appendChild(badge);
+      }
+    },
+    eventDidMount: function (arg) {
+      var startKey = (arg.event.startStr || '').slice(0, 10);
+      var todayKey = localDateKey(new Date());
+      if (startKey === todayKey) {
+        arg.el.classList.add('fc-event-today');
+      } else if (startKey < todayKey) {
+        arg.el.classList.add('fc-event-past');
+      }
+    },
     dateClick: function (info) {
       var today = new Date(); today.setHours(0, 0, 0, 0);
       if (info.date < today) return;

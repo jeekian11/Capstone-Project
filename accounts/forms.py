@@ -105,14 +105,13 @@ class AdminUserCreateForm(forms.ModelForm):
             cleaned['password1'] = ''
             cleaned['password2'] = ''
             cleaned['email'] = None
+            cleaned['assigned_lab'] = None
             if not id_number:
                 self.add_error('id_number', 'Student ID is required for Student accounts.')
             if not cleaned.get('department'):
                 self.add_error('department', 'Department is required for Student accounts.')
             if not cleaned.get('year_level'):
                 self.add_error('year_level', 'Year Level is required for Student accounts.')
-            if not cleaned.get('assigned_lab'):
-                self.add_error('assigned_lab', 'Assigned Laboratory Room is required for Student accounts.')
         else:
             p1 = cleaned.get('password1')
             p2 = cleaned.get('password2')
@@ -143,6 +142,11 @@ class AdminUserCreateForm(forms.ModelForm):
                 cleaned['department'] = ''
                 cleaned['year_level'] = None
                 cleaned['id_number'] = ''
+            # Assigned Lab is only used by Lab In-Charge accounts — clear
+            # any leftover value if the role was switched away from
+            # Lab In-Charge after a lab was already picked.
+            if role != 'incharge':
+                cleaned['assigned_lab'] = None
             # Email format + uniqueness for this role is otherwise enforced
             # automatically: EmailField validates format, and the model
             # field's unique=True triggers Django's built-in uniqueness
@@ -221,17 +225,20 @@ class AdminUserUpdateForm(forms.ModelForm):
             # None, never '', so multiple Students don't collide on the
             # unique constraint.
             cleaned['email'] = None
+            cleaned['assigned_lab'] = None
             if not id_number:
                 self.add_error('id_number', 'Student ID is required for Student accounts.')
             if not cleaned.get('department'):
                 self.add_error('department', 'Department is required for Student accounts.')
             if not cleaned.get('year_level'):
                 self.add_error('year_level', 'Year Level is required for Student accounts.')
-            if not cleaned.get('assigned_lab'):
-                self.add_error('assigned_lab', 'Assigned Laboratory Room is required for Student accounts.')
         else:
             if not email:
                 self.add_error('email', 'Email is required for this role.')
+            # Assigned Lab is only used by Lab In-Charge accounts — clear
+            # any leftover value for Admin/Instructor accounts.
+            if role != 'incharge':
+                cleaned['assigned_lab'] = None
             p1 = cleaned.get('password1')
             p2 = cleaned.get('password2')
             if p1 or p2:

@@ -22,8 +22,8 @@
   <form method="post">
     {% csrf_token %}
     <div class="form-actions">
-      <button type="submit" class="action-btn danger">Yes, delete lab</button>
-      <a href="{% url 'lab_list' %}" class="action-btn">Cancel</a>
+      <button type="submit" class="action-btn danger"><svg class="btn-icon"><use href="#icon-trash"/></svg> Yes, delete lab</button>
+      <a href="{% url 'lab_list' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-x"/></svg> Cancel</a>
     </div>
   </form>
 </div>

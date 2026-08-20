@@ -8,12 +8,12 @@
     <h1>Edit reservation request</h1>
     <div class="sub">Fix any mistakes before approving or rejecting</div>
   </div>
-  <a href="{% url 'request_detail' req.pk %}" class="action-btn js-modal-link">← Back to request</a>
+  <a href="{% url 'request_detail' req.pk %}" class="action-btn js-modal-link"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg> ← Back to request</a>
 </div>
 
 <div class="card" style="max-width:640px">
   <form method="post" novalidate
-        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Save changes?', text: 'Details for this reservation request will be updated.', icon: 'question', confirmButtonText: 'Yes, save', confirmButtonColor: '#3ed6c4'}); return false;">
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Save changes?', text: 'Details for this reservation request will be updated.', icon: 'question', confirmButtonText: 'Yes, save', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div class="form-errors">{{ form.non_field_errors }}</div>
@@ -111,8 +111,8 @@
     </div>
 
     <div class="form-actions">
-      <button type="submit" class="action-btn primary">Save changes</button>
-      <a href="{% url 'request_detail' req.pk %}" class="action-btn js-modal-link">Cancel</a>
+      <button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-edit"/></svg> Save changes</button>
+      <a href="{% url 'request_detail' req.pk %}" class="action-btn js-modal-link"><svg class="btn-icon"><use href="#icon-x"/></svg> Cancel</a>
     </div>
   </form>
 </div>

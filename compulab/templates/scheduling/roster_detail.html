@@ -60,10 +60,10 @@
 .cr-info-icon svg{width:18px; height:18px;}
 .cr-info-label{font-size:11px; color:var(--cr-dim); font-weight:600; text-transform:uppercase; letter-spacing:.03em;}
 .cr-info-val{font-size:14.5px; font-weight:600; color:var(--cr-text); margin-top:2px;}
-.ic-purple{background:var(--cr-purple-tint); color:var(--cr-purple);}
-.ic-green{background:var(--cr-green-tint); color:var(--cr-green);}
-.ic-blue{background:var(--cr-blue-tint); color:var(--cr-blue);}
-.ic-orange{background:var(--cr-orange-tint); color:var(--cr-orange);}
+.ic-purple{background:linear-gradient(160deg, color-mix(in srgb, var(--cr-purple) 30%, white) 0%, color-mix(in srgb, var(--cr-purple) 60%, white) 55%, color-mix(in srgb, var(--cr-purple) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--cr-purple) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--cr-purple) 55%, black 35%);}
+.ic-green{background:linear-gradient(160deg, color-mix(in srgb, var(--cr-green) 30%, white) 0%, color-mix(in srgb, var(--cr-green) 60%, white) 55%, color-mix(in srgb, var(--cr-green) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--cr-green) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--cr-green) 55%, black 35%);}
+.ic-blue{background:linear-gradient(160deg, color-mix(in srgb, var(--cr-blue) 30%, white) 0%, color-mix(in srgb, var(--cr-blue) 60%, white) 55%, color-mix(in srgb, var(--cr-blue) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--cr-blue) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--cr-blue) 55%, black 35%);}
+.ic-orange{background:linear-gradient(160deg, color-mix(in srgb, var(--cr-orange) 30%, white) 0%, color-mix(in srgb, var(--cr-orange) 60%, white) 55%, color-mix(in srgb, var(--cr-orange) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--cr-orange) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--cr-orange) 55%, black 35%);}
 
 .cr-two-col{display:grid; grid-template-columns:1.3fr 1fr; gap:16px; margin-bottom:16px; align-items:start;}
 .cr-section-title{font-size:13px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--cr-text); margin-bottom:14px; display:flex; align-items:center; gap:8px;}
@@ -137,7 +137,7 @@ html[data-theme="light"] .cr-add-btn{ color:#fff; }
     <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
       {% if roster.approval_status == 'pending' and can_review_roster %}
       <form method="post" action="{% url 'roster_approve' roster.pk %}"
-            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Approve this roster?', text: 'The schedule will be checked once more for conflicts and, if clear, added to the official calendar.', icon: 'question', confirmButtonText: 'Yes, approve', confirmButtonColor: '#3ed6c4'}); return false;"
+            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Approve this roster?', text: 'The schedule will be checked once more for conflicts and, if clear, added to the official calendar.', icon: 'question', confirmButtonText: 'Yes, approve', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;"
             style="display:inline">
         {% csrf_token %}
         <button type="submit" class="cr-btn primary">&#10003; Approve</button>
@@ -412,7 +412,7 @@ html[data-theme="light"] .cr-add-btn{ color:#fff; }
           text: s.full_name + ' will be added to the roster.',
           icon: 'question',
           confirmButtonText: 'Yes, add',
-          confirmButtonColor: '#3ed6c4',
+          confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim(),
         });
       };
       row.appendChild(info);

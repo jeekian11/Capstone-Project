@@ -169,7 +169,7 @@
     height: 16px;
     padding: 0 4px;
     border-radius: 8px;
-    background: #ff5d5d;
+    background: var(--red);
     color: #fff;
     font-family: 'JetBrains Mono', monospace;
     font-size: 10px;
@@ -201,11 +201,10 @@
 
   <div class="topbar-right">
 
-    <button type="button" class="theme-toggle" id="themeToggleBtn" title="Switch dark/light theme" aria-label="Switch dark/light theme">
-      <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
-      <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-    </button>
-    <form id="themeForm" style="display:none;">{% csrf_token %}<input type="hidden" name="theme" id="themeInput"></form>
+    {% comment %}
+      permanent light theme — toggle removed; kept the hidden form's
+      csrf token out since the JS-driven switch is gone with the button
+    {% endcomment %}
 
     <a href="{% if request.user.role == 'instructor' %}{% url 'inst_alerts' %}{% else %}{% url 'alerts' %}{% endif %}"
        class="notif-bell" title="Notifications" aria-label="Notifications">

@@ -12,7 +12,7 @@
 
 <div class="card" style="max-width:520px">
   <form method="post" enctype="multipart/form-data" novalidate
-        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Save profile changes?', text: 'Your name and profile picture will be updated.', icon: 'question', confirmButtonText: 'Yes, save', confirmButtonColor: '#3ed6c4'}); return false;">
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Save profile changes?', text: 'Your name and profile picture will be updated.', icon: 'question', confirmButtonText: 'Yes, save', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div class="form-errors">{{ form.non_field_errors }}</div>
@@ -60,8 +60,8 @@
     </div>
 
     <div class="form-actions" style="display:flex; gap:10px; margin-top:8px;">
-      <button type="submit" class="action-btn primary">Save changes</button>
-      <a href="{% url 'role_redirect' %}" class="action-btn">Cancel</a>
+      <button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-edit"/></svg> Save changes</button>
+      <a href="{% url 'role_redirect' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-x"/></svg> Cancel</a>
     </div>
   </form>
 </div>

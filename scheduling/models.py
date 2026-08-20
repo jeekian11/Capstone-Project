@@ -117,12 +117,15 @@ class ClassRoster(models.Model):
 
     def prune_stale_future_sessions(self):
         """Deletes this roster's auto-generated sessions that no longer
-        match its CURRENT schedule (day/time/validity period) — e.g. after
-        editing the roster from Mon/Wed to Tue/Thu, shortening the validity
-        period, or changing the meeting time. Without this, editing a
-        roster's schedule only ever adds new sessions on top of the old
-        ones (generate_sessions() is additive/idempotent by design), so the
-        stale schedule silently lingers on the official calendar.
+        match its CURRENT schedule — day/time/validity period, OR the
+        assigned instructor/lab — e.g. after editing the roster from
+        Mon/Wed to Tue/Thu, changing the meeting time, or reassigning the
+        instructor/lab. Without this, editing a roster only ever adds new
+        sessions on top of the old ones (generate_sessions() is
+        additive/idempotent by design, matching purely on roster+date+time),
+        so a stale schedule — or a stale instructor/lab on already-generated
+        sessions — would otherwise silently linger on the official calendar
+        and never get corrected by a later edit.
 
         Only ever considers TODAY-OR-LATER sessions, and only ones with no
         recorded check-in — past dates and anything a student has actually
@@ -146,6 +149,8 @@ class ClassRoster(models.Model):
                     s.start_time == self.schedule_start_time and s.end_time == self.schedule_end_time
                     and self.schedule_valid_from <= s.date <= self.schedule_valid_until
                     and s.date.weekday() in target_weekdays
+                    and s.instructor_id == self.instructor_id
+                    and s.lab_id == self.lab_id
                 )
         else:
             # Schedule was cleared entirely — nothing should remain scheduled.
@@ -403,9 +408,9 @@ class SessionRequest(models.Model):
     REQUESTER_TYPE = [
         ('instructor', 'Instructor'),
         ('student', 'Student'),
-        ('group', 'Group of students'),
+       
         ('walk_in', 'Walk-in'),
-        ('override', 'Override'),
+    
     ]
     STATUS = [
         ('pending', 'Pending'),

@@ -18,7 +18,7 @@
 .in-banner-greet{ display:flex; align-items:center; gap:10px; font-family:var(--font-display); font-size:21px; font-weight:600; color:#fff; letter-spacing:-0.01em; }
 .in-banner-wave{ font-size:22px; }
 .in-banner-role{ font-size:13px; color:rgba(255,255,255,0.85); margin-top:4px; }
-.in-banner-sub{ font-size:12.5px; color:rgba(255,255,255,0.7); margin-top:10px; }
+.in-banner-sub{ font-size:12.5px; color:rgba(255,255,255,0.7); margin-top:10px; font-style:italic; }
 .in-banner-art{ position:absolute; right:20px; bottom:0; width:180px; opacity:0.92; z-index:0; }
 @media (max-width:640px){ .in-banner-art{ display:none; } }
 
@@ -28,127 +28,108 @@
 .in-metric-top{ display:flex; align-items:flex-start; gap:12px; min-width:0; }
 .in-metric-icon{ width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .in-metric-icon svg{ width:18px; height:18px; }
-.in-metric.amber .in-metric-icon{ background:var(--amber-dim,rgba(242,169,59,0.14)); color:var(--amber); }
-.in-metric.blue .in-metric-icon{ background:var(--blue-dim,rgba(91,157,255,0.14)); color:var(--blue); }
-.in-metric.purple .in-metric-icon{ background:var(--purple-dim,rgba(167,139,250,0.14)); color:var(--purple); }
-.in-metric.green .in-metric-icon{ background:rgba(62,214,196,0.14); color:var(--green,#3ed6c4); }
-.in-metric.teal .in-metric-icon{ background:rgba(45,212,191,0.14); color:#2dd4bf; }
+.in-metric.amber .in-metric-icon{ background:linear-gradient(160deg, color-mix(in srgb, var(--amber) 30%, white) 0%, color-mix(in srgb, var(--amber) 60%, white) 55%, color-mix(in srgb, var(--amber) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--amber) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--amber) 55%, black 35%); }
+.in-metric.blue .in-metric-icon{ background:linear-gradient(160deg, color-mix(in srgb, var(--blue) 30%, white) 0%, color-mix(in srgb, var(--blue) 60%, white) 55%, color-mix(in srgb, var(--blue) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--blue) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--blue) 55%, black 35%); }
+.in-metric.purple .in-metric-icon{ background:linear-gradient(160deg, color-mix(in srgb, var(--purple) 30%, white) 0%, color-mix(in srgb, var(--purple) 60%, white) 55%, color-mix(in srgb, var(--purple) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--purple) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--purple) 55%, black 35%); }
+.in-metric.green .in-metric-icon{ background:linear-gradient(160deg, color-mix(in srgb, var(--green) 30%, white) 0%, color-mix(in srgb, var(--green) 60%, white) 55%, color-mix(in srgb, var(--green) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--green) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--green) 55%, black 35%); }
+.in-metric.teal .in-metric-icon{ background:linear-gradient(160deg, color-mix(in srgb, #2dd4bf 30%, white) 0%, color-mix(in srgb, #2dd4bf 60%, white) 55%, color-mix(in srgb, #2dd4bf 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, #2dd4bf 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, #2dd4bf 55%, black 35%); }
 .in-metric-body{ min-width:0; }
 .in-metric-label{ font-size:12px; color:var(--text-dim); font-weight:500; }
 .in-metric-val{ font-family:var(--font-display); font-size:24px; font-weight:700; letter-spacing:-0.01em; color:var(--text); margin-top:2px; }
 .in-metric-link{ font-size:11px; color:var(--blue); text-decoration:none; font-weight:500; }
 .in-metric-link:hover{ text-decoration:underline; }
 
-/* ---------- next class ---------- */
-.in-next{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:20px; min-width:0; }
-.in-next-row{ display:flex; align-items:center; gap:16px; min-width:0; flex-wrap:wrap; }
-.in-next-time{ font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--green,#3ed6c4); background:rgba(62,214,196,0.1); border-radius:10px; padding:10px 14px; text-align:center; flex-shrink:0; }
-.in-next-body{ flex:1; min-width:150px; }
-.in-next-title{ font-size:14px; font-weight:600; color:var(--text); overflow-wrap:anywhere; }
-.in-next-sub{ font-size:12px; color:var(--text-dim); margin-top:3px; overflow-wrap:anywhere; }
-.in-next-sub2{ font-size:11.5px; color:var(--text-faint); margin-top:2px; }
-
 /* ---------- status pills ---------- */
-.in-pill{ font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:999px; flex-shrink:0; }
-.in-pill.approved{ background:rgba(62,214,196,0.14); color:var(--green,#3ed6c4); }
-.in-pill.pending{ background:var(--amber-dim,rgba(242,169,59,0.14)); color:var(--amber); }
-.in-pill.declined{ background:rgba(139,152,163,0.14); color:var(--text-dim); }
+.in-pill{ font-size:10.5px; font-weight:600; padding:3px 9px; border-radius:999px; flex-shrink:0; white-space:nowrap; }
+.in-pill.ongoing{ background:rgba(27,122,77,0.14); color:#1b7a4d; }
+.in-pill.upcoming{ background:var(--blue-dim,rgba(91,157,255,0.14)); color:var(--blue); }
+.in-pill.completed{ background:rgba(139,152,163,0.14); color:var(--text-dim); }
+.in-pill.approved{ background:rgba(27,122,77,0.14); color:#1b7a4d; }
 
-/* ---------- weekly chart ---------- */
-.in-chart-wrap{ position:relative; height:190px; min-width:0; }
-
-/* ---------- quick actions ---------- */
-.in-section-label{ font-family:var(--font-display); font-size:13px; font-weight:600; color:var(--text); margin-bottom:12px; }
-.in-quick-actions{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; min-width:0;}
-.in-quick-btn{
-  display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:12px;
-  background:var(--surface); border:1px solid var(--border); color:var(--text);
-  font-size:13px; font-weight:500; text-decoration:none; min-width:0; transition:border-color .15s ease;
-}
-.in-quick-btn:hover{ border-color:var(--green,#3ed6c4); }
-.in-quick-icon{ width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; position:relative; }
-.in-quick-icon svg{ width:17px; height:17px; }
-.in-quick-btn.q-green .in-quick-icon{ background:rgba(62,214,196,0.14); color:var(--green,#3ed6c4); }
-.in-quick-btn.q-blue .in-quick-icon{ background:var(--blue-dim,rgba(91,157,255,0.14)); color:var(--blue); }
-.in-quick-btn.q-amber .in-quick-icon{ background:var(--amber-dim,rgba(242,169,59,0.14)); color:var(--amber); }
-.in-quick-btn.q-purple .in-quick-icon{ background:var(--purple-dim,rgba(167,139,250,0.14)); color:var(--purple); }
-.in-quick-badge{
-  position:absolute; top:-4px; right:-4px; min-width:16px; height:16px; padding:0 4px; border-radius:999px;
-  background:var(--purple); color:#0a0e12; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center;
-}
-
-/* ---------- bottom rows ---------- */
-.in-row3{ display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:16px; align-items:start; min-width:0; margin-bottom:16px; }
-.in-row2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; min-width:0; }
-.in-panel{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px; min-width:0;}
-.in-section-title{font-family:var(--font-display); font-size:13.5px; font-weight:600; color:var(--text); margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; gap:8px;}
+/* ---------- generic panel ---------- */
+.in-row2{ display:grid; grid-template-columns:1.4fr 1fr; gap:16px; align-items:stretch; min-width:0; margin-bottom:16px; }
+.in-panel{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px; min-width:0; display:flex; flex-direction:column; height:100%; box-sizing:border-box;}
+.in-section-title{font-family:var(--font-display); font-size:13.5px; font-weight:600; color:var(--text); margin-bottom:4px; display:flex; align-items:center; justify-content:space-between; gap:8px;}
+.in-section-title-left{ display:flex; align-items:center; gap:8px; }
+.in-section-icon{ width:26px; height:26px; border-radius:7px; background:rgba(27,122,77,0.12); color:#1b7a4d; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.in-section-icon svg{ width:14px; height:14px; }
+.in-section-sub{ font-size:11.5px; color:var(--text-dim); margin-bottom:14px; }
 .in-action{font-size:11.5px; color:var(--blue); text-decoration:none; font-weight:500; flex-shrink:0;}
 
-.in-schedule-row{display:flex; gap:14px; padding:12px 0; border-bottom:1px solid var(--border-soft); align-items:center; min-width:0;}
-.in-schedule-row:last-child{border-bottom:none; padding-bottom:0;}
-.in-schedule-time{font-family:var(--font-mono); font-size:11.5px; color:var(--text-dim); width:64px; flex-shrink:0;}
-.in-schedule-block{flex:1; min-width:0; padding:10px 14px; background:var(--surface-raised); border-radius:8px; border-left:3px solid var(--purple);}
-.in-s-title{font-size:13px; font-weight:500; color:var(--text); overflow-wrap:anywhere;}
-.in-s-sub{font-size:11.5px; color:var(--text-dim); margin-top:2px; overflow-wrap:anywhere;}
+/* ---------- today's classes list ---------- */
+.in-class-row{display:flex; gap:14px; padding:14px 0; border-bottom:1px solid var(--border-soft); align-items:center; min-width:0;}
+.in-class-row:last-child{border-bottom:none; padding-bottom:0;}
+.in-class-icon{ width:42px; height:42px; border-radius:10px; background:var(--green-dim,rgba(62,214,196,0.12)); color:var(--green,#3ed6c4); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.in-class-icon svg{ width:20px; height:20px; }
+.in-class-body{ flex:1; min-width:0; }
+.in-class-title{font-size:13.5px; font-weight:600; color:var(--text); overflow-wrap:anywhere;}
+.in-class-sub{font-size:11.5px; color:var(--text-dim); margin-top:2px; overflow-wrap:anywhere;}
+.in-class-actions{ display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0; }
+.in-class-actions .in-btn-outline{ padding:6px 12px; font-size:12px; white-space:nowrap; }
+.in-class-view{ font-size:11px; color:var(--blue); text-decoration:none; font-weight:500; }
+.in-class-view:hover{ text-decoration:underline; }
+
+/* ---------- outlined action buttons (mockup style — matches banner green) ---------- */
+.in-btn-outline{
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  padding:8px 16px; border-radius:8px; border:1.5px solid #1b7a4d;
+  background:transparent; color:#1b7a4d; font-size:13px; font-weight:600;
+  text-decoration:none; cursor:pointer; transition:background-color .15s ease, color .15s ease;
+}
+.in-btn-outline:hover{ background:rgba(27,122,77,0.12); }
+.in-btn-outline.blue{ border-color:var(--blue); color:var(--blue); }
+.in-btn-outline.blue:hover{ background:var(--blue-dim,rgba(91,157,255,0.12)); }
+
+/* ---------- donut chart ---------- */
+.in-donut-wrap{ position:relative; height:190px; display:flex; align-items:center; justify-content:center; margin-bottom:16px; }
+.in-donut-center{ position:absolute; text-align:center; pointer-events:none; }
+.in-donut-num{ font-family:var(--font-display); font-size:26px; font-weight:700; color:var(--text); }
+.in-donut-label{ font-size:11px; color:var(--text-dim); margin-top:2px; }
+.in-legend{ display:flex; flex-direction:column; gap:9px; margin-bottom:16px; }
+.in-legend-row{ display:flex; align-items:center; justify-content:space-between; font-size:12.5px; color:var(--text); }
+.in-legend-left{ display:flex; align-items:center; gap:8px; }
+.in-legend-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+.in-legend-val{ color:var(--text-dim); font-family:var(--font-mono); font-size:11.5px; }
+
+/* ---------- reservation rows ---------- */
+.in-resv-row{display:flex; gap:14px; padding:12px 0; border-bottom:1px solid var(--border-soft); align-items:center; min-width:0;}
+.in-resv-row:last-child{border-bottom:none; padding-bottom:0;}
+.in-resv-date{ display:flex; flex-direction:column; align-items:center; justify-content:center; width:52px; height:52px; border-radius:10px; background:var(--surface-raised); border:1px solid var(--border); flex-shrink:0; }
+.in-resv-date-mon{ font-size:9.5px; font-weight:700; color:var(--green,#3ed6c4); text-transform:uppercase; letter-spacing:.03em; }
+.in-resv-date-day{ font-size:16px; font-weight:700; color:var(--text); font-family:var(--font-display); line-height:1.1; }
+.in-resv-body{ flex:1; min-width:0; }
+.in-resv-title{ font-size:13px; font-weight:600; color:var(--text); overflow-wrap:anywhere; }
+.in-resv-sub{ font-size:11.5px; color:var(--text-dim); margin-top:2px; overflow-wrap:anywhere; }
 
 .in-empty{ display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px 10px; color:var(--text-faint); }
-.in-empty svg{ width:56px; height:56px; opacity:.5; margin-bottom:10px; }
+.in-empty svg{ width:48px; height:48px; opacity:.5; margin-bottom:10px; }
 .in-empty-title{ font-size:13px; font-weight:600; color:var(--text-dim); }
-.in-empty-sub{ font-size:11.5px; margin-top:3px; margin-bottom:14px; }
-
-.in-alert-item{display:flex; align-items:flex-start; gap:10px; padding:11px 0; border-bottom:1px solid var(--border-soft); min-width:0;}
-.in-alert-item:last-child{border-bottom:none; padding-bottom:0;}
-.in-alert-dot{ width:8px; height:8px; border-radius:50%; margin-top:5px; flex-shrink:0; background:var(--text-faint); }
-.in-alert-dot.success{ background:var(--green,#3ed6c4); }
-.in-alert-dot.info{ background:var(--blue); }
-.in-alert-dot.warning{ background:var(--amber); }
-.in-alert-dot.critical{ background:var(--red,#ff5d5d); }
-.in-alert-body{ min-width:0; flex:1; }
-.in-alert-title{font-size:12.5px; font-weight:500; color:var(--text); margin-bottom:2px; overflow-wrap:anywhere;}
-.in-alert-sub{font-size:11.5px; color:var(--text-dim); line-height:1.4; overflow-wrap:anywhere;}
-.in-alert-time{ font-size:10.5px; color:var(--text-faint); margin-top:3px; }
-
-/* ---------- mini calendar ---------- */
-.in-cal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-.in-cal-nav{ display:flex; align-items:center; gap:6px; }
-.in-cal-nav a{ width:24px; height:24px; border-radius:6px; display:flex; align-items:center; justify-content:center; color:var(--text-dim); text-decoration:none; border:1px solid var(--border); flex-shrink:0; }
-.in-cal-nav a:hover{ background:var(--surface-raised); color:var(--text); }
-.in-cal-title{ font-family:var(--font-display); font-size:12.5px; font-weight:600; color:var(--text); }
-.in-cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; text-align:center; }
-.in-cal-dow{ font-size:10px; color:var(--text-faint); font-weight:600; padding:4px 0; }
-.in-cal-day{ position:relative; font-size:11.5px; color:var(--text-dim); padding:6px 0; border-radius:7px; }
-.in-cal-day.status-today{ background:var(--green,#3ed6c4); color:#0a0e12; font-weight:700; }
-.in-cal-day.status-reserved{ color:var(--blue); font-weight:600; }
-.in-cal-day.status-pending{ color:var(--amber); font-weight:600; }
-.in-cal-legend{ display:flex; gap:14px; margin-top:12px; flex-wrap:wrap; }
-.in-cal-legend-item{ display:flex; align-items:center; gap:5px; font-size:10.5px; color:var(--text-dim); }
-.in-cal-legend-dot{ width:7px; height:7px; border-radius:50%; }
+.in-empty-sub{ font-size:11.5px; margin-top:3px; }
 
 @media (max-width:1100px){
   .in-metrics{ grid-template-columns:repeat(3,1fr); }
 }
 @media (max-width:960px){
   .in-metrics{ grid-template-columns:repeat(2,1fr); }
-  .in-quick-actions{ grid-template-columns:repeat(2,1fr); }
-  .in-row3{ grid-template-columns:1fr; }
   .in-row2{ grid-template-columns:1fr; }
+  .in-row2-even{ grid-template-columns:1fr; }
 }
 @media (max-width:480px){
   .in-metrics{ grid-template-columns:1fr; }
   .in-banner{ padding:20px; }
   .in-banner-greet{ font-size:17px; }
-  .in-next-row{ flex-direction:column; align-items:flex-start; }
+  .in-class-row{ flex-wrap:wrap; }
+  .in-class-actions{ align-items:flex-start; width:100%; }
 }
 </style>
 
 <div class="in-banner">
   <div class="in-banner-content">
     <div class="in-banner-greet"><span class="in-banner-wave">👋</span> {{ greeting }}, {{ request.user.display_name }}!</div>
-    <div class="in-banner-role">{{ request.user.get_role_display }}{% if request.user.department_display %} · {{ request.user.department_display }}{% endif %}</div>
-    <div class="in-banner-sub">
-      You have {{ unread_count }} unread notification{{ unread_count|pluralize }}
-      and {% if todays_sessions_count %}{{ todays_sessions_count }} scheduled class{{ todays_sessions_count|pluralize }}{% else %}no scheduled class{% endif %} today.
+    <div class="in-banner-role">
+      You have {% if todays_sessions_count %}{{ todays_sessions_count }} class{{ todays_sessions_count|pluralize:"es" }} today{% else %}no classes today{% endif %}.
     </div>
+    <div class="in-banner-sub">"A great teacher inspires hope, ignites curiosity, and builds a better future."</div>
   </div>
   <svg class="in-banner-art" viewBox="0 0 200 140" xmlns="http://www.w3.org/2000/svg">
     <rect x="18" y="112" width="164" height="6" rx="3" fill="rgba(255,255,255,0.18)"/>
@@ -172,216 +153,202 @@
   </svg>
 </div>
 
-
 <div class="in-metrics">
-  <div class="in-metric amber">
-    <div class="in-metric-top">
-      <div class="in-metric-icon">
-        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18M8 3v3M16 3v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      </div>
-      <div class="in-metric-body">
-        <div class="in-metric-label">Today's Classes</div>
-        <div class="in-metric-val">{{ todays_sessions_count }}</div>
-      </div>
-    </div>
-    <a href="{% url 'inst_schedule' %}" class="in-metric-link">View today's schedule →</a>
-  </div>
-  <div class="in-metric blue">
-    <div class="in-metric-top">
-      <div class="in-metric-icon">
-        <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      </div>
-      <div class="in-metric-body">
-        <div class="in-metric-label">Pending Requests</div>
-        <div class="in-metric-val">{{ pending_requests_count }}</div>
-      </div>
-    </div>
-    <a href="{% url 'inst_schedule' %}" class="in-metric-link">View all requests →</a>
-  </div>
-  <div class="in-metric purple">
-    <div class="in-metric-top">
-      <div class="in-metric-icon">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.7 21a2 2 0 0 1-3.4 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      </div>
-      <div class="in-metric-body">
-        <div class="in-metric-label">Unread Notifications</div>
-        <div class="in-metric-val">{{ unread_count }}</div>
-      </div>
-    </div>
-    <a href="{% url 'inst_alerts' %}" class="in-metric-link">View notifications →</a>
-  </div>
   <div class="in-metric green">
-    <div class="in-metric-top">
-      <div class="in-metric-icon">
-        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 21h8M12 18v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      </div>
-      <div class="in-metric-body">
-        <div class="in-metric-label">Reserved Labs</div>
-        <div class="in-metric-val">{{ reserved_labs_week_count }}</div>
-      </div>
-    </div>
-    <a href="{% url 'inst_schedule' %}" class="in-metric-link">This week →</a>
-  </div>
-  <div class="in-metric teal">
     <div class="in-metric-top">
       <div class="in-metric-icon">
         <svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.8"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="17.5" cy="8.5" r="2.4" stroke="currentColor" stroke-width="1.8"/><path d="M15.7 13.2c2.6.3 4.8 2.4 4.8 5.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       </div>
       <div class="in-metric-body">
-        <div class="in-metric-label">Today's Attendance</div>
-        <div class="in-metric-val">{% if todays_attendance_pct is not None %}{{ todays_attendance_pct }}%{% else %}—{% endif %}</div>
+        <div class="in-metric-label">Classes Today</div>
+        <div class="in-metric-val">{{ todays_sessions_count }}</div>
       </div>
     </div>
-    <a href="{% url 'attendance' %}" class="in-metric-link">View attendance →</a>
+    <a href="{% url 'inst_schedule' %}" class="in-metric-link">View schedule →</a>
   </div>
-</div>
-
-<div class="in-next">
-  <div class="in-section-title">Next Class</div>
-  {% if next_class %}
-  <div class="in-next-row">
-    <div class="in-next-time">{{ next_class.start_time|time:"g:i A" }}</div>
-    <div class="in-next-body">
-      <div class="in-next-title">{{ next_class.subject }}</div>
-      <div class="in-next-sub">{{ next_class.lab.name }}{% if next_class.roster %} · {{ next_class.roster.section }}{% endif %}</div>
-      <div class="in-next-sub2">{{ next_class.date|date:"F j, Y" }}{% if next_class.date == today %} (Today){% endif %} · {{ next_class.start_time|time:"g:i A" }}–{{ next_class.end_time|time:"g:i A" }}</div>
-    </div>
-    <a href="{% url 'inst_schedule' %}" class="action-btn primary">View Details</a>
-  </div>
-  {% else %}
-  <p class="in-empty-sub" style="text-align:left; padding:2px 0;">
-    No upcoming confirmed classes.
-    {% if pending_requests_count %}You have {{ pending_requests_count }} request{{ pending_requests_count|pluralize }} still waiting for approval.{% else %}<a href="{% url 'instructor_request_new' %}" class="in-action js-modal-link">Reserve a laboratory →</a>{% endif %}
-  </p>
-  {% endif %}
-</div>
-
-<div class="in-row3">
-  <div class="in-panel">
-    <div class="in-section-title">Weekly Overview</div>
-    <div class="in-chart-wrap"><canvas id="weeklyChart"></canvas></div>
-  </div>
-
-  <div class="in-panel">
-    <div class="in-cal-head">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
-      <div class="in-cal-nav">
-        <a href="?month={{ cal_prev }}">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
-        </a>
-        <span class="in-cal-title">{{ cal_label }}</span>
-        <a href="?month={{ cal_next }}">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
-        </a>
+  <div class="in-metric blue">
+    <div class="in-metric-top">
+      <div class="in-metric-icon">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18M8 3v3M16 3v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div class="in-metric-body">
+        <div class="in-metric-label">Total Classes</div>
+        <div class="in-metric-val">{{ total_classes_count }}</div>
       </div>
     </div>
-    <div class="in-cal-grid">
-      {% for label in cal_weekday_labels %}<div class="in-cal-dow">{{ label }}</div>{% endfor %}
-      {% for week in cal_weeks %}
-        {% for day in week %}
-          {% if day %}
-            <div class="in-cal-day status-{{ day.status }}">{{ day.day }}</div>
-          {% else %}
-            <div class="in-cal-day"></div>
-          {% endif %}
-        {% endfor %}
-      {% endfor %}
-    </div>
-    <div class="in-cal-legend">
-      <div class="in-cal-legend-item"><span class="in-cal-legend-dot" style="background:var(--green,#3ed6c4);"></span> Today</div>
-      <div class="in-cal-legend-item"><span class="in-cal-legend-dot" style="background:var(--blue);"></span> Reserved</div>
-      <div class="in-cal-legend-item"><span class="in-cal-legend-dot" style="background:var(--amber);"></span> Pending</div>
-    </div>
+    <a href="{% url 'roster_list' %}" class="in-metric-link">View all →</a>
   </div>
-
-  <div class="in-panel">
-    <div class="in-section-title">
-      Upcoming Reservations
-      <a href="{% url 'inst_schedule' %}" class="in-action">View all →</a>
-    </div>
-    {% for s in upcoming_sessions %}
-      <div class="in-schedule-row" style="align-items:flex-start;">
-        <div style="flex:1; min-width:0;">
-          <div class="in-s-title">{{ s.subject }}</div>
-          <div class="in-s-sub">{{ s.lab.name }} · {{ s.date|date:"M j, Y" }}</div>
-          <div class="in-s-sub">{{ s.start_time|time:"g:i A" }}–{{ s.end_time|time:"g:i A" }}</div>
-        </div>
-        <span class="in-pill approved">Approved</span>
+  <div class="in-metric purple">
+    <div class="in-metric-top">
+      <div class="in-metric-icon">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.8"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="17.5" cy="8.5" r="2.4" stroke="currentColor" stroke-width="1.8"/><path d="M15.7 13.2c2.6.3 4.8 2.4 4.8 5.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       </div>
-    {% empty %}
-      <p class="in-empty-sub" style="text-align:center; padding:14px 0;">No upcoming reservations.</p>
-    {% endfor %}
+      <div class="in-metric-body">
+        <div class="in-metric-label">Total Students</div>
+        <div class="in-metric-val">{{ total_students_count }}</div>
+      </div>
+    </div>
+    <a href="{% url 'roster_list' %}" class="in-metric-link">View roster →</a>
+  </div>
+  <div class="in-metric amber">
+    <div class="in-metric-top">
+      <div class="in-metric-icon">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M7 12l3 3 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="in-metric-body">
+        <div class="in-metric-label">Attendance Today</div>
+        <div class="in-metric-val">{{ attendance_today_count }}</div>
+      </div>
+    </div>
+    <a href="{% url 'attendance' %}" class="in-metric-link">Take attendance →</a>
+  </div>
+  <div class="in-metric teal">
+    <div class="in-metric-top">
+      <div class="in-metric-icon">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M9 2c0 3-2 4-2 8a5 5 0 0 0 10 0c0-2-1-3-1-3s-.5 2-2 2c1-3-1-5-1-7 0 2-1 3-2 3 .5-1 .5-2-2-3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="in-metric-body">
+        <div class="in-metric-label">Lab Reservations</div>
+        <div class="in-metric-val">{{ upcoming_lab_reservation_count }}</div>
+      </div>
+    </div>
+    <a href="{% url 'inst_schedule' %}" class="in-metric-link">View reservation →</a>
   </div>
 </div>
 
 <div class="in-row2">
   <div class="in-panel">
-    <div class="in-section-title">Recent Activity</div>
-    {% for a in recent_activity %}
-      <div class="in-alert-item">
-        <div class="in-alert-dot {% if a.icon == 'check' %}success{% else %}info{% endif %}"></div>
-        <div class="in-alert-body">
-          <div class="in-alert-title">{{ a.title }}</div>
-          <div class="in-alert-sub">{{ a.sub }}</div>
-          <div class="in-alert-time">{{ a.when|timesince }} ago</div>
+    <div class="in-section-title">
+      <div class="in-section-title-left">
+        <span class="in-section-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 21h8M12 18v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        Today's Classes
+      </div>
+    </div>
+    {% for s in todays_classes %}
+      <div class="in-class-row">
+        <div class="in-class-icon">
+          <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 21h8M12 18v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <div class="in-class-body">
+          <div class="in-class-title">{{ s.subject }}</div>
+          <div class="in-class-sub">
+            {% if s.roster %}Section {{ s.roster.section }} · {% endif %}{{ s.start_time|time:"g:i A" }} – {{ s.end_time|time:"g:i A" }}
+          </div>
+          <div class="in-class-sub">{{ s.lab.name }}</div>
+        </div>
+        <div class="in-class-actions">
+          <span class="in-pill {{ s.computed_status }}">{{ s.computed_status|upper }}</span>
+          {% if s.roster %}
+            <a href="{% url 'session_attendance_mark' s.pk %}" class="in-btn-outline">Take Attendance</a>
+            <a href="{% url 'roster_detail' s.roster_id %}" class="in-class-view">View Roster</a>
+          {% else %}
+            <a href="{% url 'session_attendance_mark' s.pk %}" class="in-btn-outline">Take Attendance</a>
+          {% endif %}
         </div>
       </div>
     {% empty %}
-      <p class="in-empty-sub" style="text-align:center; padding:14px 0;">No recent activity yet.</p>
+      <div class="in-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
+        <div class="in-empty-title">No classes today</div>
+        <div class="in-empty-sub">Enjoy the break — check your full schedule anytime.</div>
+      </div>
     {% endfor %}
   </div>
 
   <div class="in-panel">
     <div class="in-section-title">
-      Notifications
-      <a href="{% url 'inst_alerts' %}" class="in-action">View all →</a>
+      <div class="in-section-title-left">
+        <span class="in-section-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M7 12l3 3 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        Today's Attendance Summary
+      </div>
+      <a href="{% url 'attendance' %}" class="in-action">View All →</a>
     </div>
-    {% for notif in notifications %}
-      <div class="in-alert-item">
-        <div class="in-alert-dot {{ notif.category }}"></div>
-        <div class="in-alert-body">
-          <div class="in-alert-title">{{ notif.title }}</div>
-          <div class="in-alert-sub">{{ notif.message }}</div>
-          <div class="in-alert-time">{{ notif.created_at|timesince }} ago</div>
+    {% if todays_attendance_total %}
+      <div class="in-donut-wrap">
+        <canvas id="attendanceDonut"></canvas>
+        <div class="in-donut-center">
+          <div class="in-donut-num">{{ todays_attendance_total }}</div>
+          <div class="in-donut-label">Total Students</div>
         </div>
       </div>
-    {% empty %}
-      <p class="in-empty-sub" style="text-align:center; padding:14px 0;">No new notifications.</p>
-    {% endfor %}
+      <div class="in-legend">
+        <div class="in-legend-row">
+          <div class="in-legend-left"><span class="in-legend-dot" style="background:var(--green,#3ed6c4);"></span> Present</div>
+          <div class="in-legend-val">{{ todays_attendance_present }} ({{ todays_attendance_pct }}%)</div>
+        </div>
+        <div class="in-legend-row">
+          <div class="in-legend-left"><span class="in-legend-dot" style="background:var(--red,#ff5d5d);"></span> Absent</div>
+          <div class="in-legend-val">{{ todays_attendance_absent }}</div>
+        </div>
+      </div>
+    {% else %}
+      <div class="in-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <div class="in-empty-title">No attendance data yet</div>
+        <div class="in-empty-sub">Shows once today's rostered classes start.</div>
+      </div>
+    {% endif %}
+    <a href="{% url 'attendance' %}" class="in-btn-outline" style="width:100%; box-sizing:border-box; margin-top:auto;">Go to Attendance</a>
   </div>
+</div>
+
+<div class="in-panel" style="margin-bottom:16px;">
+  <div class="in-section-title">
+    <div class="in-section-title-left">
+      <span class="in-section-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M9 2h6M10 2v6.5L4.5 18a2 2 0 0 0 1.7 3h11.6a2 2 0 0 0 1.7-3L14 8.5V2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.5 14h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+      Upcoming Lab Reservations
+    </div>
+    <a href="{% url 'inst_schedule' %}" class="in-action">View All →</a>
+  </div>
+  {% for s in upcoming_reservations %}
+    <div class="in-resv-row">
+      <div class="in-resv-date">
+        <div class="in-resv-date-mon">{{ s.date|date:"M" }}</div>
+        <div class="in-resv-date-day">{{ s.date|date:"d" }}</div>
+      </div>
+      <div class="in-resv-body">
+        <div class="in-resv-title">{{ s.subject }}</div>
+        <div class="in-resv-sub">{{ s.start_time|time:"g:i A" }} – {{ s.end_time|time:"g:i A" }} · {{ s.lab.name }}</div>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0;">
+        <span class="in-pill approved">CONFIRMED</span>
+        <a href="{% url 'inst_schedule' %}" class="in-btn-outline blue" style="padding:5px 12px; font-size:11.5px;">View Details</a>
+      </div>
+    </div>
+  {% empty %}
+    <p class="in-empty-sub" style="text-align:center; padding:14px 0;">No upcoming reservations.</p>
+  {% endfor %}
 </div>
 
 <script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
 <script>
-  // Falls back to the CDN if the vendored copy hasn't been fetched yet
-  // (see static/vendor/fetch_assets.sh) so the page still works while online.
   if (typeof Chart === 'undefined') {
     document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"><\/script>');
   }
 </script>
 <script>
 (function(){
-  var ctx = document.getElementById('weeklyChart');
+  var ctx = document.getElementById('attendanceDonut');
   if (!ctx) return;
-  var labels = {{ weekly_chart_labels|safe }};
-  var classesData = {{ weekly_chart_classes|safe }};
-  var requestsData = {{ weekly_chart_requests|safe }};
+  var themeVar = function (name, fallback) {
+    var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  };
+  var green = themeVar('--green', '#3ed6c4');
+  var red = themeVar('--red', '#ff5d5d');
   new Chart(ctx, {
-    type: 'line',
+    type: 'doughnut',
     data: {
-      labels: labels,
-      datasets: [
-        { label: 'Classes', data: classesData, borderColor: '#3ed6c4', backgroundColor: 'rgba(62,214,196,0.1)', tension: 0.35, fill: true, pointRadius: 3 },
-        { label: 'Requests', data: requestsData, borderColor: '#f2a93b', backgroundColor: 'rgba(242,169,59,0.08)', tension: 0.35, fill: true, pointRadius: 3 }
-      ]
+      labels: ['Present', 'Absent'],
+      datasets: [{
+        data: [{{ todays_attendance_present|default:0 }}, {{ todays_attendance_absent|default:0 }}],
+        backgroundColor: [green, red],
+        borderWidth: 0,
+      }]
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'top', labels: { color: '#8b98a3', boxWidth: 10, font: { size: 11 } } } },
-      scales: {
-        x: { ticks: { color: '#8b98a3', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
-        y: { beginAtZero: true, ticks: { color: '#8b98a3', font: { size: 10 }, precision: 0 }, grid: { color: 'rgba(255,255,255,0.04)' } }
-      }
+      responsive: true, maintainAspectRatio: false, cutout: '72%',
+      plugins: { legend: { display: false }, tooltip: { enabled: true } }
     }
   });
 })();

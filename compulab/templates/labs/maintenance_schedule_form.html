@@ -12,7 +12,7 @@
 
 <div class="card" style="max-width:480px">
   <form method="post" novalidate
-        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Save this maintenance schedule?', text: 'The maintenance schedule will be saved.', icon: 'question', confirmButtonText: 'Yes, save', confirmButtonColor: '#3ed6c4'}); return false;">
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Save this maintenance schedule?', text: 'The maintenance schedule will be saved.', icon: 'question', confirmButtonText: 'Yes, save', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div class="form-errors">{{ form.non_field_errors }}</div>
@@ -43,8 +43,8 @@
     </div>
 
     <div class="form-actions">
-      <button type="submit" class="action-btn primary">Save schedule</button>
-      <a href="{% url 'maintenance_logs' %}" class="action-btn">Cancel</a>
+      <button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-save"/></svg> Save schedule</button>
+      <a href="{% url 'maintenance_logs' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-x"/></svg> Cancel</a>
     </div>
   </form>
 </div>

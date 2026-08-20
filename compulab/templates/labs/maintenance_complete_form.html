@@ -12,15 +12,15 @@
 
 <div class="card" style="max-width:480px">
   <form method="post"
-        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Mark as completed?', text: 'This maintenance task will be marked as completed.', icon: 'question', confirmButtonText: 'Yes, mark completed', confirmButtonColor: '#3ed6c4'}); return false;">
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Mark as completed?', text: 'This maintenance task will be marked as completed.', icon: 'question', confirmButtonText: 'Yes, mark completed', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;">
     {% csrf_token %}
     <div class="form-group">
       <label class="form-label" for="completion_notes">Completion notes</label>
       <textarea name="completion_notes" id="completion_notes" class="form-control" rows="4" placeholder="What was done during this maintenance?"></textarea>
     </div>
     <div class="form-actions">
-      <button type="submit" class="action-btn primary">Mark as completed</button>
-      <a href="{% url 'maintenance_logs' %}" class="action-btn">Cancel</a>
+      <button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-check"/></svg> Mark as completed</button>
+      <a href="{% url 'maintenance_logs' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-x"/></svg> Cancel</a>
     </div>
   </form>
 </div>

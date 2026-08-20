@@ -12,7 +12,7 @@
 
 <div class="card" style="max-width:640px">
   <form method="post" novalidate
-        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Submit this reservation request?', text: 'An Admin or Lab In-Charge will need to approve it before it appears on the official schedule.', icon: 'question', confirmButtonText: 'Yes, submit', confirmButtonColor: '#3ed6c4'}); return false;">
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Submit this reservation request?', text: 'An Admin or Lab In-Charge will need to approve it before it appears on the official schedule.', icon: 'question', confirmButtonText: 'Yes, submit', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div class="form-errors">{{ form.non_field_errors }}</div>
@@ -64,8 +64,8 @@
     </div>
 
     <div class="form-actions">
-      <button type="submit" class="action-btn primary">Submit request</button>
-      <a href="{% url 'inst_schedule' %}" class="action-btn">Cancel</a>
+      <button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-send"/></svg> Submit request</button>
+      <a href="{% url 'inst_schedule' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-x"/></svg> Cancel</a>
     </div>
   </form>
 </div>

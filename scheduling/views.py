@@ -143,6 +143,31 @@ class SessionUpdateView(RoleRequiredMixin, ModalFormMixin, UpdateView):
     template_name = 'scheduling/session_edit.html'
     context_object_name = 'session'
 
+    def _blocked_if_past(self, request):
+        """Past-dated sessions are history, not something to be corrected —
+        block edits the same way RequestUpdateView blocks edits on
+        non-pending requests."""
+        if self.object.date < timezone.localdate():
+            messages.error(request, 'This reservation has already passed and can no longer be edited.')
+            if is_modal_request(request):
+                return JsonResponse({'success': True, 'redirect': f"{reverse_lazy('view_schedule')}?lab={self.object.lab_id}&date={self.object.date}"})
+            return redirect(f"{reverse_lazy('view_schedule')}?lab={self.object.lab_id}&date={self.object.date}")
+        return None
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        blocked = self._blocked_if_past(request)
+        if blocked:
+            return blocked
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        blocked = self._blocked_if_past(request)
+        if blocked:
+            return blocked
+        return super().post(request, *args, **kwargs)
+
     def form_valid(self, form):
         error = _slot_error(
             form.instance.requester_type, form.instance.lab, form.instance.date,
@@ -497,13 +522,47 @@ class LabScheduleView(RoleRequiredMixin, TemplateView):
     allowed_roles = ['admin', 'incharge']
     template_name = 'scheduling/lab_schedule.html'
 
+    # caps so a lab with years of history doesn't dump everything into
+    # one page load — "View more" only reveals what's already rendered
+    MAX_UPCOMING = 50
+    MAX_PAST = 30
+    MAX_FLAT_RESULTS = 200
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        assigned_lab = self.request.user.assigned_lab
-        ctx['sessions'] = Session.objects.filter(
-            lab=assigned_lab
-        ).order_by('date', 'start_time')
-        ctx['lab'] = assigned_lab
+
+        lab = self.request.user.assigned_lab
+        ctx['lab'] = lab
+
+        q = self.request.GET.get('q', '').strip()
+        date_from = self.request.GET.get('date_from', '').strip()
+        date_to = self.request.GET.get('date_to', '').strip()
+        ctx['selected_q'] = q
+        ctx['selected_date_from'] = date_from
+        ctx['selected_date_to'] = date_to
+        ctx['is_searching'] = bool(q or date_from or date_to)
+
+        if not lab:
+            return ctx
+
+        qs = Session.objects.filter(lab=lab)
+        if q:
+            qs = qs.filter(Q(subject__icontains=q) | Q(requester_name__icontains=q))
+        if date_from:
+            qs = qs.filter(date__gte=date_from)
+        if date_to:
+            qs = qs.filter(date__lte=date_to)
+
+        today = timezone.localdate()
+        ctx['today'] = today
+
+        if ctx['is_searching']:
+            ctx['sessions'] = qs.order_by('date', 'start_time')[:self.MAX_FLAT_RESULTS]
+        else:
+            ctx['today_sessions'] = qs.filter(date=today).order_by('start_time')
+            ctx['upcoming_sessions'] = qs.filter(date__gt=today).order_by('date', 'start_time')[:self.MAX_UPCOMING]
+            ctx['past_sessions'] = qs.filter(date__lt=today).order_by('-date', '-start_time')[:self.MAX_PAST]
+
         return ctx
 
 

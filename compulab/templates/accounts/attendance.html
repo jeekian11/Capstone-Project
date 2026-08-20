@@ -19,7 +19,7 @@
       <input type="date" name="summary_date" class="form-control" value="{{ summary_date|date:'Y-m-d' }}">
     </div>
     <div class="form-group" style="margin-bottom:0">
-      <button type="submit" class="action-btn primary">Generate summary</button>
+      <button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-chart"/></svg> Generate summary</button>
     </div>
   </form>
 
@@ -45,7 +45,7 @@
               <span style="color:#8b98a3;font-size:11px;">(estimate - no roster)</span>
             {% endif %}
           </td>
-          <td><a href="{% url 'session_attendance_mark' row.session.pk %}" class="action-btn small">Mark attendance</a></td>
+          <td><a href="{% url 'session_attendance_mark' row.session.pk %}" class="action-btn small"><svg class="btn-icon"><use href="#icon-check"/></svg> Mark attendance</a></td>
         </tr>
       {% empty %}
         <tr><td colspan="7"><p class="empty">No sessions of yours on this date.</p></td></tr>
@@ -55,8 +55,8 @@
 
   {% if summary_rows %}
     <div style="display:flex; gap:10px; margin-top:14px;">
-      <a href="{% url 'attendance_summary_export' %}?summary_date={{ summary_date|date:'Y-m-d' }}&format=pdf" class="action-btn">Export as PDF</a>
-      <a href="{% url 'attendance_summary_export' %}?summary_date={{ summary_date|date:'Y-m-d' }}&format=excel" class="action-btn primary">Export as Excel</a>
+      <a href="{% url 'attendance_summary_export' %}?summary_date={{ summary_date|date:'Y-m-d' }}&format=pdf" class="action-btn"><svg class="btn-icon"><use href="#icon-pdf-doc"/></svg> Export as PDF</a>
+      <a href="{% url 'attendance_summary_export' %}?summary_date={{ summary_date|date:'Y-m-d' }}&format=excel" class="action-btn primary"><svg class="btn-icon"><use href="#icon-excel-doc"/></svg> Export as Excel</a>
     </div>
   {% endif %}
 </div>
@@ -92,7 +92,7 @@
   <div class="card">
     <div class="page-header" style="margin-bottom:0;">
       <div>
-        <a href="{% url 'attendance' %}" class="action-btn small" style="margin-bottom:8px; display:inline-flex;">&laquo; All classes</a>
+        <a href="{% url 'attendance' %}" class="action-btn small" style="margin-bottom:8px; display:inline-flex;"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg> All classes</a>
         <div class="section-title" style="margin-top:8px;">{{ selected_roster_label }} &mdash; attendance log</div>
       </div>
     </div>
@@ -116,7 +116,7 @@
         </select>
       </div>
       <div class="form-group" style="margin-bottom:0">
-        <button type="submit" class="action-btn primary">Filter</button>
+        <button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-filter"/></svg> Filter</button>
       </div>
     </form>
   </div>
@@ -178,11 +178,11 @@
   {% if log_groups.has_other_pages %}
     <div style="display:flex; justify-content:center; align-items:center; gap:14px; margin:10px 0 18px;">
       {% if log_groups.has_previous %}
-        <a href="?summary_date={{ summary_date|date:'Y-m-d' }}&log_date={{ log_date }}&log_student={{ log_student }}&log_session={{ log_session }}&page={{ log_groups.previous_page_number }}" class="action-btn small">&laquo; Prev</a>
+        <a href="?summary_date={{ summary_date|date:'Y-m-d' }}&log_date={{ log_date }}&log_student={{ log_student }}&log_session={{ log_session }}&page={{ log_groups.previous_page_number }}" class="action-btn small"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg> &laquo; Prev</a>
       {% endif %}
       <span style="font-size:12px; color:#8b98a3;">Page {{ log_groups.number }} of {{ log_groups.paginator.num_pages }}</span>
       {% if log_groups.has_next %}
-        <a href="?summary_date={{ summary_date|date:'Y-m-d' }}&log_date={{ log_date }}&log_student={{ log_student }}&log_session={{ log_session }}&page={{ log_groups.next_page_number }}" class="action-btn small">Next &raquo;</a>
+        <a href="?summary_date={{ summary_date|date:'Y-m-d' }}&log_date={{ log_date }}&log_student={{ log_student }}&log_session={{ log_session }}&page={{ log_groups.next_page_number }}" class="action-btn small"><svg class="btn-icon"><use href="#icon-arrow-right"/></svg> Next &raquo;</a>
       {% endif %}
     </div>
   {% endif %}

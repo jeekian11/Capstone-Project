@@ -11,7 +11,7 @@
 
 <div class="card" style="max-width:480px">
   <form method="post" novalidate
-        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Submit this report?', text: 'This equipment issue report will be submitted.', icon: 'question', confirmButtonText: 'Yes, submit', confirmButtonColor: '#3ed6c4'}); return false;">
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Submit this report?', text: 'This equipment issue report will be submitted.', icon: 'question', confirmButtonText: 'Yes, submit', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div class="form-errors">{{ form.non_field_errors }}</div>
@@ -30,8 +30,8 @@
     </div>
 
     <div class="form-actions">
-      <button type="submit" class="action-btn primary">Submit report</button>
-      <a href="{% url 'equipment_issues' %}" class="action-btn">Cancel</a>
+      <button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-send"/></svg> Submit report</button>
+      <a href="{% url 'equipment_issues' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-x"/></svg> Cancel</a>
     </div>
   </form>
 </div>

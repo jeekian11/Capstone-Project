@@ -9,10 +9,11 @@
     <div class="sub">{{ pending_count }} pending</div>
   </div>
   <div style="display:flex; gap:8px">
-    <a href="{% url 'inventory' %}" class="action-btn">Back</a>
-    <a href="{% url 'repair_history' %}" class="action-btn">Repair history</a>
+    
+    <a href="{% url 'repair_history' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-wrench"/></svg> Repair history</a>
     {% if request.user.role == 'admin' %}
-      <a href="{% url 'maintenance_schedule' %}" class="action-btn primary js-modal-link">+ Schedule maintenance</a>
+      <a href="{% url 'maintenance_schedule' %}" class="action-btn primary js-modal-link"><svg class="btn-icon"><use href="#icon-plus"/></svg>Schedule maintenance</a>
+      <a href="{% url 'inventory' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg> Back</a>
     {% endif %}
   </div>
 </div>
@@ -37,7 +38,7 @@
           </td>
           <td>
             {% if not log.completed %}
-              <a href="{% url 'maintenance_complete' log.pk %}" class="action-btn small primary">Record completion</a>
+              <a href="{% url 'maintenance_complete' log.pk %}" class="action-btn small primary"><svg class="btn-icon"><use href="#icon-check"/></svg> Record completion</a>
             {% else %}
               <span style="color:#888; font-size:12px">{{ log.completed_at|date:"M d, Y" }}</span>
             {% endif %}

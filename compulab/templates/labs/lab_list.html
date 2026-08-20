@@ -12,7 +12,7 @@
   --ml-bg:var(--bg); --ml-card:var(--surface); --ml-border:var(--border);
   --ml-text:var(--text); --ml-dim:var(--text-dim); --ml-faint:var(--text-faint);
   --ml-purple:var(--purple); --ml-green:var(--green); --ml-blue:var(--blue);
-  --ml-orange:var(--amber); --ml-red:var(--red); --ml-teal:#2dd4bf; --ml-lime:#84cc16;
+  --ml-orange:var(--amber); --ml-red:var(--red); --ml-teal:#2dd4bf; --ml-lime:#84cc16; --ml-gold:var(--maintenance);
   font-family:'Inter',sans-serif; background:var(--ml-bg); color:var(--ml-text);
   margin:-20px; padding:20px; min-height:100%;
 }
@@ -28,14 +28,12 @@
 .ml-metric-label{font-size:11px; color:var(--ml-dim); font-weight:600; text-transform:uppercase; letter-spacing:.03em;}
 .ml-metric-val{font-size:21px; font-weight:700; letter-spacing:-0.01em; margin-top:2px;}
 .ml-metric-sub{font-size:11px; color:var(--ml-faint); margin-top:2px;}
-.ic-teal{background:var(--ml-teal); color:#0a0e12;}
-.ic-blue{background:var(--ml-blue); color:#fff;}
-.ic-green{background:var(--ml-green); color:#0a0e12;}
-.ic-purple{background:var(--ml-purple); color:#fff;}
-.ic-orange{background:var(--ml-orange); color:#0a0e12;}
-html[data-theme="light"] .ic-green,
-html[data-theme="light"] .ic-orange{ color:#fff; }
-.ic-red{background:var(--ml-red); color:#fff;}
+.ic-teal{background:linear-gradient(160deg, color-mix(in srgb, var(--ml-teal) 30%, white) 0%, color-mix(in srgb, var(--ml-teal) 60%, white) 55%, color-mix(in srgb, var(--ml-teal) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--ml-teal) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--ml-teal) 55%, black 35%);}
+.ic-blue{background:linear-gradient(160deg, color-mix(in srgb, var(--ml-blue) 30%, white) 0%, color-mix(in srgb, var(--ml-blue) 60%, white) 55%, color-mix(in srgb, var(--ml-blue) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--ml-blue) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--ml-blue) 55%, black 35%);}
+.ic-green{background:linear-gradient(160deg, color-mix(in srgb, var(--ml-green) 30%, white) 0%, color-mix(in srgb, var(--ml-green) 60%, white) 55%, color-mix(in srgb, var(--ml-green) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--ml-green) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--ml-green) 55%, black 35%);}
+.ic-purple{background:linear-gradient(160deg, color-mix(in srgb, var(--ml-purple) 30%, white) 0%, color-mix(in srgb, var(--ml-purple) 60%, white) 55%, color-mix(in srgb, var(--ml-purple) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--ml-purple) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--ml-purple) 55%, black 35%);}
+.ic-orange{background:linear-gradient(160deg, color-mix(in srgb, var(--ml-orange) 30%, white) 0%, color-mix(in srgb, var(--ml-orange) 60%, white) 55%, color-mix(in srgb, var(--ml-orange) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--ml-orange) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--ml-orange) 55%, black 35%);}
+.ic-red{background:linear-gradient(160deg, color-mix(in srgb, var(--ml-red) 30%, white) 0%, color-mix(in srgb, var(--ml-red) 60%, white) 55%, color-mix(in srgb, var(--ml-red) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--ml-red) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--ml-red) 55%, black 35%);}
 
 .ml-filter-form{display:grid; grid-template-columns:1fr 1fr 1.6fr auto auto; gap:14px; align-items:end;}
 .ml-label{font-size:12px; font-weight:500; color:var(--ml-dim); margin-bottom:6px; display:block;}
@@ -176,7 +174,7 @@ html[data-theme="light"] .ic-orange{ color:#fff; }
         <label class="ml-label" for="q">Search</label>
         <input type="text" name="q" id="q" class="ml-input" placeholder="Search lab name, room or in-charge..." value="{{ search_query }}">
       </div>
-      <div><button type="submit" class="ml-btn primary">Filter</button></div>
+      <div><button type="submit" class="ml-btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#icon-filter"/></svg> Filter</button></div>
       {% if filtered %}
         <div><a href="{% url 'lab_list' %}" class="ml-btn">Clear</a></div>
       {% endif %}
@@ -214,11 +212,11 @@ html[data-theme="light"] .ic-orange{ color:#fff; }
             </div>
 
             <div>
-              <div class="ml-stat-row"><span class="ml-stat-label"><span class="ml-stat-dot" style="background:#3ed6c4"></span>Online</span><span class="ml-stat-val">{{ c.online }}</span></div>
-              <div class="ml-stat-row"><span class="ml-stat-label"><span class="ml-stat-dot" style="background:#f2a93b"></span>In Use</span><span class="ml-stat-val">{{ c.in_use }}</span></div>
-              <div class="ml-stat-row"><span class="ml-stat-label"><span class="ml-stat-dot" style="background:#5b9dff"></span>Available</span><span class="ml-stat-val">{{ c.available }}</span></div>
-              <div class="ml-stat-row"><span class="ml-stat-label"><span class="ml-stat-dot" style="background:#facc15"></span>Under Maintenance</span><span class="ml-stat-val">{{ c.maintenance }}</span></div>
-              <div class="ml-stat-row"><span class="ml-stat-label"><span class="ml-stat-dot" style="background:#ff5d5d"></span>Offline</span><span class="ml-stat-val">{{ c.offline }}</span></div>
+              <div class="ml-stat-row"><span class="ml-stat-label"><span class="ml-stat-dot" style="background:var(--ml-green)"></span>Online</span><span class="ml-stat-val">{{ c.online }}</span></div>
+              <div class="ml-stat-row"><span class="ml-stat-label"><span class="ml-stat-dot" style="background:var(--ml-orange)"></span>In Use</span><span class="ml-stat-val">{{ c.in_use }}</span></div>
+              <div class="ml-stat-row"><span class="ml-stat-label"><span class="ml-stat-dot" style="background:var(--ml-blue)"></span>Available</span><span class="ml-stat-val">{{ c.available }}</span></div>
+              <div class="ml-stat-row"><span class="ml-stat-label"><span class="ml-stat-dot" style="background:var(--ml-gold)"></span>Under Maintenance</span><span class="ml-stat-val">{{ c.maintenance }}</span></div>
+              <div class="ml-stat-row"><span class="ml-stat-label"><span class="ml-stat-dot" style="background:var(--ml-red)"></span>Offline</span><span class="ml-stat-val">{{ c.offline }}</span></div>
             </div>
 
             <div>
@@ -259,7 +257,7 @@ html[data-theme="light"] .ic-orange{ color:#fff; }
         {% for o in lab_overview %}
           <div class="ml-overview-item">
             <div class="ml-overview-top"><span>{{ o.lab.name }}</span><span class="val">{{ o.pct }}%</span></div>
-            <div class="ml-overview-bar"><div class="ml-overview-fill" style="width:{{ o.pct }}%; background:{% cycle '#5b9dff' '#3ed6c4' '#84cc16' '#a78bfa' '#f2a93b' %};"></div></div>
+            <div class="ml-overview-bar"><div class="ml-overview-fill" style="width:{{ o.pct }}%; background:{% cycle 'var(--ml-blue)' 'var(--ml-green)' 'var(--ml-lime)' 'var(--ml-purple)' 'var(--ml-orange)' %};"></div></div>
           </div>
         {% empty %}
           <p class="ml-empty">No labs yet.</p>
@@ -282,7 +280,7 @@ html[data-theme="light"] .ic-orange{ color:#fff; }
           Import Computers
         </a>
         <form method="post" action="{% url 'pc_status_refresh' %}" style="margin:0;"
-              onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Check all PC status now?', text: 'This will ping every PC across all labs right away — it may take a few seconds.', icon: 'question', confirmButtonText: 'Yes, check now', confirmButtonColor: '#3ed6c4'}); return false;">
+              onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Check all PC status now?', text: 'This will ping every PC across all labs right away — it may take a few seconds.', icon: 'question', confirmButtonText: 'Yes, check now', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;">
           {% csrf_token %}
           <button type="submit" class="ml-quick-action" style="background:none; border:none; width:100%; text-align:left; cursor:pointer; border-bottom:1px solid var(--ml-border); font-family:inherit;">
             <svg viewBox="0 0 24 24" fill="none"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -290,7 +288,7 @@ html[data-theme="light"] .ic-orange{ color:#fff; }
           </button>
         </form>
         <a href="{% url 'pc_status_export' %}?format=pdf" class="ml-quick-action">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg viewBox="0 0 24 24"><use href="#icon-pdf-doc"/></svg>
           Export PC Status Report
         </a>
       </div>

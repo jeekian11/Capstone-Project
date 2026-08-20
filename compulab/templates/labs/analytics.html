@@ -23,6 +23,11 @@
 
 /* filter bar */
 .ra-filters{ display:grid; grid-template-columns:repeat(4,1fr) auto; gap:12px; align-items:end; padding:16px; margin-bottom:18px; min-width:0; }
+/* ".ra .card" above (2 classes) otherwise beats ".ra-filters" (1 class)
+   on specificity and wins the margin-bottom tie, collapsing the gap
+   between the filter card and the metrics row below it. This selector
+   (3 classes) is the one that needs to win instead. */
+.ra .card.ra-filters{ margin-bottom:18px; }
 .ra-filters > *{ min-width:0; }
 .ra-filters .form-group{ margin-bottom:0; }
 @media (max-width:1000px) and (min-width:641px){ .ra-filters{ grid-template-columns:repeat(2,1fr); } }
@@ -32,6 +37,11 @@
 .ra-metrics{ display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:18px; min-width:0; }
 .ra-metrics > *{ min-width:0; }
 .ra-metric{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; display:flex; align-items:flex-start; gap:10px; min-width:0; }
+.ra-metric.blue{border-left:4px solid var(--blue);}
+.ra-metric.green{border-left:4px solid var(--green);}
+.ra-metric.purple{border-left:4px solid var(--purple);}
+.ra-metric.amber{border-left:4px solid var(--amber);}
+.ra-metric.red{border-left:4px solid var(--red);}
 .ra-metric > div{ min-width:0; }
 .ra-metric-icon{ width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .ra-metric-icon svg{ width:17px; height:17px; }
@@ -78,7 +88,7 @@
 .ra-bar-row:last-child{ margin-bottom:0; }
 .ra-bar-label{ width:46px; flex-shrink:0; font-size:11.5px; color:var(--text-dim); font-weight:500; }
 .ra-bar-track{ flex:1; height:9px; border-radius:5px; background:var(--surface-raised); overflow:hidden; }
-.ra-bar-fill{ height:100%; border-radius:5px; background:linear-gradient(90deg,#5b9dff,#3ed6c4); }
+.ra-bar-fill{ height:100%; border-radius:5px; background:linear-gradient(90deg,var(--blue),var(--green)); }
 .ra-bar-pct{ width:36px; text-align:right; flex-shrink:0; font-size:11.5px; color:var(--text-dim); font-family:var(--font-mono); }
 
 /* legend for donut */
@@ -112,8 +122,8 @@
 .ra-table td{ padding:8px 6px; border-bottom:1px solid var(--border-soft); color:var(--text); vertical-align:middle; white-space:nowrap; }
 .ra-table tr:last-child td{ border-bottom:none; }
 .ra-pill{ display:inline-block; padding:2px 8px; border-radius:8px; font-size:10px; font-weight:600; }
-.ra-pill.pdf{ background:rgba(255,93,93,0.14); color:#ff5d5d; }
-.ra-pill.excel{ background:rgba(62,214,196,0.14); color:#3ed6c4; }
+.ra-pill.pdf{ background:linear-gradient(160deg, color-mix(in srgb, var(--red) 30%, white) 0%, color-mix(in srgb, var(--red) 60%, white) 55%, color-mix(in srgb, var(--red) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--red) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--red) 55%, black 35%); }
+.ra-pill.excel{ background:linear-gradient(160deg, color-mix(in srgb, var(--green) 30%, white) 0%, color-mix(in srgb, var(--green) 60%, white) 55%, color-mix(in srgb, var(--green) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--green) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--green) 55%, black 35%); }
 .ra-dl{ color:var(--blue2); text-decoration:none; }
 .ra-dl:hover{ text-decoration:underline; }
 
@@ -127,7 +137,7 @@
 .ra-instr-name{ font-size:12.5px; font-weight:500; color:var(--text); overflow-wrap:anywhere; }
 .ra-instr-count{ font-size:10.5px; color:var(--text-dim); }
 .ra-instr-bar{ height:5px; border-radius:3px; background:var(--surface-raised); margin-top:5px; overflow:hidden; }
-.ra-instr-bar-fill{ height:100%; border-radius:3px; background:#3ed6c4; }
+.ra-instr-bar-fill{ height:100%; border-radius:3px; background:var(--green); }
 
 /* maintenance summary */
 .ra-msum-item{ display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border-soft); gap:8px; min-width:0; }
@@ -140,7 +150,7 @@
 
 .ra-empty{ color:var(--text-faint); font-size:12.5px; text-align:center; padding:20px 0; }
 
-:root{ --blue2:#5b9dff; }
+:root{ --blue2:var(--blue); }
 
 @media print{
   .sidebar, .app-navbar, .app-footer, .ra-actions, .ra-filters, form{ display:none !important; }
@@ -151,16 +161,16 @@
 
   <div class="ra-header">
     <div>
-      <h1 style="font-family:var(--font-display); font-size:20px; font-weight:600; color:#e7ebee; letter-spacing:-0.01em;">Reporting &amp; Analytics</h1>
-      <div class="sub" style="font-size:13px; color:#8b98a3; margin-top:2px;">Overview of laboratory usage and system reports</div>
+      <h1 style="font-family:var(--font-display); font-size:20px; font-weight:600; color:var(--text); letter-spacing:-0.01em;">Reporting &amp; Analytics</h1>
+      <div class="sub" style="font-size:13px; color:var(--text-dim); margin-top:2px;">Overview of laboratory usage and system reports</div>
     </div>
     <div class="ra-actions">
       <a href="{% url 'analytics_export' %}?{{ request.GET.urlencode }}&format=pdf" class="action-btn">
-        <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z" stroke="currentColor" stroke-width="1.6"/><path d="M14 2v6h6" stroke="currentColor" stroke-width="1.6"/></svg>
+        <svg viewBox="0 0 24 24" width="14" height="14"><use href="#icon-pdf-doc"/></svg>
         Export PDF
       </a>
       <a href="{% url 'analytics_export' %}?{{ request.GET.urlencode }}&format=excel" class="action-btn">
-        <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 8l8 8M16 8l-8 8" stroke="currentColor" stroke-width="1.6"/></svg>
+        <svg viewBox="0 0 24 24" width="14" height="14"><use href="#icon-excel-doc"/></svg>
         Export Excel
       </a>
       <button type="button" onclick="window.print()" class="action-btn">
@@ -223,14 +233,14 @@
       </div>
     </div>
     <button type="submit" class="action-btn primary" style="white-space:nowrap;">
-      <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M4 4h16l-6.5 8v6l-3 2v-8L4 4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      <svg class="btn-icon"><use href="#icon-filter"/></svg>
       Apply Filter
     </button>
   </form>
 
   <div class="ra-metrics">
-    <div class="ra-metric">
-      <div class="ra-metric-icon" style="background:rgba(91,157,255,0.14); color:#5b9dff;">
+    <div class="ra-metric blue">
+      <div class="ra-metric-icon" style="background:linear-gradient(160deg, color-mix(in srgb, var(--blue) 30%, white) 0%, color-mix(in srgb, var(--blue) 60%, white) 55%, color-mix(in srgb, var(--blue) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--blue) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--blue) 55%, black 35%);">
         <svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="4" width="19" height="12" rx="1.5" stroke="currentColor" stroke-width="1.8"/><path d="M9 20h6M12 16v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       </div>
       <div>
@@ -239,8 +249,8 @@
         <div class="ra-metric-sub">All Laboratories</div>
       </div>
     </div>
-    <div class="ra-metric">
-      <div class="ra-metric-icon" style="background:rgba(62,214,196,0.14); color:#3ed6c4;">
+    <div class="ra-metric green">
+      <div class="ra-metric-icon" style="background:linear-gradient(160deg, color-mix(in srgb, var(--green) 30%, white) 0%, color-mix(in srgb, var(--green) 60%, white) 55%, color-mix(in srgb, var(--green) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--green) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--green) 55%, black 35%);">
         <svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="4" width="19" height="12" rx="1.5" stroke="currentColor" stroke-width="1.8"/><path d="M9 20h6M12 16v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="7" r="3" fill="currentColor"/></svg>
       </div>
       <div>
@@ -249,8 +259,8 @@
         <div class="ra-metric-sub">All Computers</div>
       </div>
     </div>
-    <div class="ra-metric">
-      <div class="ra-metric-icon" style="background:rgba(167,139,250,0.14); color:#a78bfa;">
+    <div class="ra-metric purple">
+      <div class="ra-metric-icon" style="background:linear-gradient(160deg, color-mix(in srgb, var(--purple) 30%, white) 0%, color-mix(in srgb, var(--purple) 60%, white) 55%, color-mix(in srgb, var(--purple) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--purple) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--purple) 55%, black 35%);">
         <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       </div>
       <div>
@@ -259,8 +269,8 @@
         <div class="ra-metric-sub">This Period</div>
       </div>
     </div>
-    <div class="ra-metric">
-      <div class="ra-metric-icon" style="background:rgba(242,169,59,0.14); color:#f2a93b;">
+    <div class="ra-metric amber">
+      <div class="ra-metric-icon" style="background:linear-gradient(160deg, color-mix(in srgb, var(--amber) 30%, white) 0%, color-mix(in srgb, var(--amber) 60%, white) 55%, color-mix(in srgb, var(--amber) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--amber) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--amber) 55%, black 35%);">
         <svg viewBox="0 0 24 24" fill="none"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 20v-2a4 4 0 0 0-2.5-3.7M17 3.3a4 4 0 0 1 0 7.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
       <div>
@@ -269,8 +279,8 @@
         <div class="ra-metric-sub">This Period</div>
       </div>
     </div>
-    <div class="ra-metric">
-      <div class="ra-metric-icon" style="background:rgba(255,93,93,0.14); color:#ff5d5d;">
+    <div class="ra-metric red">
+      <div class="ra-metric-icon" style="background:linear-gradient(160deg, color-mix(in srgb, var(--red) 30%, white) 0%, color-mix(in srgb, var(--red) 60%, white) 55%, color-mix(in srgb, var(--red) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--red) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--red) 55%, black 35%);">
         <svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l2.4-2.4a5 5 0 0 1-6.4 6.4L7.4 19.6a2 2 0 0 1-2.8-2.8l6.3-6.3a5 5 0 0 1 6.4-6.4l-2.4 2.4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
       </div>
       <div>
@@ -279,8 +289,8 @@
         <div class="ra-metric-sub">Pending</div>
       </div>
     </div>
-    <div class="ra-metric">
-      <div class="ra-metric-icon" style="background:rgba(91,157,255,0.14); color:#5b9dff;">
+    <div class="ra-metric blue">
+      <div class="ra-metric-icon" style="background:linear-gradient(160deg, color-mix(in srgb, var(--blue) 30%, white) 0%, color-mix(in srgb, var(--blue) 60%, white) 55%, color-mix(in srgb, var(--blue) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--blue) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--blue) 55%, black 35%);">
         <svg viewBox="0 0 24 24" fill="none"><path d="M3 17l5-5 4 4 8-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 8h6v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
       <div>
@@ -309,9 +319,9 @@
       <div class="ra-panel-title">Equipment Status</div>
       <div class="ra-chart-wrap"><canvas id="raEquipmentChart"></canvas></div>
       <div class="ra-legend">
-        <div class="ra-legend-item"><span class="ra-legend-left"><span class="ra-legend-dot" style="background:#3ed6c4;"></span>Working</span><span>{{ equipment_status.working_pct }}% ({{ equipment_status.working }})</span></div>
-        <div class="ra-legend-item"><span class="ra-legend-left"><span class="ra-legend-dot" style="background:#f2a93b;"></span>Maintenance</span><span>{{ equipment_status.maintenance_pct }}% ({{ equipment_status.maintenance }})</span></div>
-        <div class="ra-legend-item"><span class="ra-legend-left"><span class="ra-legend-dot" style="background:#ff5d5d;"></span>Damaged</span><span>{{ equipment_status.damaged_pct }}% ({{ equipment_status.damaged }})</span></div>
+        <div class="ra-legend-item"><span class="ra-legend-left"><span class="ra-legend-dot" style="background:var(--green);"></span>Working</span><span>{{ equipment_status.working_pct }}% ({{ equipment_status.working }})</span></div>
+        <div class="ra-legend-item"><span class="ra-legend-left"><span class="ra-legend-dot" style="background:var(--amber);"></span>Maintenance</span><span>{{ equipment_status.maintenance_pct }}% ({{ equipment_status.maintenance }})</span></div>
+        <div class="ra-legend-item"><span class="ra-legend-left"><span class="ra-legend-dot" style="background:var(--red);"></span>Damaged</span><span>{{ equipment_status.damaged_pct }}% ({{ equipment_status.damaged }})</span></div>
       </div>
     </div>
 
@@ -330,31 +340,31 @@
     <div class="section-title">Generate a Report</div>
     <div class="ra-report-grid">
       <a href="{% url 'report_lab_utilization' %}" class="ra-report-btn">
-        <div class="ra-report-icon" style="background:rgba(91,157,255,0.14); color:#5b9dff;">
+        <div class="ra-report-icon" style="background:linear-gradient(160deg, color-mix(in srgb, var(--blue) 30%, white) 0%, color-mix(in srgb, var(--blue) 60%, white) 55%, color-mix(in srgb, var(--blue) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--blue) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--blue) 55%, black 35%);">
           <svg viewBox="0 0 24 24" fill="none"><path d="M4 20V10M12 20V4M20 20v-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         </div>
         Lab Utilization Report
       </a>
       <a href="{% url 'report_equipment_status' %}" class="ra-report-btn">
-        <div class="ra-report-icon" style="background:rgba(62,214,196,0.14); color:#3ed6c4;">
+        <div class="ra-report-icon" style="background:linear-gradient(160deg, color-mix(in srgb, var(--green) 30%, white) 0%, color-mix(in srgb, var(--green) 60%, white) 55%, color-mix(in srgb, var(--green) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--green) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--green) 55%, black 35%);">
           <svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="4" width="19" height="12" rx="1.5" stroke="currentColor" stroke-width="1.8"/><path d="M9 20h6M12 16v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         </div>
         Equipment Status Report
       </a>
       <a href="{% url 'report_instructor_usage' %}" class="ra-report-btn">
-        <div class="ra-report-icon" style="background:rgba(167,139,250,0.14); color:#a78bfa;">
+        <div class="ra-report-icon" style="background:linear-gradient(160deg, color-mix(in srgb, var(--purple) 30%, white) 0%, color-mix(in srgb, var(--purple) 60%, white) 55%, color-mix(in srgb, var(--purple) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--purple) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--purple) 55%, black 35%);">
           <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 21v-1a8 8 0 0 1 16 0v1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         </div>
         Instructor Usage Report
       </a>
       <a href="{% url 'report_attendance' %}" class="ra-report-btn">
-        <div class="ra-report-icon" style="background:rgba(242,169,59,0.14); color:#f2a93b;">
+        <div class="ra-report-icon" style="background:linear-gradient(160deg, color-mix(in srgb, var(--amber) 30%, white) 0%, color-mix(in srgb, var(--amber) 60%, white) 55%, color-mix(in srgb, var(--amber) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--amber) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--amber) 55%, black 35%);">
           <svg viewBox="0 0 24 24" fill="none"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 20v-2a4 4 0 0 0-2.5-3.7M17 3.3a4 4 0 0 1 0 7.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
         Attendance Report
       </a>
       <a href="{% url 'report_maintenance' %}" class="ra-report-btn">
-        <div class="ra-report-icon" style="background:rgba(255,93,93,0.14); color:#ff5d5d;">
+        <div class="ra-report-icon" style="background:linear-gradient(160deg, color-mix(in srgb, var(--red) 30%, white) 0%, color-mix(in srgb, var(--red) 60%, white) 55%, color-mix(in srgb, var(--red) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--red) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--red) 55%, black 35%);">
           <svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l2.4-2.4a5 5 0 0 1-6.4 6.4L7.4 19.6a2 2 0 0 1-2.8-2.8l6.3-6.3a5 5 0 0 1 6.4-6.4l-2.4 2.4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
         </div>
         Maintenance Report
@@ -428,24 +438,24 @@
       <div class="ra-panel-title">Maintenance Summary</div>
       <div class="ra-msum-item">
         <div class="ra-msum-left">
-          <div class="ra-msum-icon" style="background:rgba(242,169,59,0.14); color:#f2a93b;"><svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="ra-msum-icon" style="background:linear-gradient(160deg, color-mix(in srgb, var(--amber) 30%, white) 0%, color-mix(in srgb, var(--amber) 60%, white) 55%, color-mix(in srgb, var(--amber) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--amber) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--amber) 55%, black 35%);"><svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
           Pending Issues
         </div>
-        <div class="ra-msum-val" style="background:rgba(255,93,93,0.14); color:#ff5d5d;">{{ maintenance_summary.pending }}</div>
+        <div class="ra-msum-val" style="background:linear-gradient(160deg, color-mix(in srgb, var(--red) 30%, white) 0%, color-mix(in srgb, var(--red) 60%, white) 55%, color-mix(in srgb, var(--red) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--red) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--red) 55%, black 35%);">{{ maintenance_summary.pending }}</div>
       </div>
       <div class="ra-msum-item">
         <div class="ra-msum-left">
-          <div class="ra-msum-icon" style="background:rgba(62,214,196,0.14); color:#3ed6c4;"><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="ra-msum-icon" style="background:linear-gradient(160deg, color-mix(in srgb, var(--green) 30%, white) 0%, color-mix(in srgb, var(--green) 60%, white) 55%, color-mix(in srgb, var(--green) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--green) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--green) 55%, black 35%);"><svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
           Resolved Issues
         </div>
-        <div class="ra-msum-val" style="background:rgba(62,214,196,0.14); color:#3ed6c4;">{{ maintenance_summary.resolved }}</div>
+        <div class="ra-msum-val" style="background:linear-gradient(160deg, color-mix(in srgb, var(--green) 30%, white) 0%, color-mix(in srgb, var(--green) 60%, white) 55%, color-mix(in srgb, var(--green) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--green) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--green) 55%, black 35%);">{{ maintenance_summary.resolved }}</div>
       </div>
       <div class="ra-msum-item">
         <div class="ra-msum-left">
-          <div class="ra-msum-icon" style="background:rgba(91,157,255,0.14); color:#5b9dff;"><svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l2.4-2.4a5 5 0 0 1-6.4 6.4L7.4 19.6a2 2 0 0 1-2.8-2.8l6.3-6.3a5 5 0 0 1 6.4-6.4l-2.4 2.4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+          <div class="ra-msum-icon" style="background:linear-gradient(160deg, color-mix(in srgb, var(--blue) 30%, white) 0%, color-mix(in srgb, var(--blue) 60%, white) 55%, color-mix(in srgb, var(--blue) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--blue) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--blue) 55%, black 35%);"><svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l2.4-2.4a5 5 0 0 1-6.4 6.4L7.4 19.6a2 2 0 0 1-2.8-2.8l6.3-6.3a5 5 0 0 1 6.4-6.4l-2.4 2.4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
           Under Repair
         </div>
-        <div class="ra-msum-val" style="background:rgba(91,157,255,0.14); color:#5b9dff;">{{ maintenance_summary.under_repair }}</div>
+        <div class="ra-msum-val" style="background:linear-gradient(160deg, color-mix(in srgb, var(--blue) 30%, white) 0%, color-mix(in srgb, var(--blue) 60%, white) 55%, color-mix(in srgb, var(--blue) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--blue) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--blue) 55%, black 35%);">{{ maintenance_summary.under_repair }}</div>
       </div>
       <div class="ra-msum-item">
         <div class="ra-msum-left">
@@ -462,12 +472,22 @@
 <script>
 (function() {
   var mono = "'JetBrains Mono', monospace";
-  var dim = '#8b98a3';
+  var themeVar = function (name, fallback) {
+    var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  };
+  var dim = themeVar('--text-dim', '#8b98a3');
+  var green = themeVar('--green', '#3ed6c4');
+  var blue = themeVar('--blue', '#5b9dff');
+  var amber = themeVar('--amber', '#f2a93b');
+  var red = themeVar('--red', '#ff5d5d');
+  var greenDim = themeVar('--green-dim', 'rgba(62,214,196,0.12)');
+  var blueDim = themeVar('--blue-dim', 'rgba(91,157,255,0.12)');
   var gridColor = 'rgba(139,152,163,0.12)';
   // matches whichever surface color the light/dark toggle currently has
   // active, so doughnut/pie segment borders blend into the card instead
   // of showing a leftover dark ring in light mode
-  var surface = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#12171d';
+  var surface = themeVar('--surface', '#12171d');
   Chart.defaults.color = dim;
   Chart.defaults.font.family = "'Inter', sans-serif";
   Chart.defaults.font.size = 10.5;
@@ -478,7 +498,7 @@
       labels: ['Working', 'Maintenance', 'Damaged'],
       datasets: [{
         data: [{{ equipment_status.working }}, {{ equipment_status.maintenance }}, {{ equipment_status.damaged }}],
-        backgroundColor: ['#3ed6c4', '#f2a93b', '#ff5d5d'],
+        backgroundColor: [green, amber, red],
         borderColor: surface,
         borderWidth: 2,
       }]
@@ -495,8 +515,8 @@
       labels: [{% for w in attendance_trend %}'{{ w.label }}'{% if not forloop.last %},{% endif %}{% endfor %}],
       datasets: [{
         data: [{% for w in attendance_trend %}{{ w.pct }}{% if not forloop.last %},{% endif %}{% endfor %}],
-        borderColor: '#3ed6c4', backgroundColor: 'rgba(62,214,196,0.12)',
-        tension: 0.35, fill: true, pointRadius: 3, pointBackgroundColor: '#3ed6c4',
+        borderColor: green, backgroundColor: greenDim,
+        tension: 0.35, fill: true, pointRadius: 3, pointBackgroundColor: green,
       }]
     },
     options: {
@@ -515,8 +535,8 @@
       labels: [{% for m in reservations_trend %}'{{ m.label }}'{% if not forloop.last %},{% endif %}{% endfor %}],
       datasets: [{
         data: [{% for m in reservations_trend %}{{ m.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
-        borderColor: '#5b9dff', backgroundColor: 'rgba(91,157,255,0.12)',
-        tension: 0.35, fill: true, pointRadius: 3, pointBackgroundColor: '#5b9dff',
+        borderColor: blue, backgroundColor: blueDim,
+        tension: 0.35, fill: true, pointRadius: 3, pointBackgroundColor: blue,
       }]
     },
     options: {

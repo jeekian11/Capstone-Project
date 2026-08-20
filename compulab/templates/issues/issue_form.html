@@ -12,7 +12,7 @@
 
 <div class="card" style="max-width:640px">
   <form method="post" novalidate
-        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: '{% if object %}Save changes?{% else %}Log this issue?{% endif %}', text: '{% if object %}Details for this issue will be updated.{% else %}A new issue report will be logged.{% endif %}', icon: 'question', confirmButtonText: '{% if object %}Yes, save{% else %}Yes, log issue{% endif %}', confirmButtonColor: '#3ed6c4'}); return false;">
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: '{% if object %}Save changes?{% else %}Log this issue?{% endif %}', text: '{% if object %}Details for this issue will be updated.{% else %}A new issue report will be logged.{% endif %}', icon: 'question', confirmButtonText: '{% if object %}Yes, save{% else %}Yes, log issue{% endif %}', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div class="form-errors">{{ form.non_field_errors }}</div>
@@ -76,8 +76,8 @@
     {% endif %}
 
     <div class="form-actions">
-      <button type="submit" class="action-btn primary">{% if object %}Save changes{% else %}Log issue{% endif %}</button>
-      <a href="{% if object %}{% url 'issue_detail' object.pk %}{% else %}{% url 'issues' %}{% endif %}" class="action-btn">Cancel</a>
+      <button type="submit" class="action-btn primary">{% if object %}<svg class="btn-icon"><use href="#icon-save"/></svg> Save changes{% else %}<svg class="btn-icon"><use href="#icon-plus"/></svg> Log issue{% endif %}</button>
+      <a href="{% if object %}{% url 'issue_detail' object.pk %}{% else %}{% url 'issues' %}{% endif %}" class="action-btn"><svg class="btn-icon"><use href="#icon-x"/></svg> Cancel</a>
     </div>
   </form>
 </div>

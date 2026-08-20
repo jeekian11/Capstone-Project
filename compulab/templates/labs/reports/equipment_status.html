@@ -9,9 +9,9 @@
     <div class="sub">{{ date_from }} to {{ date_to }}</div>
   </div>
   <div style="display:flex; gap:10px;">
-    <a href="{% url 'report_equipment_status_export' %}?{{ request.GET.urlencode }}&format=pdf" class="action-btn">Export as PDF</a>
-    <a href="{% url 'report_equipment_status_export' %}?{{ request.GET.urlencode }}&format=excel" class="action-btn primary">Export as Excel</a>
-    <a href="{% url 'analytics' %}" class="action-btn">Back</a>
+    <a href="{% url 'report_equipment_status_export' %}?{{ request.GET.urlencode }}&format=pdf" class="action-btn"><svg class="btn-icon"><use href="#icon-pdf-doc"/></svg> Export as PDF</a>
+    <a href="{% url 'report_equipment_status_export' %}?{{ request.GET.urlencode }}&format=excel" class="action-btn primary"><svg class="btn-icon"><use href="#icon-excel-doc"/></svg> Export as Excel</a>
+    <a href="{% url 'analytics' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg> Back</a>
   </div>
 </div>
 
@@ -35,7 +35,7 @@
       <input type="date" name="date_to" class="form-control" value="{{ date_to|date:'Y-m-d' }}">
     </div>
     <div class="form-group" style="margin-bottom:0">
-      <button type="submit" class="action-btn primary">Generate report</button>
+      <button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-chart"/></svg> Generate report</button>
     </div>
   </form>
   <p style="font-size:12px; color:#8b98a3; margin-top:10px;">

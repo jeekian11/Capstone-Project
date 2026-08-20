@@ -12,7 +12,7 @@
 
 <div class="card" style="max-width:480px">
   <form method="post" novalidate id="pc-form"
-        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: '{% if object %}Save changes?{% else %}Add this PC?{% endif %}', text: '{% if object %}Details for {{ object.pc_id|escapejs }} will be updated.{% else %}A new PC record will be added.{% endif %}', icon: 'question', confirmButtonText: '{% if object %}Yes, save{% else %}Yes, add{% endif %}', confirmButtonColor: '#3ed6c4'}); return false;">
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: '{% if object %}Save changes?{% else %}Add this PC?{% endif %}', text: '{% if object %}Details for {{ object.pc_id|escapejs }} will be updated.{% else %}A new PC record will be added.{% endif %}', icon: 'question', confirmButtonText: '{% if object %}Yes, save{% else %}Yes, add{% endif %}', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div class="form-errors" role="alert">{{ form.non_field_errors }}</div>
@@ -47,17 +47,17 @@
 
   {% if object %}
   <form method="post" action="{% url 'pc_delete' object.pk %}" id="pc-delete-form"
-        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this PC?', text: 'This action cannot be undone. {{ object.pc_id|escapejs }} will be permanently removed. Any issue reports linked to it keep their history.', confirmButtonText: 'Yes, delete PC'}); return false;">
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Delete this PC?', text: 'This action cannot be undone.<br>{{ object.pc_id|escapejs }} will be <span class=&quot;cl-danger-highlight&quot;>permanently removed</span>.<br>Any issue reports linked to it<br>will be kept in history.', confirmButtonText: 'Yes, delete PC', itemName: '{{ object.pc_id|escapejs }}', itemSub: '{{ object.lab.name|escapejs }}'}); return false;">
     {% csrf_token %}
   </form>
   {% endif %}
 
   <div class="form-actions">
-    <button type="submit" form="pc-form" class="action-btn primary">{% if object %}Save changes{% else %}Add PC{% endif %}</button>
+    <button type="submit" form="pc-form" class="action-btn primary">{% if object %}<svg class="btn-icon"><use href="#icon-save"/></svg> Save changes{% else %}<svg class="btn-icon"><use href="#icon-plus"/></svg> Add PC{% endif %}</button>
     {% if object %}
-    <button type="submit" form="pc-delete-form" class="action-btn danger">Delete PC</button>
+    <button type="submit" form="pc-delete-form" class="action-btn danger"><svg class="btn-icon"><use href="#icon-trash"/></svg> Delete PC</button>
     {% endif %}
-    <a href="{% url 'lab_list' %}" class="action-btn">Cancel</a>
+    <a href="{% url 'lab_list' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-x"/></svg> Cancel</a>
   </div>
 
 {% endblock %}

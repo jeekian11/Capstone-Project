@@ -9,9 +9,9 @@
     <div class="sub">{{ session.subject }} · {{ session.lab.name }} · {{ session.date|date:"M d, Y" }} ({{ session.start_time|time:"H:i" }} - {{ session.end_time|time:"H:i" }})</div>
   </div>
   {% if session.roster_id %}
-    <a href="{% url 'roster_detail' session.roster_id %}" class="action-btn">Back</a>
+    <a href="{% url 'roster_detail' session.roster_id %}" class="action-btn"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg> Back</a>
   {% else %}
-    <a href="{% url 'attendance' %}?summary_date={{ session.date|date:'Y-m-d' }}" class="action-btn">Back to attendance</a>
+    <a href="{% url 'attendance' %}?summary_date={{ session.date|date:'Y-m-d' }}" class="action-btn"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg> Back to attendance</a>
   {% endif %}
 </div>
 
@@ -29,11 +29,11 @@
     Marking a status here overrides the automatic PC-unlock estimate for that student.
   </p>
   <form method="post"
-        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Save attendance?', text: 'Present/absent status for this session will be recorded.', icon: 'question', confirmButtonText: 'Yes, save', confirmButtonColor: '#3ed6c4'}); return false;">
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Save attendance?', text: 'Present/absent status for this session will be recorded.', icon: 'question', confirmButtonText: 'Yes, save', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;">
     {% csrf_token %}
     <table class="table">
       <thead>
-        <tr><th>Student ID</th><th>Name</th><th>Present</th><th>Absent</th></tr>
+        <tr><th>Student ID</th><th>Name</th><th>Present</th><th>Absent</th><th></th></tr>
       </thead>
       <tbody>
         {% for c in candidates %}
@@ -42,9 +42,10 @@
             <td>{{ c.name }}</td>
             <td><input type="radio" name="status_{{ c.id_number }}" value="present" {% if c.current_status == 'present' %}checked{% endif %}></td>
             <td><input type="radio" name="status_{{ c.id_number }}" value="absent" {% if c.current_status == 'absent' %}checked{% endif %}></td>
+            <td></td>
           </tr>
         {% empty %}
-          <tr><td colspan="4"><p class="empty">No roster attached and no PC activity detected yet — add students manually below.</p></td></tr>
+          <tr><td colspan="5"><p class="empty">No roster attached and no PC activity detected yet — add students manually below.</p></td></tr>
         {% endfor %}
         {% for m in ad_hoc %}
           <tr>
@@ -52,46 +53,73 @@
             <td>{{ m.full_name|default:"—" }} <span style="font-size:11px;color:#8b98a3;">(added manually)</span></td>
             <td><input type="radio" name="status_{{ m.id_number }}" value="present" disabled {% if m.status == 'present' %}checked{% endif %}></td>
             <td><input type="radio" name="status_{{ m.id_number }}" value="absent" disabled {% if m.status == 'absent' %}checked{% endif %}></td>
+            <td>
+              <button type="submit" form="remove-form-{{ forloop.counter }}" class="action-btn danger" style="padding:4px 8px;">
+                <svg class="btn-icon"><use href="#icon-trash"/></svg> Remove
+              </button>
+            </td>
           </tr>
         {% endfor %}
       </tbody>
     </table>
     {% if candidates %}
       <div class="form-actions">
-        <button type="submit" class="action-btn primary">Save attendance</button>
+        <button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-save"/></svg> Save attendance</button>
       </div>
     {% endif %}
   </form>
+  {% for m in ad_hoc %}
+    <form id="remove-form-{{ forloop.counter }}" method="post"
+          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Remove this entry?', text: '{{ m.full_name|default:m.id_number|escapejs }} will be removed from this session\'s attendance.', icon: 'warning', confirmButtonText: 'Yes, remove', confirmButtonColor: '#e53e3e'}); return false;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="remove_student">
+      <input type="hidden" name="remove_id_number" value="{{ m.id_number }}">
+    </form>
+  {% endfor %}
 </div>
 
 <div class="card" style="max-width:640px">
   <div class="section-title">Add a student manually</div>
   <p style="font-size:12px; color:#8b98a3; margin-top:-6px; margin-bottom:14px;">
-    For a student who attended but isn't on the roster or didn't use a lab PC (e.g. no roster attached to this session).
+    For a student who attended but didn't use a lab PC. Only students who already have a registered
+    account and are already on this class's roster show up below.
   </p>
-  <form method="post" class="form-row" style="grid-template-columns: 1fr 1fr 1fr auto; align-items:end; gap:10px;"
-        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Add this student?', text: 'A manual attendance entry will be added for this session.', icon: 'question', confirmButtonText: 'Yes, add', confirmButtonColor: '#3ed6c4'}); return false;">
-    {% csrf_token %}
-    <input type="hidden" name="action" value="add_student">
-    <div class="form-group" style="margin-bottom:0">
-      <label class="form-label">Student ID</label>
-      <input type="text" name="new_id_number" class="form-control" required>
-    </div>
-    <div class="form-group" style="margin-bottom:0">
-      <label class="form-label">Full name</label>
-      <input type="text" name="new_full_name" class="form-control">
-    </div>
-    <div class="form-group" style="margin-bottom:0">
-      <label class="form-label">Status</label>
-      <select name="new_status" class="form-control">
-        <option value="present">Present</option>
-        <option value="absent">Absent</option>
-      </select>
-    </div>
-    <div class="form-group" style="margin-bottom:0">
-      <button type="submit" class="action-btn primary">Add</button>
-    </div>
-  </form>
+  {% if roster_students %}
+    <form method="post" class="form-row" style="grid-template-columns: 1fr 1fr auto; align-items:end; gap:10px;"
+          onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Add this student?', text: 'A manual attendance entry will be added for this session.', icon: 'question', confirmButtonText: 'Yes, add', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add_student">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Student</label>
+        <select name="new_id_number" class="form-control" required>
+          <option value="" disabled selected>Select a student…</option>
+          {% for rs in roster_students %}
+            <option value="{{ rs.id_number }}">{{ rs.full_name }} ({{ rs.id_number }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Status</label>
+        <select name="new_status" class="form-control">
+          <option value="present">Present</option>
+          <option value="absent">Absent</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-plus"/></svg> Add</button>
+      </div>
+    </form>
+  {% else %}
+    <p style="font-size:13px; color:#8b98a3;">
+      {% if session.roster %}
+        No students with a registered account are on this class's roster yet. Add them to the
+        <a href="{% url 'roster_detail' session.roster_id %}">class roster</a> first.
+      {% else %}
+        This session has no class roster attached, so there's no one to add here. Attach a roster
+        to this session first.
+      {% endif %}
+    </p>
+  {% endif %}
 </div>
 
 {% endblock %}

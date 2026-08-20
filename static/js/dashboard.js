@@ -16,7 +16,12 @@ function formatUser(pc) {
   const first = pc.current_user__first_name || '';
   const last = pc.current_user__last_name || '';
   const fullName = `${first} ${last}`.trim();
-  return fullName || pc.current_user__id_number || null;
+  const registeredName = fullName || pc.current_user__id_number || null;
+  // A PC checked in via Manual Unlock has no registered account at all —
+  // current_user__* is blank — so fall back to the typed guest name.
+  // Without this, the guest's name gets wiped out by the very next poll.
+  if (registeredName) return registeredName;
+  return pc.current_guest_name ? `${pc.current_guest_name} (Guest)` : null;
 }
 
 async function refreshPcStatuses() {

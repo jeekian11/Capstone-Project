@@ -44,6 +44,14 @@
 
 .ld-card{background:var(--ld-card); border:1px solid var(--ld-border); border-radius:14px; padding:18px 20px; box-shadow:0 1px 2px rgba(0,0,0,.2);}
 
+.ld-card[class*=" b-"],.ld-card[class^="b-"]{border-left-width:4px; border-left-style:solid;}
+.ld-card.b-purple{border-left-color:var(--ld-purple);}
+.ld-card.b-green{border-left-color:var(--ld-green);}
+.ld-card.b-blue{border-left-color:var(--ld-blue);}
+.ld-card.b-orange{border-left-color:var(--ld-orange);}
+.ld-card.b-teal{border-left-color:var(--ld-teal);}
+.ld-card.b-amber{border-left-color:var(--maintenance);}
+
 .ld-metrics{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:20px;}
 .ld-metric{display:flex; align-items:center; gap:12px;}
 .ld-metric-icon{width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
@@ -53,12 +61,12 @@
 .ld-metric-sub{font-size:11.5px; color:var(--ld-faint); margin-top:2px;}
 .ld-metric-sub.up{color:var(--ld-green);}
 
-.ic-purple{background:var(--ld-purple-tint); color:var(--ld-purple);}
-.ic-green{background:var(--ld-green-tint); color:var(--ld-green);}
-.ic-blue{background:var(--ld-blue-tint); color:var(--ld-blue);}
-.ic-orange{background:var(--ld-orange-tint); color:var(--ld-orange);}
-.ic-teal{background:var(--ld-teal-tint); color:var(--ld-teal);}
-.ic-red{background:var(--ld-red-tint); color:var(--ld-red);}
+.ic-purple{background:linear-gradient(160deg, color-mix(in srgb, var(--ld-purple) 30%, white) 0%, color-mix(in srgb, var(--ld-purple) 60%, white) 55%, color-mix(in srgb, var(--ld-purple) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--ld-purple) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--ld-purple) 55%, black 35%);}
+.ic-green{background:linear-gradient(160deg, color-mix(in srgb, var(--ld-green) 30%, white) 0%, color-mix(in srgb, var(--ld-green) 60%, white) 55%, color-mix(in srgb, var(--ld-green) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--ld-green) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--ld-green) 55%, black 35%);}
+.ic-blue{background:linear-gradient(160deg, color-mix(in srgb, var(--ld-blue) 30%, white) 0%, color-mix(in srgb, var(--ld-blue) 60%, white) 55%, color-mix(in srgb, var(--ld-blue) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--ld-blue) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--ld-blue) 55%, black 35%);}
+.ic-orange{background:linear-gradient(160deg, color-mix(in srgb, var(--ld-orange) 30%, white) 0%, color-mix(in srgb, var(--ld-orange) 60%, white) 55%, color-mix(in srgb, var(--ld-orange) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--ld-orange) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--ld-orange) 55%, black 35%);}
+.ic-teal{background:linear-gradient(160deg, color-mix(in srgb, var(--ld-teal) 30%, white) 0%, color-mix(in srgb, var(--ld-teal) 60%, white) 55%, color-mix(in srgb, var(--ld-teal) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--ld-teal) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--ld-teal) 55%, black 35%);}
+.ic-red{background:linear-gradient(160deg, color-mix(in srgb, var(--ld-red) 30%, white) 0%, color-mix(in srgb, var(--ld-red) 60%, white) 55%, color-mix(in srgb, var(--ld-red) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--ld-red) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--ld-red) 55%, black 35%);}
 
 .ld-section-title{font-size:13px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--ld-text); margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;}
 .ld-section-title a{font-size:12px; font-weight:500; text-transform:none; letter-spacing:0;}
@@ -137,7 +145,7 @@
 <div class="ld">
 
   <div class="ld-metrics">
-    <div class="ld-card ld-metric">
+    <div class="ld-card ld-metric b-purple">
       <div class="ld-metric-icon ic-purple">
         <svg viewBox="0 0 24 24" fill="none"><path d="M17 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M10 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM21 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
@@ -147,7 +155,7 @@
         <div class="ld-metric-sub up">↗ {{ new_students_this_week }} this week</div>
       </div>
     </div>
-    <div class="ld-card ld-metric">
+    <div class="ld-card ld-metric b-green">
       <div class="ld-metric-icon ic-green">
         <svg viewBox="0 0 24 24" fill="none"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 20v-2a4 4 0 0 0-2.5-3.7M17 3.3a4 4 0 0 1 0 7.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
@@ -157,7 +165,7 @@
         <div class="ld-metric-sub up">↗ {{ new_instructors_this_week }} this week</div>
       </div>
     </div>
-    <div class="ld-card ld-metric">
+    <div class="ld-card ld-metric b-blue">
       <div class="ld-metric-icon ic-blue">
         <svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
@@ -167,7 +175,7 @@
         <div class="ld-metric-sub">{{ total_pcs }} PCs total</div>
       </div>
     </div>
-    <div class="ld-card ld-metric">
+    <div class="ld-card ld-metric b-orange">
       <div class="ld-metric-icon ic-orange">
         <svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="4" width="19" height="12" rx="1.5" stroke="currentColor" stroke-width="1.8"/><path d="M9 20h6M12 16v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       </div>
@@ -177,7 +185,7 @@
         <div class="ld-metric-sub">Across {{ total_labs }} labs</div>
       </div>
     </div>
-    <div class="ld-card ld-metric">
+    <div class="ld-card ld-metric b-teal">
       <div class="ld-metric-icon ic-teal">
         <svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="4" width="19" height="12" rx="1.5" stroke="currentColor" stroke-width="1.8"/><path d="M9 20h6M12 16v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="7" r="3" fill="currentColor"/></svg>
       </div>
@@ -187,7 +195,7 @@
         <div class="ld-metric-sub">{{ in_use_pct }}% of total</div>
       </div>
     </div>
-    <div class="ld-card ld-metric">
+    <div class="ld-card ld-metric b-green">
       <div class="ld-metric-icon ic-green">
         <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="m8.5 12.5 2.3 2.3L15.5 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
@@ -197,8 +205,8 @@
         <div class="ld-metric-sub">{{ online_pct }}% of total</div>
       </div>
     </div>
-    <div class="ld-card ld-metric">
-      <div class="ld-metric-icon" style="background:rgba(250,204,21,0.14); color:#facc15;">
+    <div class="ld-card ld-metric b-amber">
+      <div class="ld-metric-icon" style="background:linear-gradient(160deg, color-mix(in srgb, var(--maintenance) 30%, white) 0%, color-mix(in srgb, var(--maintenance) 60%, white) 55%, color-mix(in srgb, var(--maintenance) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--maintenance) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--maintenance) 55%, black 35%);">
         <svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 0 0 1.4 0l1.6-1.6a1 1 0 0 1 1.4 0l.2.2a1 1 0 0 1 0 1.4l-1.6 1.6a1 1 0 0 0 0 1.4l.5.5a1 1 0 0 0 1.4 0l1.6-1.6a1 1 0 0 1 1.4 0l.2.2a1 1 0 0 1 0 1.4l-3.6 3.6a3 3 0 0 1-4-4l3.5-3.1Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="m11 13-6.5 6.5a1.5 1.5 0 0 1-2.1-2.1L9 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
       <div>
@@ -207,8 +215,8 @@
         <div class="ld-metric-sub">{{ maintenance_pct }}% of total</div>
       </div>
     </div>
-    <div class="ld-card ld-metric">
-      <div class="ld-metric-icon" style="background:rgba(167,139,250,0.14); color:#a78bfa;">
+    <div class="ld-card ld-metric b-purple">
+      <div class="ld-metric-icon" style="background:linear-gradient(160deg, color-mix(in srgb, var(--purple) 30%, white) 0%, color-mix(in srgb, var(--purple) 60%, white) 55%, color-mix(in srgb, var(--purple) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--purple) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--purple) 55%, black 35%);">
         <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
       <div>
@@ -263,11 +271,11 @@
       <div class="ld-donut-wrap">
         <div style="width:130px; height:130px; flex-shrink:0;"><canvas id="statusDonut"></canvas></div>
         <div class="ld-donut-legend">
-          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:#3ed6c4"></span><span class="lbl">In Use</span><span class="val">{{ in_use_count }} ({{ in_use_pct }}%)</span></div>
-          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:#5b9dff"></span><span class="lbl">Available</span><span class="val">{{ online_count }} ({{ online_pct }}%)</span></div>
-          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:#facc15"></span><span class="lbl">Under Maintenance</span><span class="val">{{ maintenance_count }} ({{ maintenance_pct }}%)</span></div>
-          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:#ff5d5d"></span><span class="lbl">Offline</span><span class="val">{{ offline_count }} ({{ offline_pct }}%)</span></div>
-          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:#a78bfa"></span><span class="lbl">Has Issue</span><span class="val">{{ issue_count }} ({{ issue_pct }}%)</span></div>
+          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:var(--amber)"></span><span class="lbl">In Use</span><span class="val">{{ in_use_count }} ({{ in_use_pct }}%)</span></div>
+          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:var(--blue)"></span><span class="lbl">Available</span><span class="val">{{ online_count }} ({{ online_pct }}%)</span></div>
+          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:var(--maintenance)"></span><span class="lbl">Under Maintenance</span><span class="val">{{ maintenance_count }} ({{ maintenance_pct }}%)</span></div>
+          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:var(--red)"></span><span class="lbl">Offline</span><span class="val">{{ offline_count }} ({{ offline_pct }}%)</span></div>
+          <div class="ld-donut-legend-item"><span class="ld-donut-dot" style="background:var(--purple)"></span><span class="lbl">Has Issue</span><span class="val">{{ issue_count }} ({{ issue_pct }}%)</span></div>
         </div>
       </div>
     </div>
@@ -363,8 +371,23 @@
 
 <script>
 (function () {
+  var themeVar = function (name, fallback) {
+    var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  };
+  var dim = themeVar('--text-dim', '#8b98a3');
+  var green = themeVar('--green', '#3ed6c4');
+  var blue = themeVar('--blue', '#5b9dff');
+  var amber = themeVar('--amber', '#f2a93b');
+  var gold = themeVar('--maintenance', '#facc15');
+  var red = themeVar('--red', '#ff5d5d');
+  var purple = themeVar('--purple', '#a78bfa');
+  var greenDim = themeVar('--green-dim', 'rgba(62,214,196,0.1)');
+  var blueDim = themeVar('--blue-dim', 'rgba(91,157,255,0.12)');
+  var gridLine = 'rgba(139,152,163,0.12)';
+
   Chart.defaults.font.family = 'Inter, sans-serif';
-  Chart.defaults.color = '#8b98a3';
+  Chart.defaults.color = dim;
 
   new Chart(document.getElementById('statusDonut'), {
     type: 'doughnut',
@@ -372,7 +395,7 @@
       labels: ['In Use', 'Available', 'Under Maintenance', 'Offline', 'Has Issue'],
       datasets: [{
         data: [{{ in_use_count }}, {{ online_count }}, {{ maintenance_count }}, {{ offline_count }}, {{ issue_count }}],
-        backgroundColor: ['#3ed6c4', '#5b9dff', '#facc15', '#ff5d5d', '#a78bfa'],
+        backgroundColor: [amber, blue, gold, red, purple],
         borderWidth: 0,
       }]
     },
@@ -389,15 +412,15 @@
       labels: {{ attendance_trend_labels|safe }},
       datasets: [{
         data: {{ attendance_trend_data|safe }},
-        borderColor: '#5b9dff', backgroundColor: 'rgba(91,157,255,0.12)',
-        fill: true, tension: 0.35, pointRadius: 3, pointBackgroundColor: '#5b9dff',
+        borderColor: blue, backgroundColor: blueDim,
+        fill: true, tension: 0.35, pointRadius: 3, pointBackgroundColor: blue,
       }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.06)' } },
+        y: { beginAtZero: true, grid: { color: gridLine } },
         x: { grid: { display: false } },
       }
     }
@@ -409,14 +432,14 @@
       labels: {{ lab_usage_labels|safe }},
       datasets: [{
         data: {{ lab_usage_data|safe }},
-        backgroundColor: '#5b9dff', borderRadius: 4, maxBarThickness: 26,
+        backgroundColor: blue, borderRadius: 4, maxBarThickness: 26,
       }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        y: { beginAtZero: true, max: 100, ticks: { callback: function (v) { return v + '%'; } }, grid: { color: 'rgba(255,255,255,0.06)' } },
+        y: { beginAtZero: true, max: 100, ticks: { callback: function (v) { return v + '%'; } }, grid: { color: gridLine } },
         x: { grid: { display: false } },
       }
     }
@@ -428,15 +451,15 @@
       labels: {{ monthly_util_labels|safe }},
       datasets: [{
         data: {{ monthly_util_data|safe }},
-        borderColor: '#3ed6c4', backgroundColor: 'rgba(62,214,196,0.1)',
-        fill: true, tension: 0.35, pointRadius: 4, pointBackgroundColor: '#3ed6c4',
+        borderColor: green, backgroundColor: greenDim,
+        fill: true, tension: 0.35, pointRadius: 4, pointBackgroundColor: green,
       }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        y: { beginAtZero: true, max: 100, ticks: { callback: function (v) { return v + '%'; } }, grid: { color: 'rgba(255,255,255,0.06)' } },
+        y: { beginAtZero: true, max: 100, ticks: { callback: function (v) { return v + '%'; } }, grid: { color: gridLine } },
         x: { grid: { display: false } },
       }
     }

@@ -29,11 +29,11 @@
 .um-metric-label{font-size:12px; color:var(--um-dim); font-weight:500;}
 .um-metric-val{font-size:22px; font-weight:700; letter-spacing:-0.01em; margin-top:2px;}
 .um-metric-sub{font-size:11.5px; color:var(--um-faint); margin-top:2px;}
-.ic-blue{background:var(--um-blue); color:#fff;}
-.ic-green{background:var(--um-green); color:#0a0e12;}
-.ic-purple{background:var(--um-purple); color:#fff;}
-.ic-orange{background:var(--um-orange); color:#0a0e12;}
-.ic-gold{background:var(--um-gold); color:#0a0e12;}
+.ic-blue{background:linear-gradient(160deg, color-mix(in srgb, var(--um-blue) 30%, white) 0%, color-mix(in srgb, var(--um-blue) 60%, white) 55%, color-mix(in srgb, var(--um-blue) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--um-blue) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--um-blue) 55%, black 35%);}
+.ic-green{background:linear-gradient(160deg, color-mix(in srgb, var(--um-green) 30%, white) 0%, color-mix(in srgb, var(--um-green) 60%, white) 55%, color-mix(in srgb, var(--um-green) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--um-green) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--um-green) 55%, black 35%);}
+.ic-purple{background:linear-gradient(160deg, color-mix(in srgb, var(--um-purple) 30%, white) 0%, color-mix(in srgb, var(--um-purple) 60%, white) 55%, color-mix(in srgb, var(--um-purple) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--um-purple) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--um-purple) 55%, black 35%);}
+.ic-orange{background:linear-gradient(160deg, color-mix(in srgb, var(--um-orange) 30%, white) 0%, color-mix(in srgb, var(--um-orange) 60%, white) 55%, color-mix(in srgb, var(--um-orange) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--um-orange) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--um-orange) 55%, black 35%);}
+.ic-gold{background:linear-gradient(160deg, color-mix(in srgb, var(--um-gold) 30%, white) 0%, color-mix(in srgb, var(--um-gold) 60%, white) 55%, color-mix(in srgb, var(--um-gold) 85%, black 10%) 100%); box-shadow:inset 0 -3px 0 color-mix(in srgb, var(--um-gold) 90%, black 18%), inset 0 1px 0 rgba(255,255,255,.3), 0 3px 6px rgba(0,0,0,.18); color:color-mix(in srgb, var(--um-gold) 55%, black 35%);}
 
 .um-filter-form{display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1.4fr auto auto; gap:14px; align-items:end; min-width:0;}
 .um-filter-form > *{min-width:0;}
@@ -69,9 +69,6 @@
 .um-pill.incharge{background:var(--um-purple); color:#fff;}
 .um-pill.instructor{background:var(--um-orange); color:#0a0e12;}
 .um-pill.student{background:var(--um-gold); color:#0a0e12;}
-html[data-theme="light"] .ic-green,
-html[data-theme="light"] .ic-orange,
-html[data-theme="light"] .ic-gold,
 html[data-theme="light"] .um-pill.instructor,
 html[data-theme="light"] .um-pill.student{ color:#fff; }
 .um-status{display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:500;}
@@ -124,7 +121,7 @@ html[data-theme="light"] .um-pill.student{ color:#fff; }
     </div>
     <div style="display:flex; gap:8px;">
       <a href="{% url 'log_history' %}" class="um-btn">View log history</a>
-      <a href="{% url 'user_import' %}" class="um-btn js-modal-link">&#8593; Import Students</a>
+      <a href="{% url 'user_import' %}" class="um-btn js-modal-link"><svg viewBox="0 0 24 24" fill="none"><path d="M12 15V3m0 12-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Import Students</a>
       <a href="{% url 'user_create' %}" class="um-btn primary js-modal-link">+ Add User</a>
     </div>
   </div>
@@ -225,11 +222,11 @@ html[data-theme="light"] .um-pill.student{ color:#fff; }
       </div>
       <div>
         <a href="{% url 'user_export' %}?role={{ selected_role }}&lab={{ selected_lab }}&status={{ selected_status }}&department={{ selected_department }}&q={{ search_query }}&format=pdf" class="um-btn">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg viewBox="0 0 24 24"><use href="#icon-pdf-doc"/></svg>
           Export
         </a>
       </div>
-      <div><button type="submit" class="um-btn primary">Filter</button></div>
+      <div><button type="submit" class="um-btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#icon-filter"/></svg> Filter</button></div>
       {% if filtered %}
         <div style="grid-column:1/-1;"><a href="{% url 'users' %}">Clear filters</a></div>
       {% endif %}
@@ -323,7 +320,7 @@ html[data-theme="light"] .um-pill.student{ color:#fff; }
                       </form>
                     {% else %}
                       <form method="post" action="{% url 'user_activate' u.pk %}" style="display:inline"
-                            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Activate this account?', text: '{{ u.display_name|escapejs }} will be able to log in again.', icon: 'question', confirmButtonText: 'Yes, activate', confirmButtonColor: '#3ed6c4'}); return false;">
+                            onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Activate this account?', text: '{{ u.display_name|escapejs }} will be able to log in again.', icon: 'question', confirmButtonText: 'Yes, activate', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--green').trim()}); return false;">
                         {% csrf_token %}
                         <button type="submit" class="um-icon-btn" title="Activate">
                           <svg viewBox="0 0 24 24" fill="none"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>

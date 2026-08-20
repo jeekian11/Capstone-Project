@@ -8,14 +8,11 @@
     <h1{% if is_modal %} id="appModalTitle"{% endif %}>Import Students (Excel/CSV)</h1>
     <div class="sub">Bulk-create student accounts under one Department at a time</div>
   </div>
-  <div>
-    <a href="{% url 'users' %}" class="action-btn">&larr; Back to Users</a>
-  </div>
 </div>
 
 <div class="card" style="max-width:640px">
   <form method="post" enctype="multipart/form-data" novalidate
-        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Create accounts from this file?', text: 'A new student account will be created for every valid row in the file, filed under the Department selected above. This cannot be bulk-undone afterward.', icon: 'warning', confirmButtonText: 'Yes, import', confirmButtonColor: '#f2a93b'}); return false;">
+        onsubmit="event.preventDefault(); compulabConfirmSubmit(this, {title: 'Create accounts from this file?', text: 'A new student account will be created for every valid row in the file, filed under the Department selected above. This cannot be bulk-undone afterward.', icon: 'warning', confirmButtonText: 'Yes, import', confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--amber').trim()}); return false;">
     {% csrf_token %}
     {% if form.non_field_errors %}
       <div class="form-errors">{{ form.non_field_errors }}</div>
@@ -24,7 +21,6 @@
     <div class="form-group">
       <label class="form-label" for="{{ form.department.id_for_label }}">Department</label>
       {{ form.department }}
-      <span class="helptext">Every student in the file will be filed under this Department. To import a second department, run the import again with a separate file.</span>
       {% if form.department.errors %}<div class="form-errors">{{ form.department.errors|join:", " }}</div>{% endif %}
     </div>
 
@@ -36,8 +32,8 @@
     </div>
 
     <div class="form-actions">
-      <button type="submit" class="action-btn primary">Import Students</button>
-      <a href="{% url 'users' %}" class="action-btn">Cancel</a>
+      <button type="submit" class="action-btn primary"><svg class="btn-icon"><use href="#icon-upload"/></svg> Import Students</button>
+      <a href="{% url 'users' %}" class="action-btn"><svg class="btn-icon"><use href="#icon-x"/></svg> Cancel</a>
     </div>
   </form>
 </div>
@@ -80,7 +76,7 @@
   {% if is_modal %}
     <div class="form-actions" style="margin-top:16px;">
       <button type="button" class="action-btn primary"
-              onclick="closeAppModal(); window.location.reload();">Done — refresh Users list</button>
+              onclick="closeAppModal(); window.location.reload();"><svg class="btn-icon"><use href="#icon-check"/></svg> Done — refresh Users list</button>
     </div>
   {% endif %}
 </div>
